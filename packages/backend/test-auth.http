@@ -1,0 +1,71 @@
+### SavePal Auth API Tests
+### Use with REST Client extension in VS Code
+
+@baseUrl = http://localhost:3000/api
+@token = YOUR_TOKEN_HERE
+
+### Health Check
+GET http://localhost:3000/health
+
+### API Info
+GET http://localhost:3000/api
+
+### Register New User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+1234567890"
+}
+
+### Register Another User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "jane.smith@example.com",
+  "password": "password123",
+  "firstName": "Jane",
+  "lastName": "Smith"
+}
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+### Get Current User Profile (Protected - requires token)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Logout (Protected)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### Test Invalid Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "wrongpassword"
+}
+
+### Test Duplicate Registration
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123",
+  "firstName": "John",
+  "lastName": "Duplicate"
+}
