@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
+import groupRoutes from './routes/group.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +43,9 @@ app.get('/api', (req: Request, res: Response) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Group routes
+app.use('/api/groups', groupRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

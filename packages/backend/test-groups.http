@@ -1,0 +1,60 @@
+### Test Group Management API
+### Make sure the backend is running on localhost:3000
+
+### 1. Login to get token
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jmezalon@gmail.com",
+  "password": "Jm2!4905"
+}
+
+### 2. Create a new group (use token from login)
+POST http://localhost:3000/api/groups
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "name": "Family Savings Circle",
+  "description": "Monthly savings for family emergencies",
+  "contributionAmount": 100,
+  "frequency": "MONTHLY",
+  "payoutMethod": "SEQUENTIAL",
+  "maxMembers": 5
+}
+
+### 3. Get all groups for user
+GET http://localhost:3000/api/groups
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 4. Get group by ID
+GET http://localhost:3000/api/groups/GROUP_ID_HERE
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 5. Join group with invite code (requires second user)
+POST http://localhost:3000/api/groups/join
+Content-Type: application/json
+Authorization: Bearer SECOND_USER_TOKEN_HERE
+
+{
+  "inviteCode": "INVITE_CODE_HERE"
+}
+
+### 6. Update group details (owner only)
+PUT http://localhost:3000/api/groups/GROUP_ID_HERE
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "name": "Updated Family Savings",
+  "contributionAmount": 150
+}
+
+### 7. Start group (owner only, when full)
+POST http://localhost:3000/api/groups/GROUP_ID_HERE/start
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 8. Delete/Cancel group (owner only, before start)
+DELETE http://localhost:3000/api/groups/GROUP_ID_HERE
+Authorization: Bearer YOUR_TOKEN_HERE
