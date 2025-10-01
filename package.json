@@ -1,0 +1,24 @@
+{
+  "name": "savepal",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@savepal/backend & npm run dev --workspace=@savepal/frontend",
+    "dev:frontend": "npm run dev --workspace=@savepal/frontend",
+    "dev:backend": "npm run dev --workspace=@savepal/backend",
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace=@savepal/frontend",
+    "build:backend": "npm run build --workspace=@savepal/backend",
+    "db:generate": "npm run db:generate --workspace=@savepal/backend",
+    "db:push": "npm run db:push --workspace=@savepal/backend",
+    "db:migrate": "npm run db:migrate --workspace=@savepal/backend",
+    "db:studio": "npm run db:studio --workspace=@savepal/backend",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+}
