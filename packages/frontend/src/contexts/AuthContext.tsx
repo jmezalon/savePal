@@ -65,7 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      setUser(data.user);
+      // Backend returns { success: true, data: { user, stats } }
+      // Extract just the user data (which includes stats)
+      const { stats, ...userData } = data.data;
+      setUser(userData);
     } catch (err) {
       console.error('Error fetching user:', err);
       // Invalid token, clear it
@@ -96,9 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || 'Login failed');
       }
 
-      localStorage.setItem('token', data.token);
-      setToken(data.token);
-      setUser(data.user);
+      localStorage.setItem('token', data.data.token);
+      setToken(data.data.token);
+      setUser(data.data.user);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -127,9 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(responseData.error || 'Registration failed');
       }
 
-      localStorage.setItem('token', responseData.token);
-      setToken(responseData.token);
-      setUser(responseData.user);
+      localStorage.setItem('token', responseData.data.token);
+      setToken(responseData.data.token);
+      setUser(responseData.data.user);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);
