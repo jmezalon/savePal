@@ -1,19 +1,19 @@
 ### Test Group Management API
 ### Make sure the backend is running on localhost:3000
 
-### 1. Login to get token
+### 1. Login to get token (replace with your credentials)
 POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "jmezalon@gmail.com",
-  "password": "Jm2!4905"
+  "email": "your-email@example.com",
+  "password": "your-password"
 }
 
-### 2. Create a new group (use token from login)
+### 2. Create a new group (replace YOUR_JWT_TOKEN with actual token from step 1)
 POST http://localhost:3000/api/groups
 Content-Type: application/json
-Authorization: Bearer YOUR_TOKEN_HERE
+Authorization: Bearer YOUR_JWT_TOKEN
 
 {
   "name": "Family Savings Circle",
@@ -26,25 +26,25 @@ Authorization: Bearer YOUR_TOKEN_HERE
 
 ### 3. Get all groups for user
 GET http://localhost:3000/api/groups
-Authorization: Bearer YOUR_TOKEN_HERE
+Authorization: Bearer YOUR_JWT_TOKEN
 
-### 4. Get group by ID
-GET http://localhost:3000/api/groups/GROUP_ID_HERE
-Authorization: Bearer YOUR_TOKEN_HERE
+### 4. Get group by ID (replace GROUP_ID with actual group id from step 2)
+GET http://localhost:3000/api/groups/GROUP_ID
+Authorization: Bearer YOUR_JWT_TOKEN
 
-### 5. Join group with invite code (requires second user)
+### 5. Join group with invite code (requires second user - register another user first)
 POST http://localhost:3000/api/groups/join
 Content-Type: application/json
-Authorization: Bearer SECOND_USER_TOKEN_HERE
+Authorization: Bearer SECOND_USER_JWT_TOKEN
 
 {
-  "inviteCode": "INVITE_CODE_HERE"
+  "inviteCode": "INVITE_CODE_FROM_STEP_2"
 }
 
 ### 6. Update group details (owner only)
-PUT http://localhost:3000/api/groups/GROUP_ID_HERE
+PUT http://localhost:3000/api/groups/GROUP_ID
 Content-Type: application/json
-Authorization: Bearer YOUR_TOKEN_HERE
+Authorization: Bearer YOUR_JWT_TOKEN
 
 {
   "name": "Updated Family Savings",
@@ -52,9 +52,9 @@ Authorization: Bearer YOUR_TOKEN_HERE
 }
 
 ### 7. Start group (owner only, when full)
-POST http://localhost:3000/api/groups/GROUP_ID_HERE/start
-Authorization: Bearer YOUR_TOKEN_HERE
+POST http://localhost:3000/api/groups/GROUP_ID/start
+Authorization: Bearer YOUR_JWT_TOKEN
 
 ### 8. Delete/Cancel group (owner only, before start)
-DELETE http://localhost:3000/api/groups/GROUP_ID_HERE
-Authorization: Bearer YOUR_TOKEN_HERE
+DELETE http://localhost:3000/api/groups/GROUP_ID
+Authorization: Bearer YOUR_JWT_TOKEN
