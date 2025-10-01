@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/auth.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -25,14 +26,22 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes will be added here
+// API routes
 app.get('/api', (req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'SavePal API v1',
     version: '0.0.1',
+    endpoints: {
+      auth: '/api/auth',
+      groups: '/api/groups (coming soon)',
+      payments: '/api/payments (coming soon)',
+    },
   });
 });
+
+// Auth routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
