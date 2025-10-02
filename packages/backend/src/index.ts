@@ -14,7 +14,7 @@ const port = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://save-pal-frontend-l0nyaext4-max-mezalons-projects.vercel.app',
+  'https://save-pal-frontend.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
