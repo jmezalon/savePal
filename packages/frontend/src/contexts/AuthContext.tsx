@@ -9,6 +9,9 @@ interface User {
   emailVerified: boolean;
   phoneVerified: boolean;
   trustScore: number;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  pushNotifications: boolean;
   createdAt: string;
   updatedAt: string;
 }
