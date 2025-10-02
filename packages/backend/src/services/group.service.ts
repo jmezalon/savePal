@@ -1,5 +1,5 @@
 import prisma from '../utils/prisma.js';
-import { Frequency, PayoutMethod, GroupStatus, MemberRole } from '@prisma/client';
+import { Frequency, PayoutMethod } from '@prisma/client';
 
 interface CreateGroupData {
   name: string;

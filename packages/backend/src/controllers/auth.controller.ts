@@ -140,7 +140,7 @@ class AuthController {
    * POST /api/auth/logout
    * Logout user (client-side token removal, here for consistency)
    */
-  async logout(req: Request, res: Response) {
+  async logout(_req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       message: 'Logout successful. Please remove the token from client.',
