@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -84,10 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      setError(null);
-      setIsLoading(true);
+    setError(null);
+    setIsLoading(true);
 
+    try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -99,18 +99,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        const errorMessage = data.error || 'Login failed';
+        setIsLoading(false);
+        setError(errorMessage);
+        throw new Error(errorMessage);
       }
 
       localStorage.setItem('token', data.data.token);
       setToken(data.data.token);
       setUser(data.data.user);
+      setIsLoading(false);
     } catch (err) {
+      setIsLoading(false);
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -152,9 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/login';
   };
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, []);
 
   const value: AuthContextType = {
     user,
