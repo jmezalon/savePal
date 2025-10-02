@@ -4,9 +4,11 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: NODE_ENV=development && cd packages/backend && npm install && npx prisma generate && npm run build
-    startCommand: NODE_ENV=production && cd packages/backend && npm start
+    buildCommand: cd packages/backend && npm install && npx prisma generate && npm run build
+    startCommand: cd packages/backend && npm start
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
