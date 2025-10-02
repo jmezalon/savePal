@@ -28,6 +28,10 @@ model User {
   smsNotifications   Boolean @default(false)
   pushNotifications  Boolean @default(true)
 
+  // Password Reset
+  resetToken       String?
+  resetTokenExpiry DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

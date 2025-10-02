@@ -265,6 +265,74 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * POST /api/auth/forgot-password
+   * Request password reset
+   */
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email is required',
+        });
+      }
+
+      await authService.requestPasswordReset(email);
+
+      // Always return success to avoid revealing if email exists
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists with that email, a password reset link has been sent',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process request';
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * POST /api/auth/reset-password
+   * Reset password with token
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Token and new password are required',
+        });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must be at least 8 characters long',
+        });
+      }
+
+      await authService.resetPassword(token, newPassword);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Password reset successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
 }
 
 export default new AuthController();

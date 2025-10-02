@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js';
 import { Frequency, PayoutMethod } from '@prisma/client';
 import cycleService from './cycle.service.js';
+import emailService from './email.service.js';
 
 interface CreateGroupData {
   name: string;
@@ -109,6 +110,24 @@ class GroupService {
       throw new Error('You are already a member of this group');
     }
 
+    // Get user details for the new member
+    const newMember = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    // Get group owner details
+    const groupOwner = await prisma.user.findUnique({
+      where: { id: group.createdById },
+      select: {
+        email: true,
+        firstName: true,
+      },
+    });
+
     // Add user as member in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Calculate next payout position
@@ -137,6 +156,21 @@ class GroupService {
 
       return membership;
     });
+
+    // Send email notification to group owner
+    if (groupOwner && newMember) {
+      try {
+        await emailService.sendMemberJoinedNotification(
+          groupOwner.email,
+          groupOwner.firstName,
+          `${newMember.firstName} ${newMember.lastName}`,
+          group.name
+        );
+      } catch (error) {
+        console.error('Failed to send member joined email notification:', error);
+        // Don't throw error - membership was created successfully
+      }
+    }
 
     return result;
   }
