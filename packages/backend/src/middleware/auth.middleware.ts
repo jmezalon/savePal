@@ -5,15 +5,16 @@ import { verifyToken, extractTokenFromHeader } from '../utils/auth.js';
  * Middleware to authenticate requests using JWT
  * Attaches userId to request object if valid
  */
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export function authenticate(req: Request, res: Response, next: NextFunction): void {
   try {
     const token = extractTokenFromHeader(req.headers.authorization);
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'No token provided. Authorization header required.',
       });
+      return;
     }
 
     const decoded = verifyToken(token);
@@ -24,10 +25,11 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
     next();
   } catch (error) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: 'Invalid or expired token',
     });
+    return;
   }
 }
 
@@ -35,7 +37,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
  * Optional authentication - doesn't fail if no token
  * Useful for endpoints that work for both authenticated and non-authenticated users
  */
-export function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
+export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): void {
   try {
     const token = extractTokenFromHeader(req.headers.authorization);
 
