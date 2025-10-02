@@ -1,0 +1,198 @@
+import { Response, Request } from 'express';
+import payoutService from '../services/payout.service.js';
+
+export interface AuthRequest extends Request {
+  userId?: string;
+  userEmail?: string;
+}
+
+class PayoutController {
+  /**
+   * Get payout by ID
+   * GET /api/payouts/:payoutId
+   */
+  async getPayoutById(req: AuthRequest, res: Response) {
+    try {
+      const { payoutId } = req.params;
+
+      const payout = await payoutService.getPayoutById(payoutId);
+
+      res.json({
+        success: true,
+        data: payout,
+      });
+    } catch (error: any) {
+      res.status(error.message === 'Payout not found' ? 404 : 400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get all payouts for current user
+   * GET /api/payouts/my-payouts
+   */
+  async getMyPayouts(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+
+      const payouts = await payoutService.getUserPayouts(userId);
+
+      res.json({
+        success: true,
+        data: payouts,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get pending payouts for current user
+   * GET /api/payouts/my-payouts/pending
+   */
+  async getMyPendingPayouts(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+
+      const payouts = await payoutService.getPendingPayouts(userId);
+
+      res.json({
+        success: true,
+        data: payouts,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get payout statistics for current user
+   * GET /api/payouts/my-stats
+   */
+  async getMyPayoutStats(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+
+      const stats = await payoutService.getUserPayoutStats(userId);
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Process a payout (admin only)
+   * POST /api/payouts/:payoutId/process
+   */
+  async processPayout(req: AuthRequest, res: Response) {
+    try {
+      const { payoutId } = req.params;
+      const { transactionReference } = req.body;
+
+      const payout = await payoutService.processPayout(payoutId, transactionReference);
+
+      res.json({
+        success: true,
+        message: 'Payout processed successfully',
+        data: payout,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Mark payout as failed (admin only)
+   * POST /api/payouts/:payoutId/fail
+   */
+  async failPayout(req: AuthRequest, res: Response) {
+    try {
+      const { payoutId } = req.params;
+      const { reason } = req.body;
+
+      const payout = await payoutService.failPayout(payoutId, reason);
+
+      res.json({
+        success: true,
+        message: 'Payout marked as failed',
+        data: payout,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get payout for a specific cycle
+   * GET /api/cycles/:cycleId/payout
+   */
+  async getPayoutForCycle(req: AuthRequest, res: Response) {
+    try {
+      const { cycleId } = req.params;
+
+      const payout = await payoutService.getPayoutForCycle(cycleId);
+
+      if (!payout) {
+        return res.status(404).json({
+          success: false,
+          error: 'No payout found for this cycle',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: payout,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get all payouts for a group
+   * GET /api/groups/:groupId/payouts
+   */
+  async getPayoutsForGroup(req: AuthRequest, res: Response) {
+    try {
+      const { groupId } = req.params;
+
+      const payouts = await payoutService.getPayoutsForGroup(groupId);
+
+      res.json({
+        success: true,
+        data: payouts,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+}
+
+export default new PayoutController();

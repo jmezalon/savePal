@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.js';
 import { Frequency, PayoutMethod } from '@prisma/client';
+import cycleService from './cycle.service.js';
 
 interface CreateGroupData {
   name: string;
@@ -320,8 +321,8 @@ class GroupService {
       },
     });
 
-    // TODO: Create cycles for the group based on payout method
-    // This will be implemented when we add the cycle/payment logic
+    // Create cycles for the group based on payout method
+    await cycleService.createCyclesForGroup(groupId);
 
     return updatedGroup;
   }

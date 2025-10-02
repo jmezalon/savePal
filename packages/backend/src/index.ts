@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import groupRoutes from './routes/group.routes.js';
+import cycleRoutes from './routes/cycle.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
+import payoutRoutes from './routes/payout.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +70,15 @@ app.use('/api/auth', authRoutes);
 
 // Group routes
 app.use('/api/groups', groupRoutes);
+
+// Cycle routes
+app.use('/api/cycles', cycleRoutes);
+
+// Payment routes
+app.use('/api/payments', paymentRoutes);
+
+// Payout routes
+app.use('/api/payouts', payoutRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

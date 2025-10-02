@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import groupController from '../controllers/group.controller.js';
+import cycleController from '../controllers/cycle.controller.js';
+import payoutController from '../controllers/payout.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -27,5 +29,12 @@ router.post('/:id/start', groupController.startGroup.bind(groupController));
 
 // Delete/cancel a group (owner only)
 router.delete('/:id', groupController.deleteGroup.bind(groupController));
+
+// Cycle routes for a specific group
+router.get('/:groupId/cycles', cycleController.getCyclesForGroup);
+router.get('/:groupId/cycles/current', cycleController.getCurrentCycle);
+
+// Payout routes for a specific group
+router.get('/:groupId/payouts', payoutController.getPayoutsForGroup);
 
 export default router;
