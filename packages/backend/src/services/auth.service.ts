@@ -25,9 +25,12 @@ class AuthService {
    * Register a new user
    */
   async register(data: RegisterInput): Promise<AuthResponse> {
+    // Normalize email to lowercase
+    const normalizedEmail = data.email.toLowerCase().trim();
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -40,7 +43,7 @@ class AuthService {
     // Create user
     const user = await prisma.user.create({
       data: {
-        email: data.email,
+        email: normalizedEmail,
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -67,9 +70,12 @@ class AuthService {
    * Login user
    */
   async login(data: LoginInput): Promise<AuthResponse> {
+    // Normalize email to lowercase
+    const normalizedEmail = data.email.toLowerCase().trim();
+
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
