@@ -16,6 +16,30 @@ interface GroupMember {
   };
 }
 
+interface Payment {
+  id: string;
+  amount: number;
+  status: string;
+  paidAt?: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+interface Cycle {
+  id: string;
+  cycleNumber: number;
+  dueDate: string;
+  completedDate?: string;
+  totalAmount: number;
+  isCompleted: boolean;
+  recipientId: string;
+  payments?: Payment[];
+}
+
 interface GroupDetails {
   id: string;
   name: string;
@@ -41,15 +65,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>();
   const [group, setGroup] = useState<GroupDetails | null>(null);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [currentCycle, setCurrentCycle] = useState<Cycle | null>(null);
+  const [myPayment, setMyPayment] = useState<Payment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchGroupDetails();
+    if (id) {
+      fetchCycles(id);
+    }
   }, [id]);
 
   const fetchGroupDetails = async () => {
@@ -77,6 +108,82 @@ export default function GroupDetails() {
       setError(err instanceof Error ? err.message : 'Failed to fetch group details');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCycles = async (groupId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/groups/${groupId}/cycles`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCycles(data.data || []);
+
+        // Fetch current cycle
+        const currentResponse = await fetch(`${API_BASE_URL}/api/groups/${groupId}/cycles/current`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json();
+          setCurrentCycle(currentData.data);
+
+          // Fetch user's payment for current cycle
+          if (currentData.data) {
+            const paymentResponse = await fetch(`${API_BASE_URL}/api/cycles/${currentData.data.id}/my-payment`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+
+            if (paymentResponse.ok) {
+              const paymentData = await paymentResponse.json();
+              setMyPayment(paymentData.data);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch cycles:', err);
+    }
+  };
+
+  const handleProcessPayment = async () => {
+    if (!myPayment || !currentCycle) return;
+
+    setIsProcessingPayment(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/${myPayment.id}/process`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactionReference: `MANUAL_${Date.now()}`,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh cycle and payment data
+        if (id) {
+          await fetchCycles(id);
+        }
+        alert('Payment processed successfully!');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to process payment');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to process payment');
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -322,6 +429,128 @@ export default function GroupDetails() {
                   <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
                     Start Group
                   </button>
+                </div>
+              )}
+
+              {/* Current Cycle and Payment Section */}
+              {group.status === 'ACTIVE' && currentCycle && (
+                <div className="mt-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Cycle</h2>
+
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-4 border border-blue-200">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">Cycle {currentCycle.cycleNumber}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Due: {new Date(currentCycle.dueDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 text-sm font-semibold rounded ${
+                        currentCycle.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {currentCycle.isCompleted ? 'Completed' : 'Active'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Pot</p>
+                        <p className="text-2xl font-bold text-blue-600">${currentCycle.totalAmount}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Recipient</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* User's Payment Status */}
+                    {myPayment && (
+                      <div className="mt-4 pt-4 border-t border-blue-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Your Contribution</p>
+                            <p className="text-xl font-bold text-gray-900">${myPayment.amount}</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Status: <span className={`font-semibold ${
+                                myPayment.status === 'COMPLETED' ? 'text-green-600' :
+                                myPayment.status === 'PENDING' ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {myPayment.status}
+                              </span>
+                            </p>
+                          </div>
+                          {myPayment.status === 'PENDING' && (
+                            <button
+                              onClick={handleProcessPayment}
+                              disabled={isProcessingPayment}
+                              className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              {isProcessingPayment ? 'Processing...' : 'Mark as Paid'}
+                            </button>
+                          )}
+                          {myPayment.status === 'COMPLETED' && myPayment.paidAt && (
+                            <div className="text-right">
+                              <p className="text-sm text-green-600 font-semibold">✓ Paid</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(myPayment.paidAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* All Cycles Section */}
+              {group.status === 'ACTIVE' && cycles.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">All Cycles</h2>
+                  <div className="space-y-3">
+                    {cycles.map((cycle) => (
+                      <div
+                        key={cycle.id}
+                        className={`p-4 rounded-lg border ${
+                          cycle.isCompleted ? 'bg-gray-50 border-gray-200' :
+                          cycle.id === currentCycle?.id ? 'bg-blue-50 border-blue-300' :
+                          'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                              cycle.isCompleted ? 'bg-green-500 text-white' :
+                              cycle.id === currentCycle?.id ? 'bg-blue-500 text-white' :
+                              'bg-gray-300 text-gray-600'
+                            }`}>
+                              {cycle.cycleNumber}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                Cycle {cycle.cycleNumber}
+                                {cycle.id === currentCycle?.id && (
+                                  <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">Current</span>
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Due: {new Date(cycle.dueDate).toLocaleDateString()}
+                                {cycle.completedDate && ` • Completed: ${new Date(cycle.completedDate).toLocaleDateString()}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-700">Recipient</p>
+                            <p className="text-sm text-gray-900">
+                              {group.memberships.find(m => m.user.id === cycle.recipientId)?.user.firstName || 'Unknown'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
