@@ -16,6 +16,13 @@ export default function Profile() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -97,6 +104,63 @@ export default function Profile() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setIsChangingPassword(true);
+    setMessage(null);
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setMessage({ type: 'error', text: 'All password fields are required' });
+      setIsChangingPassword(false);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      setIsChangingPassword(false);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters' });
+      setIsChangingPassword(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Password changed successfully!' });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowPasswordChange(false);
+      } else {
+        throw new Error(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to change password',
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -301,6 +365,80 @@ export default function Profile() {
               {isSaving ? 'Saving...' : 'Save Preferences'}
             </button>
           </div>
+        </div>
+
+        {/* Security - Change Password */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Security</h2>
+
+          {!showPasswordChange ? (
+            <button
+              onClick={() => setShowPasswordChange(true)}
+              className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              Change Password
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+                <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isChangingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPasswordChange(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Account Stats */}

@@ -218,6 +218,53 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * POST /api/auth/change-password
+   * Change user password
+   */
+  async changePassword(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      // Validation
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Current password and new password are required',
+        });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password must be at least 8 characters long',
+        });
+      }
+
+      await authService.changePassword(userId, currentPassword, newPassword);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Password changed successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
+      const statusCode = errorMessage.includes('incorrect') ? 400 : 500;
+      return res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
 }
 
 export default new AuthController();

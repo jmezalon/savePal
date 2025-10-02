@@ -18,6 +18,13 @@ export default function Login() {
     }
   }, []);
 
+  // Clear error when user starts typing
+  useEffect(() => {
+    if (error) {
+      clearError();
+    }
+  }, [email, password]);
+
   useEffect(() => {
     // Redirect if already authenticated
     if (isAuthenticated) {
@@ -44,7 +51,8 @@ export default function Login() {
 
       navigate('/dashboard');
     } catch (err) {
-      // Error is handled by AuthContext
+      // Error is handled by AuthContext and displayed in the UI
+      console.error('Login failed:', err);
     }
   };
 

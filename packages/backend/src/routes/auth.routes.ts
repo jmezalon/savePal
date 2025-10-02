@@ -13,5 +13,6 @@ router.get('/me', authenticate, authController.getMe.bind(authController));
 router.post('/logout', authenticate, authController.logout.bind(authController));
 router.patch('/profile', authenticate, authController.updateProfile.bind(authController));
 router.patch('/notifications', authenticate, authController.updateNotificationPreferences.bind(authController));
+router.post('/change-password', authenticate, authController.changePassword.bind(authController));
 
 export default router;
