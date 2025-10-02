@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: savepal-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd packages/backend && npm install && npx prisma generate && npm run build
+    startCommand: cd packages/backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
