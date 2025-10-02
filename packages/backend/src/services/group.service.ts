@@ -215,20 +215,6 @@ class GroupService {
             email: true,
           },
         },
-        cycles: {
-          include: {
-            recipient: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-          orderBy: {
-            cycleNumber: 'asc',
-          },
-        },
       },
     });
 
