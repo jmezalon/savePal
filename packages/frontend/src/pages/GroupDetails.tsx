@@ -154,6 +154,33 @@ export default function GroupDetails() {
     }
   };
 
+  const handleStartGroup = async () => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/groups/${id}/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Refresh group details and cycles
+        await fetchGroupDetails();
+        if (id) {
+          await fetchCycles(id);
+        }
+        alert('Group started successfully! Payment cycles have been created.');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to start group');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to start group');
+    }
+  };
+
   const handleProcessPayment = async () => {
     if (!myPayment || !currentCycle) return;
 
@@ -426,7 +453,10 @@ export default function GroupDetails() {
                   <p className="text-sm text-green-800 mb-3">
                     All member spots are filled. You can now start the group to begin payment cycles.
                   </p>
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                  <button
+                    onClick={handleStartGroup}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                  >
                     Start Group
                   </button>
                 </div>
