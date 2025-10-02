@@ -1,0 +1,269 @@
+import prisma from '../utils/prisma.js';
+import { NotificationType } from '@prisma/client';
+
+interface CreateNotificationData {
+  userId: string;
+  groupId?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+}
+
+class NotificationService {
+  /**
+   * Create a new notification
+   */
+  async createNotification(data: CreateNotificationData) {
+    const notification = await prisma.notification.create({
+      data: {
+        userId: data.userId,
+        groupId: data.groupId,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+      },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return notification;
+  }
+
+  /**
+   * Get all notifications for a user
+   */
+  async getUserNotifications(userId: string, limit?: number) {
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        sentAt: 'desc',
+      },
+      take: limit,
+    });
+
+    return notifications;
+  }
+
+  /**
+   * Get unread notifications for a user
+   */
+  async getUnreadNotifications(userId: string) {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId,
+        isRead: false,
+      },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        sentAt: 'desc',
+      },
+    });
+
+    return notifications;
+  }
+
+  /**
+   * Get unread notification count
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    const count = await prisma.notification.count({
+      where: {
+        userId,
+        isRead: false,
+      },
+    });
+
+    return count;
+  }
+
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(notificationId: string, userId: string) {
+    const notification = await prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+
+    if (notification.userId !== userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const updatedNotification = await prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+    });
+
+    return updatedNotification;
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userId: string) {
+    await prisma.notification.updateMany({
+      where: {
+        userId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Delete a notification
+   */
+  async deleteNotification(notificationId: string, userId: string) {
+    const notification = await prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+
+    if (notification.userId !== userId) {
+      throw new Error('Unauthorized');
+    }
+
+    await prisma.notification.delete({
+      where: { id: notificationId },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Send payment due notification
+   */
+  async sendPaymentDueNotification(userId: string, groupId: string, groupName: string, amount: number, dueDate: Date) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'PAYMENT_DUE',
+      title: 'Payment Due',
+      message: `Your payment of $${amount} for "${groupName}" is due on ${dueDate.toLocaleDateString()}.`,
+    });
+  }
+
+  /**
+   * Send payment received notification
+   */
+  async sendPaymentReceivedNotification(userId: string, groupId: string, groupName: string, amount: number) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'PAYMENT_RECEIVED',
+      title: 'Payment Received',
+      message: `Your payment of $${amount} for "${groupName}" has been received.`,
+    });
+  }
+
+  /**
+   * Send payout pending notification
+   */
+  async sendPayoutPendingNotification(userId: string, groupId: string, groupName: string, amount: number) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'PAYOUT_PENDING',
+      title: 'Payout Pending',
+      message: `Your payout of $${amount} from "${groupName}" is being processed.`,
+    });
+  }
+
+  /**
+   * Send payout completed notification
+   */
+  async sendPayoutCompletedNotification(userId: string, groupId: string, groupName: string, amount: number) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'PAYOUT_COMPLETED',
+      title: 'Payout Completed',
+      message: `Your payout of $${amount} from "${groupName}" has been completed.`,
+    });
+  }
+
+  /**
+   * Send group started notification
+   */
+  async sendGroupStartedNotification(userId: string, groupId: string, groupName: string) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'GROUP_STARTED',
+      title: 'Group Started',
+      message: `The group "${groupName}" has started. Payment cycles are now active.`,
+    });
+  }
+
+  /**
+   * Send group completed notification
+   */
+  async sendGroupCompletedNotification(userId: string, groupId: string, groupName: string) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'GROUP_COMPLETED',
+      title: 'Group Completed',
+      message: `The group "${groupName}" has completed all payment cycles.`,
+    });
+  }
+
+  /**
+   * Send payment failed notification
+   */
+  async sendPaymentFailedNotification(userId: string, groupId: string, groupName: string, amount: number) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'PAYMENT_FAILED',
+      title: 'Payment Failed',
+      message: `Your payment of $${amount} for "${groupName}" has failed. Please try again.`,
+    });
+  }
+
+  /**
+   * Send reminder notification
+   */
+  async sendReminderNotification(userId: string, groupId: string, title: string, message: string) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'REMINDER',
+      title,
+      message,
+    });
+  }
+}
+
+export default new NotificationService();

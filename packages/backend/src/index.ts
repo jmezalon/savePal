@@ -6,6 +6,7 @@ import groupRoutes from './routes/group.routes.js';
 import cycleRoutes from './routes/cycle.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import payoutRoutes from './routes/payout.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -79,6 +80,9 @@ app.use('/api/payments', paymentRoutes);
 
 // Payout routes
 app.use('/api/payouts', payoutRoutes);
+
+// Notification routes
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

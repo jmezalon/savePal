@@ -1,5 +1,4 @@
 import prisma from '../utils/prisma.js';
-import { PaymentStatus } from '@prisma/client';
 import cycleService from './cycle.service.js';
 
 interface ProcessPaymentData {

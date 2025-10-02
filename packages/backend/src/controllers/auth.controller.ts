@@ -146,6 +146,78 @@ class AuthController {
       message: 'Logout successful. Please remove the token from client.',
     });
   }
+
+  /**
+   * PATCH /api/auth/profile
+   * Update user profile
+   */
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { firstName, lastName, phoneNumber } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      const user = await authService.updateProfile(userId, {
+        firstName,
+        lastName,
+        phoneNumber,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: user,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * PATCH /api/auth/notifications
+   * Update notification preferences
+   */
+  async updateNotificationPreferences(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { emailNotifications, smsNotifications, pushNotifications } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      const user = await authService.updateNotificationPreferences(userId, {
+        emailNotifications,
+        smsNotifications,
+        pushNotifications,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Notification preferences updated successfully',
+        data: user,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update preferences';
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
 }
 
 export default new AuthController();

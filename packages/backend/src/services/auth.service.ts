@@ -176,6 +176,48 @@ class AuthService {
       },
     };
   }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(userId: string, data: {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+  }): Promise<Omit<User, 'password'>> {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.firstName && { firstName: data.firstName }),
+        ...(data.lastName && { lastName: data.lastName }),
+        ...(data.phoneNumber !== undefined && { phoneNumber: data.phoneNumber }),
+      },
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  /**
+   * Update notification preferences
+   */
+  async updateNotificationPreferences(userId: string, preferences: {
+    emailNotifications?: boolean;
+    smsNotifications?: boolean;
+    pushNotifications?: boolean;
+  }): Promise<Omit<User, 'password'>> {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(preferences.emailNotifications !== undefined && { emailNotifications: preferences.emailNotifications }),
+        ...(preferences.smsNotifications !== undefined && { smsNotifications: preferences.smsNotifications }),
+        ...(preferences.pushNotifications !== undefined && { pushNotifications: preferences.pushNotifications }),
+      },
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
 }
 
 export default new AuthService();

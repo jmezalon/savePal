@@ -22,6 +22,12 @@ model User {
   emailVerified Boolean  @default(false)
   phoneVerified Boolean  @default(false)
   trustScore    Float    @default(0)
+
+  // Notification Preferences
+  emailNotifications Boolean @default(true)
+  smsNotifications   Boolean @default(false)
+  pushNotifications  Boolean @default(true)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

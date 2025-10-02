@@ -132,7 +132,7 @@ class PayoutService {
   /**
    * Mark a payout as failed
    */
-  async failPayout(payoutId: string, reason?: string) {
+  async failPayout(payoutId: string, _reason?: string) {
     const payout = await this.getPayoutById(payoutId);
 
     if (payout.status === 'COMPLETED') {

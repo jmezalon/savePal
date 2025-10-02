@@ -84,14 +84,19 @@ export default function Dashboard() {
               <span className="text-gray-700">
                 {user.firstName} {user.lastName}
               </span>
+              <Link
+                to="/profile"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Profile
+              </Link>
               <button
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Logout
               </button>
-            </div>
-          </div>
+            </div>          </div>
         </div>
       </nav>
 

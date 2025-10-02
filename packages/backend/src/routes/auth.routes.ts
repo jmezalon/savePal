@@ -11,5 +11,7 @@ router.post('/login', authController.login.bind(authController));
 // Protected routes
 router.get('/me', authenticate, authController.getMe.bind(authController));
 router.post('/logout', authenticate, authController.logout.bind(authController));
+router.patch('/profile', authenticate, authController.updateProfile.bind(authController));
+router.patch('/notifications', authenticate, authController.updateNotificationPreferences.bind(authController));
 
 export default router;

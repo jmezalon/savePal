@@ -160,12 +160,12 @@ class PayoutController {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: payout,
       });
     } catch (error: any) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         error: error.message,
       });

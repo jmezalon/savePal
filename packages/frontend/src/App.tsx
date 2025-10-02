@@ -8,6 +8,7 @@ import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
 import CreateGroup from './pages/CreateGroup';
 import JoinGroup from './pages/JoinGroup';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/groups/create" element={<CreateGroup />} />
           <Route path="/groups/join" element={<JoinGroup />} />
           <Route path="/groups/:id" element={<GroupDetails />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

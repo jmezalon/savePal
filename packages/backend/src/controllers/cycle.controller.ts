@@ -46,12 +46,12 @@ class CycleController {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: cycle,
       });
     } catch (error: any) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         error: error.message,
       });
@@ -121,12 +121,12 @@ class CycleController {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: payment,
       });
     } catch (error: any) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         error: error.message,
       });
