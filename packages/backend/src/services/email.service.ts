@@ -82,23 +82,45 @@ class EmailService {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     const subject = 'Reset Your SavePal Password';
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Reset Your Password</h2>
-        <p>Hi ${name},</p>
-        <p>You requested to reset your password for your SavePal account.</p>
-        <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
-        <div style="margin: 30px 0;">
-          <a href="${resetUrl}"
-             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            Reset Password
-          </a>
-        </div>
-        <p style="color: #666;">If you didn't request this, you can safely ignore this email.</p>
-        <p style="color: #666; font-size: 14px;">
-          Best regards,<br>
-          The SavePal Team
-        </p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td align="center" style="padding: 40px 0;">
+              <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #2563eb; margin: 0 0 20px 0;">Reset Your Password</h2>
+                    <p style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Hi ${name},</p>
+                    <p style="margin: 0 0 15px 0; color: #333; font-size: 16px;">You requested to reset your password for your SavePal account.</p>
+                    <p style="margin: 0 0 30px 0; color: #333; font-size: 16px;">Click the button below to reset your password. This link will expire in 1 hour.</p>
+                    <table role="presentation" style="margin: 0 0 30px 0;">
+                      <tr>
+                        <td style="border-radius: 6px; background-color: #2563eb;">
+                          <a href="${resetUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 6px;">Reset Password</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+                    <p style="margin: 0 0 30px 0; color: #2563eb; font-size: 14px; word-break: break-all;">${resetUrl}</p>
+                    <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                    <p style="margin: 0; color: #666; font-size: 14px;">
+                      Best regards,<br>
+                      The SavePal Team
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
     const text = `Hi ${name},\n\nYou requested to reset your password for your SavePal account.\n\nClick the link below to reset your password (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe SavePal Team`;
 
