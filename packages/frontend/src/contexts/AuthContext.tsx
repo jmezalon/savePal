@@ -26,6 +26,7 @@ interface AuthContextType {
   logout: () => void;
   error: string | null;
   clearError: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -169,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     error,
     clearError,
+    refreshUser: fetchUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
