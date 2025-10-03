@@ -73,6 +73,8 @@ export default function GroupDetails() {
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -222,6 +224,34 @@ export default function GroupDetails() {
     }
   };
 
+  const handleDeleteGroup = async () => {
+    if (!id || !confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/groups/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        alert('Group deleted successfully');
+        navigate('/groups');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete group');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete group');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
@@ -289,38 +319,6 @@ export default function GroupDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <Link to="/dashboard" className="text-2xl font-bold text-blue-600">
-                SavePal
-              </Link>
-              <Link
-                to="/dashboard"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/groups"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Groups
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={logout}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
@@ -344,14 +342,34 @@ export default function GroupDetails() {
                   )}
                 </div>
                 {isOwner && group.status === 'PENDING' && (
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                    Settings
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  >
+                    {showSettings ? 'Close Settings' : 'Settings'}
                   </button>
                 )}
               </div>
             </div>
 
             <div className="px-6 py-4">
+              {/* Settings Panel */}
+              {showSettings && isOwner && group.status === 'PENDING' && (
+                <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-red-900 mb-4">Danger Zone</h3>
+                  <p className="text-sm text-red-800 mb-4">
+                    Delete this group permanently. This action cannot be undone. All member data will be lost.
+                  </p>
+                  <button
+                    onClick={handleDeleteGroup}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Group'}
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-blue-900 mb-1">Contribution</h3>
