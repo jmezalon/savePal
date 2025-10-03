@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -7,6 +8,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
+  const { token: authToken } = useAuth();
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('');
@@ -27,9 +29,15 @@ export default function VerifyEmail() {
 
       if (response.ok) {
         setStatus('success');
-        setMessage('Your email has been verified successfully!');
+        setMessage('Your email has been verified successfully! Your trust score has increased by 20 points.');
+
+        // If user is logged in, redirect to profile instead of login
         setTimeout(() => {
-          navigate('/login');
+          if (authToken) {
+            navigate('/profile');
+          } else {
+            navigate('/login');
+          }
         }, 3000);
       } else {
         setStatus('error');

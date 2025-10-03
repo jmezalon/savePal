@@ -360,12 +360,15 @@ class AuthService {
       throw new Error('Email already verified');
     }
 
-    // Update user to mark email as verified
+    // Update user to mark email as verified and increase trust score
     await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: true,
         emailVerificationToken: null,
+        trustScore: {
+          increment: 20, // Add 20 points for email verification
+        },
       },
     });
   }
