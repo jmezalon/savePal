@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Navbar from '../components/Navbar';
 
 interface Group {
   id: string;
@@ -28,7 +29,7 @@ export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, logout } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,7 +45,6 @@ export default function Groups() {
       });
 
       if (response.status === 401) {
-        logout();
         navigate('/login');
         return;
       }
@@ -104,37 +104,7 @@ export default function Groups() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <Link to="/dashboard" className="text-2xl font-bold text-blue-600">
-                SavePal
-              </Link>
-              <Link
-                to="/dashboard"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/groups"
-                className="text-blue-600 border-b-2 border-blue-600 px-3 py-2 text-sm font-medium"
-              >
-                Groups
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={logout}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
