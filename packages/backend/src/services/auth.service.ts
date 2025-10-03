@@ -42,6 +42,9 @@ class AuthService {
     // Hash password
     const hashedPassword = await hashPassword(data.password);
 
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -50,8 +53,22 @@ class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: data.phoneNumber,
+        emailVerificationToken,
+        emailVerified: false,
       },
     });
+
+    // Send verification email
+    try {
+      await emailService.sendEmailVerification(
+        user.email,
+        user.firstName,
+        emailVerificationToken
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Don't throw error - user was created successfully
+    }
 
     // Generate token
     const token = generateToken({
@@ -322,6 +339,77 @@ class AuthService {
         resetTokenExpiry: null,
       },
     });
+  }
+
+  /**
+   * Verify email with token
+   */
+  async verifyEmail(token: string): Promise<void> {
+    // Find user by verification token
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Invalid verification token');
+    }
+
+    if (user.emailVerified) {
+      throw new Error('Email already verified');
+    }
+
+    // Update user to mark email as verified
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+      },
+    });
+  }
+
+  /**
+   * Resend verification email
+   */
+  async resendVerificationEmail(email: string): Promise<void> {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists
+      return;
+    }
+
+    if (user.emailVerified) {
+      throw new Error('Email already verified');
+    }
+
+    // Generate new verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Update user with new token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken,
+      },
+    });
+
+    // Send verification email
+    try {
+      await emailService.sendEmailVerification(
+        user.email,
+        user.firstName,
+        emailVerificationToken
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      throw new Error('Failed to send verification email');
+    }
   }
 }
 

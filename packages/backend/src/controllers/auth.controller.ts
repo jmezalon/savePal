@@ -333,6 +333,66 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * GET /api/auth/verify-email/:token
+   * Verify email with token
+   */
+  async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          error: 'Verification token is required',
+        });
+      }
+
+      await authService.verifyEmail(token);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Email verified successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify email';
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * POST /api/auth/resend-verification
+   * Resend verification email
+   */
+  async resendVerification(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email is required',
+        });
+      }
+
+      await authService.resendVerificationEmail(email);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Verification email sent',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send verification email';
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
 }
 
 export default new AuthController();
