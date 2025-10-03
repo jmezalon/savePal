@@ -308,13 +308,23 @@ export default function Profile() {
         {user && user.phoneNumber && !user.phoneVerified && (
           <div className="mb-6 p-4 rounded-md bg-blue-50 border border-blue-200">
             <div className="flex flex-col space-y-3">
-              <div className="flex items-center">
-                <svg className="h-5 w-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                <span className="text-blue-800 font-medium">
-                  Verify your phone number to increase your trust score
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                  </svg>
+                  <span className="text-blue-800 font-medium">
+                    Verify your phone number to increase your trust score
+                  </span>
+                </div>
+                <a
+                  href="/sms-consent"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  SMS Terms
+                </a>
               </div>
 
               {!showCodeInput ? (

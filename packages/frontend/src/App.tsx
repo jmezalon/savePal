@@ -13,12 +13,13 @@ import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
+import SmsConsent from './pages/SmsConsent';
 
 function AppContent() {
   const location = useLocation();
 
   // Pages that should NOT show the navbar
-  const publicPages = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+  const publicPages = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/sms-consent'];
   const showNavbar = !publicPages.includes(location.pathname);
 
   return (
@@ -31,6 +32,7 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/sms-consent" element={<SmsConsent />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/create" element={<CreateGroup />} />
