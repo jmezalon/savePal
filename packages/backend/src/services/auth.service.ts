@@ -2,6 +2,7 @@ import { User } from '@prisma/client';
 import prisma from '../utils/prisma.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
 import emailService from './email.service.js';
+import { smsService } from './smsService.js';
 import crypto from 'crypto';
 
 export interface RegisterInput {
@@ -413,6 +414,99 @@ class AuthService {
       console.error('Failed to send verification email:', error);
       throw new Error('Failed to send verification email');
     }
+  }
+
+  /**
+   * Send phone verification code
+   */
+  async sendPhoneVerification(userId: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (!user.phoneNumber) {
+      throw new Error('No phone number on file. Please add a phone number to your profile first.');
+    }
+
+    if (user.phoneVerified) {
+      throw new Error('Phone number is already verified');
+    }
+
+    // Validate phone number format
+    if (!smsService.validatePhoneNumber(user.phoneNumber)) {
+      throw new Error('Invalid phone number format');
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = smsService.generateVerificationCode();
+
+    // Set expiry to 10 minutes from now
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10);
+
+    // Store verification code in database
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneVerificationToken: verificationCode,
+        phoneVerificationExpiry: expiry,
+      },
+    });
+
+    // Send SMS with verification code
+    try {
+      const formattedPhone = smsService.formatPhoneNumber(user.phoneNumber);
+      await smsService.sendVerificationCode(formattedPhone, verificationCode);
+    } catch (error) {
+      console.error('Failed to send verification SMS:', error);
+      throw new Error('Failed to send verification code');
+    }
+  }
+
+  /**
+   * Verify phone with code
+   */
+  async verifyPhone(userId: string, code: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.phoneVerified) {
+      throw new Error('Phone number is already verified');
+    }
+
+    if (!user.phoneVerificationToken || !user.phoneVerificationExpiry) {
+      throw new Error('No verification code found. Please request a new code.');
+    }
+
+    // Check if code has expired
+    if (new Date() > user.phoneVerificationExpiry) {
+      throw new Error('Verification code has expired. Please request a new code.');
+    }
+
+    // Check if code matches
+    if (user.phoneVerificationToken !== code) {
+      throw new Error('Invalid verification code');
+    }
+
+    // Mark phone as verified and clear verification fields
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneVerified: true,
+        phoneVerificationToken: null,
+        phoneVerificationExpiry: null,
+        trustScore: { increment: 10 }, // Increase trust score for verifying phone
+      },
+    });
   }
 }
 

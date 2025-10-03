@@ -393,6 +393,72 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * POST /api/auth/send-phone-verification
+   * Send phone verification code
+   */
+  async sendPhoneVerification(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      await authService.sendPhoneVerification(userId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Verification code sent to your phone',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code';
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * POST /api/auth/verify-phone
+   * Verify phone with code
+   */
+  async verifyPhone(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Verification code is required',
+        });
+      }
+
+      await authService.verifyPhone(userId, code);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Phone verified successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify phone';
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
 }
 
 export default new AuthController();

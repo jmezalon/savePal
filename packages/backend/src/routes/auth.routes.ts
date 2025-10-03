@@ -18,5 +18,7 @@ router.post('/logout', authenticate, authController.logout.bind(authController))
 router.patch('/profile', authenticate, authController.updateProfile.bind(authController));
 router.patch('/notifications', authenticate, authController.updateNotificationPreferences.bind(authController));
 router.post('/change-password', authenticate, authController.changePassword.bind(authController));
+router.post('/send-phone-verification', authenticate, authController.sendPhoneVerification.bind(authController));
+router.post('/verify-phone', authenticate, authController.verifyPhone.bind(authController));
 
 export default router;

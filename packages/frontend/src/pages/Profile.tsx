@@ -25,6 +25,12 @@ export default function Profile() {
   // Email verification state
   const [isResendingVerification, setIsResendingVerification] = useState(false);
 
+  // Phone verification state
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -198,6 +204,77 @@ export default function Profile() {
     }
   };
 
+  const handleSendPhoneVerification = async () => {
+    setIsSendingCode(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-phone-verification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Verification code sent to your phone!' });
+        setShowCodeInput(true);
+      } else {
+        throw new Error(data.error || 'Failed to send verification code');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to send verification code',
+      });
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setMessage({ type: 'error', text: 'Please enter a valid 6-digit code' });
+      return;
+    }
+
+    setIsVerifyingPhone(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-phone`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: verificationCode }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Phone verified successfully! Your trust score has increased.' });
+        setVerificationCode('');
+        setShowCodeInput(false);
+        // Refresh user data
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to verify phone');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to verify phone',
+      });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Profile Content */}
@@ -223,6 +300,57 @@ export default function Profile() {
               >
                 {isResendingVerification ? 'Sending...' : 'Resend Email'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Phone Verification Banner */}
+        {user && user.phoneNumber && !user.phoneVerified && (
+          <div className="mb-6 p-4 rounded-md bg-blue-50 border border-blue-200">
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+                <span className="text-blue-800 font-medium">
+                  Verify your phone number to increase your trust score
+                </span>
+              </div>
+
+              {!showCodeInput ? (
+                <button
+                  onClick={handleSendPhoneVerification}
+                  disabled={isSendingCode}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 w-fit"
+                >
+                  {isSendingCode ? 'Sending...' : 'Send Verification Code'}
+                </button>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    className="px-3 py-2 border border-blue-300 rounded-md w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleVerifyPhone}
+                    disabled={isVerifyingPhone || verificationCode.length !== 6}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isVerifyingPhone ? 'Verifying...' : 'Verify'}
+                  </button>
+                  <button
+                    onClick={handleSendPhoneVerification}
+                    disabled={isSendingCode}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                  >
+                    {isSendingCode ? 'Sending...' : 'Resend Code'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

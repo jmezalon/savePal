@@ -35,6 +35,10 @@ model User {
   // Email Verification
   emailVerificationToken String?
 
+  // Phone Verification
+  phoneVerificationToken String?
+  phoneVerificationExpiry DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
