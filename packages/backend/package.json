@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "script:send-verification": "tsx src/scripts/send-verification-to-existing-users.ts",
-    "script:auto-verify": "tsx src/scripts/auto-verify-existing-users.ts"
+    "script:auto-verify": "tsx src/scripts/auto-verify-existing-users.ts",
+    "script:test-join-notification": "tsx src/scripts/test-join-notification.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

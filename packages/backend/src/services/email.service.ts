@@ -22,10 +22,29 @@ class EmailService {
     });
   }
 
+  /**
+   * Get email footer with support information
+   */
+  private getEmailFooter(): string {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    return `
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
+          Best regards,<br>
+          The SavePal Team
+        </p>
+        <p style="margin: 0; color: #999; font-size: 12px;">
+          Need help? Contact us at <a href="mailto:${supportEmail}" style="color: #2563eb; text-decoration: none;">${supportEmail}</a>
+        </p>
+      </div>
+    `;
+  }
+
   async sendEmail({ to, subject, html, text }: EmailOptions): Promise<void> {
     try {
       await this.transporter.sendMail({
-        from: `SavePal <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        from: `SavePal <${process.env.EMAIL_FROM || 'noreply@save-pals.com'}>`,
+        replyTo: process.env.SUPPORT_EMAIL || 'support@save-pals.com',
         to,
         subject,
         text,
@@ -47,6 +66,7 @@ class EmailService {
     memberName: string,
     groupName: string
   ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
     const subject = `New Member Joined: ${groupName}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -60,13 +80,10 @@ class EmailService {
             View Dashboard
           </a>
         </div>
-        <p style="color: #666; font-size: 14px;">
-          Best regards,<br>
-          The SavePal Team
-        </p>
+        ${this.getEmailFooter()}
       </div>
     `;
-    const text = `Hi ${groupOwnerName},\n\n${memberName} has joined your savings group "${groupName}".\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team`;
+    const text = `Hi ${groupOwnerName},\n\n${memberName} has joined your savings group "${groupName}".\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
 
     await this.sendEmail({ to: groupOwnerEmail, subject, html, text });
   }
@@ -109,10 +126,7 @@ class EmailService {
                     <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
                     <p style="margin: 0 0 30px 0; color: #2563eb; font-size: 14px; word-break: break-all;">${resetUrl}</p>
                     <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
-                    <p style="margin: 0; color: #666; font-size: 14px;">
-                      Best regards,<br>
-                      The SavePal Team
-                    </p>
+                    ${this.getEmailFooter()}
                   </td>
                 </tr>
               </table>
@@ -122,7 +136,8 @@ class EmailService {
       </body>
       </html>
     `;
-    const text = `Hi ${name},\n\nYou requested to reset your password for your SavePal account.\n\nClick the link below to reset your password (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe SavePal Team`;
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const text = `Hi ${name},\n\nYou requested to reset your password for your SavePal account.\n\nClick the link below to reset your password (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
 
     await this.sendEmail({ to: email, subject, html, text });
   }
@@ -165,10 +180,7 @@ class EmailService {
                     <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
                     <p style="margin: 0 0 30px 0; color: #2563eb; font-size: 14px; word-break: break-all;">${verificationUrl}</p>
                     <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">If you didn't create this account, you can safely ignore this email.</p>
-                    <p style="margin: 0; color: #666; font-size: 14px;">
-                      Best regards,<br>
-                      The SavePal Team
-                    </p>
+                    ${this.getEmailFooter()}
                   </td>
                 </tr>
               </table>
@@ -178,7 +190,8 @@ class EmailService {
       </body>
       </html>
     `;
-    const text = `Hi ${name},\n\nThank you for joining SavePal - your trusted platform for group savings and ROSCAs.\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nIf you didn't create this account, you can safely ignore this email.\n\nBest regards,\nThe SavePal Team`;
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const text = `Hi ${name},\n\nThank you for joining SavePal - your trusted platform for group savings and ROSCAs.\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nIf you didn't create this account, you can safely ignore this email.\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
 
     await this.sendEmail({ to: email, subject, html, text });
   }
@@ -187,6 +200,7 @@ class EmailService {
    * Send welcome email to new users
    */
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
     const subject = 'Welcome to SavePal!';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -200,13 +214,10 @@ class EmailService {
             Go to Dashboard
           </a>
         </div>
-        <p style="color: #666; font-size: 14px;">
-          Best regards,<br>
-          The SavePal Team
-        </p>
+        ${this.getEmailFooter()}
       </div>
     `;
-    const text = `Hi ${name},\n\nThank you for joining SavePal - your trusted platform for group savings and ROSCAs.\n\nGet started: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team`;
+    const text = `Hi ${name},\n\nThank you for joining SavePal - your trusted platform for group savings and ROSCAs.\n\nGet started: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
 
     await this.sendEmail({ to: email, subject, html, text });
   }
