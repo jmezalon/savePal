@@ -118,20 +118,20 @@ class PaymentController {
   }
 
   /**
-   * Process a payment (mark as completed)
+   * Process a payment via Stripe
    * POST /api/payments/:paymentId/process
    */
   async processPayment(req: AuthRequest, res: Response) {
     try {
       const { paymentId } = req.params;
-      const { transactionReference } = req.body;
+      const { paymentMethodId } = req.body;
       const userId = req.userId!;
 
-      const payment = await paymentService.processPayment({
+      const payment = await paymentService.chargeAndProcessPayment(
         paymentId,
         userId,
-        transactionReference,
-      });
+        paymentMethodId
+      );
 
       res.json({
         success: true,
@@ -139,7 +139,9 @@ class PaymentController {
         data: payment,
       });
     } catch (error: any) {
-      res.status(400).json({
+      const statusCode = error.message?.includes('Unauthorized') ? 403 :
+                         error.message?.includes('already') ? 409 : 400;
+      res.status(statusCode).json({
         success: false,
         error: error.message,
       });

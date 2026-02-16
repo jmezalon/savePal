@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { StripeProvider } from './contexts/StripeContext';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -14,6 +15,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import SmsConsent from './pages/SmsConsent';
+import PaymentHistory from './pages/PaymentHistory';
 
 function AppContent() {
   const location = useLocation();
@@ -38,6 +40,7 @@ function AppContent() {
         <Route path="/groups/create" element={<CreateGroup />} />
         <Route path="/groups/join" element={<JoinGroup />} />
         <Route path="/groups/:id" element={<GroupDetails />} />
+        <Route path="/payments" element={<PaymentHistory />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
     </>
@@ -48,7 +51,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <StripeProvider>
+          <AppContent />
+        </StripeProvider>
       </AuthProvider>
     </BrowserRouter>
   );

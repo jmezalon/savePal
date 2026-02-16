@@ -39,6 +39,11 @@ model User {
   phoneVerificationToken String?
   phoneVerificationExpiry DateTime?
 
+  // Stripe
+  stripeCustomerId         String?  @unique
+  stripeConnectAccountId   String?  @unique
+  stripeConnectOnboarded   Boolean  @default(false)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -131,6 +136,7 @@ model Payment {
   stripePaymentIntentId  String?       @unique
   stripeChargeId         String?
   failureReason          String?
+  retryCount             Int           @default(0)
   paidAt                 DateTime?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
@@ -154,6 +160,7 @@ model Payout {
   status                PaymentStatus @default(PENDING)
   stripeTransferId      String?       @unique
   transferredAt         DateTime?
+  failureReason         String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -225,6 +232,7 @@ enum GroupStatus {
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
   COMPLETED
   FAILED
   REFUNDED
@@ -241,9 +249,11 @@ enum NotificationType {
   PAYMENT_RECEIVED
   PAYOUT_PENDING
   PAYOUT_COMPLETED
+  PAYOUT_FAILED
   GROUP_INVITE
   GROUP_STARTED
   GROUP_COMPLETED
   PAYMENT_FAILED
+  CONNECT_ONBOARDING_REQUIRED
   REMINDER
 }
