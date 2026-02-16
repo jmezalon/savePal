@@ -1,4 +1,6 @@
 import prisma from '../utils/prisma.js';
+import stripeService from './stripe.service.js';
+import notificationService from './notification.service.js';
 
 class PayoutService {
   /**
@@ -103,36 +105,86 @@ class PayoutService {
   }
 
   /**
-   * Process a payout (mark as completed)
-   * In a real implementation, this would integrate with a payment gateway
+   * Process a payout via Stripe Connect transfer
    */
-  async processPayout(payoutId: string, transactionReference?: string) {
+  async processPayout(payoutId: string) {
     const payout = await this.getPayoutById(payoutId);
 
     if (payout.status === 'COMPLETED') {
       throw new Error('Payout has already been processed');
     }
 
-    if (payout.status === 'FAILED') {
-      throw new Error('Cannot process a failed payout');
-    }
-
-    const updatedPayout = await prisma.payout.update({
-      where: { id: payoutId },
-      data: {
-        status: 'COMPLETED',
-        transferredAt: new Date(),
-        stripeTransferId: transactionReference,
+    // Check recipient has onboarded Connect account
+    const recipient = await prisma.user.findUnique({
+      where: { id: payout.recipientId },
+      select: {
+        id: true,
+        stripeConnectAccountId: true,
+        stripeConnectOnboarded: true,
       },
     });
 
-    return updatedPayout;
+    if (!recipient?.stripeConnectAccountId || !recipient.stripeConnectOnboarded) {
+      // Notify recipient to set up their payout account
+      await notificationService.createNotification({
+        userId: payout.recipientId,
+        groupId: payout.cycle.group.id,
+        type: 'CONNECT_ONBOARDING_REQUIRED',
+        title: 'Payout Account Required',
+        message: `You have a pending payout of $${payout.netAmount.toFixed(2)} from "${payout.cycle.group.name}". Please set up your payout account in Profile Settings to receive funds.`,
+      });
+      throw new Error('Recipient has not completed payout account setup');
+    }
+
+    // Set status to PROCESSING
+    await prisma.payout.update({
+      where: { id: payoutId },
+      data: { status: 'PROCESSING' },
+    });
+
+    try {
+      const transferId = await stripeService.createTransfer(
+        payoutId,
+        recipient.stripeConnectAccountId,
+        payout.netAmount
+      );
+
+      const updatedPayout = await prisma.payout.update({
+        where: { id: payoutId },
+        data: {
+          status: 'COMPLETED',
+          stripeTransferId: transferId,
+          transferredAt: new Date(),
+          failureReason: null,
+        },
+      });
+
+      // Notify recipient
+      await notificationService.sendPayoutCompletedNotification(
+        payout.recipientId,
+        payout.cycle.group.id,
+        payout.cycle.group.name,
+        payout.netAmount
+      );
+
+      return updatedPayout;
+    } catch (error: any) {
+      // Revert to PENDING so scheduler can retry
+      await prisma.payout.update({
+        where: { id: payoutId },
+        data: {
+          status: 'PENDING',
+          failureReason: error.message,
+        },
+      });
+      throw error;
+    }
   }
 
   /**
    * Mark a payout as failed
    */
-  async failPayout(payoutId: string, _reason?: string) {
+  async failPayout(payoutId: string, reason?: string) {
     const payout = await this.getPayoutById(payoutId);
 
     if (payout.status === 'COMPLETED') {
@@ -143,11 +195,18 @@ class PayoutService {
       where: { id: payoutId },
       data: {
         status: 'FAILED',
+        failureReason: reason || null,
       },
     });
 
-    // TODO: Implement retry logic or notification system
-    // TODO: Store failure reason in a separate audit log table
+    // Notify recipient about the failure
+    await notificationService.createNotification({
+      userId: payout.recipientId,
+      groupId: payout.cycle.group.id,
+      type: 'PAYOUT_FAILED',
+      title: 'Payout Failed',
+      message: `Your payout of $${payout.netAmount.toFixed(2)} from "${payout.cycle.group.name}" has failed. ${reason || 'Please contact support.'}`,
+    });
 
     return updatedPayout;
   }

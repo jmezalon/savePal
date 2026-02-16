@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import PaymentModal from '../components/PaymentModal';
 
 interface GroupMember {
   id: string;
@@ -21,6 +22,8 @@ interface Payment {
   amount: number;
   status: string;
   paidAt?: string;
+  failureReason?: string;
+  retryCount?: number;
   user: {
     id: string;
     firstName: string;
@@ -72,7 +75,7 @@ export default function GroupDetails() {
   const [error, setError] = useState<string | null>(null);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { token, logout, user } = useAuth();
@@ -183,36 +186,10 @@ export default function GroupDetails() {
     }
   };
 
-  const handleProcessPayment = async () => {
-    if (!myPayment || !currentCycle) return;
-
-    setIsProcessingPayment(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/${myPayment.id}/process`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transactionReference: `MANUAL_${Date.now()}`,
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh cycle and payment data
-        if (id) {
-          await fetchCycles(id);
-        }
-        alert('Payment processed successfully!');
-      } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to process payment');
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to process payment');
-    } finally {
-      setIsProcessingPayment(false);
+  const handlePaymentSuccess = async () => {
+    setShowPaymentModal(false);
+    if (id) {
+      await fetchCycles(id);
     }
   };
 
@@ -523,24 +500,42 @@ export default function GroupDetails() {
                             <p className="text-sm text-gray-600 mt-1">
                               Status: <span className={`font-semibold ${
                                 myPayment.status === 'COMPLETED' ? 'text-green-600' :
-                                myPayment.status === 'PENDING' ? 'text-yellow-600' : 'text-red-600'
+                                myPayment.status === 'PROCESSING' ? 'text-blue-600' :
+                                myPayment.status === 'FAILED' ? 'text-red-600' :
+                                'text-yellow-600'
                               }`}>
                                 {myPayment.status}
                               </span>
                             </p>
+                            {myPayment.status === 'FAILED' && myPayment.failureReason && (
+                              <p className="text-xs text-red-500 mt-1">{myPayment.failureReason}</p>
+                            )}
                           </div>
                           {myPayment.status === 'PENDING' && (
                             <button
-                              onClick={handleProcessPayment}
-                              disabled={isProcessingPayment}
-                              className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                              onClick={() => setShowPaymentModal(true)}
+                              className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
                             >
-                              {isProcessingPayment ? 'Processing...' : 'Mark as Paid'}
+                              Pay Now
                             </button>
+                          )}
+                          {myPayment.status === 'FAILED' && (
+                            <button
+                              onClick={() => setShowPaymentModal(true)}
+                              className="px-6 py-3 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                            >
+                              Retry Payment
+                            </button>
+                          )}
+                          {myPayment.status === 'PROCESSING' && (
+                            <div className="text-right">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto"></div>
+                              <p className="text-xs text-blue-600 mt-1">Processing...</p>
+                            </div>
                           )}
                           {myPayment.status === 'COMPLETED' && myPayment.paidAt && (
                             <div className="text-right">
-                              <p className="text-sm text-green-600 font-semibold">✓ Paid</p>
+                              <p className="text-sm text-green-600 font-semibold">Paid</p>
                               <p className="text-xs text-gray-500">
                                 {new Date(myPayment.paidAt).toLocaleDateString()}
                               </p>
@@ -604,6 +599,18 @@ export default function GroupDetails() {
             </div>
           </div>
         </div>
+
+        {/* Payment Modal */}
+        {showPaymentModal && myPayment && token && (
+          <PaymentModal
+            paymentId={myPayment.id}
+            amount={myPayment.amount}
+            groupName={group.name}
+            token={token}
+            onClose={() => setShowPaymentModal(false)}
+            onSuccess={handlePaymentSuccess}
+          />
+        )}
       </main>
     </div>
   );

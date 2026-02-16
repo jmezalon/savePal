@@ -7,6 +7,10 @@ import cycleRoutes from './routes/cycle.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import payoutRoutes from './routes/payout.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import paymentMethodRoutes from './routes/paymentMethod.routes.js';
+import connectRoutes from './routes/connect.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
+import schedulerService from './services/scheduler.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -40,6 +44,10 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Webhook route MUST come before express.json() - Stripe needs raw body for signature verification
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -84,6 +92,12 @@ app.use('/api/payouts', payoutRoutes);
 // Notification routes
 app.use('/api/notifications', notificationRoutes);
 
+// Payment method routes
+app.use('/api/payment-methods', paymentMethodRoutes);
+
+// Connect routes
+app.use('/api/connect', connectRoutes);
+
 // 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
@@ -96,6 +110,9 @@ app.use((_req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`⚡️ [server]: Server is running at http://localhost:${port}`);
   console.log(`⚡️ [server]: Health check available at http://localhost:${port}/health`);
+
+  // Initialize scheduled jobs
+  schedulerService.init();
 });
 
 export default app;

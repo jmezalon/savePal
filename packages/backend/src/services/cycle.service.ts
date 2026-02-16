@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.js';
 import { Frequency } from '@prisma/client';
+import payoutService from './payout.service.js';
 
 class CycleService {
   /**
@@ -254,7 +255,7 @@ class CycleService {
     const feeAmount = cycle.totalAmount * 0.03; // 3% platform fee
     const netAmount = cycle.totalAmount - feeAmount;
 
-    await prisma.payout.create({
+    const payout = await prisma.payout.create({
       data: {
         cycleId: cycle.id,
         recipientId: cycle.recipientId,
@@ -264,6 +265,14 @@ class CycleService {
         status: 'PENDING',
       },
     });
+
+    // Attempt immediate payout via Stripe Connect
+    try {
+      await payoutService.processPayout(payout.id);
+    } catch (error: any) {
+      // Silently catch - scheduler will retry later
+      console.log(`[Cycle] Immediate payout attempt failed for ${payout.id}: ${error.message}`);
+    }
 
     // Create payments for the next cycle if it exists
     const nextCycle = await prisma.cycle.findFirst({

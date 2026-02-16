@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import AddPaymentMethod from '../components/AddPaymentMethod';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+interface PaymentMethod {
+  id: string;
+  type: string;
+  last4: string;
+  brand: string | null;
+  expiryMonth: number | null;
+  expiryYear: number | null;
+  isDefault: boolean;
+}
 
 export default function Profile() {
   const { user, token } = useAuth();
@@ -30,6 +41,27 @@ export default function Profile() {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
+
+  // Payment methods state
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
+
+  // Payout Settings state
+  const [connectStatus, setConnectStatus] = useState<{
+    hasAccount: boolean;
+    isOnboarded: boolean;
+    accountId: string | null;
+    bankLast4: string | null;
+    bankName: string | null;
+  } | null>(null);
+  const [isLoadingConnect, setIsLoadingConnect] = useState(false);
+  const [isConnectAction, setIsConnectAction] = useState(false);
+  const [showBankForm, setShowBankForm] = useState(false);
+  const [routingNumber, setRoutingNumber] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -274,6 +306,202 @@ export default function Profile() {
       setIsVerifyingPhone(false);
     }
   };
+
+  // Load payment methods
+  const loadPaymentMethods = async () => {
+    if (!token) return;
+
+    setIsLoadingPaymentMethods(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payment-methods`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPaymentMethods(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+    } finally {
+      setIsLoadingPaymentMethods(false);
+    }
+  };
+
+  // Delete payment method
+  const handleDeletePaymentMethod = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this payment method?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payment-methods/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Payment method deleted successfully' });
+        loadPaymentMethods();
+      } else {
+        throw new Error(data.error || 'Failed to delete payment method');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to delete payment method',
+      });
+    }
+  };
+
+  // Set default payment method
+  const handleSetDefaultPaymentMethod = async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payment-methods/${id}/default`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Default payment method updated' });
+        loadPaymentMethods();
+      } else {
+        throw new Error(data.error || 'Failed to update default payment method');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to update default payment method',
+      });
+    }
+  };
+
+  // Handle payment method added successfully
+  const handlePaymentMethodAdded = () => {
+    setMessage({ type: 'success', text: 'Payment method added successfully!' });
+    setShowAddPaymentMethod(false);
+    loadPaymentMethods();
+  };
+
+  // Load Connect / payout status
+  const loadConnectStatus = async () => {
+    if (!token) return;
+
+    setIsLoadingConnect(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/connect/status`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setConnectStatus(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load connect status:', error);
+    } finally {
+      setIsLoadingConnect(false);
+    }
+  };
+
+  // Handle bank account setup
+  const handleBankAccountSetup = async () => {
+    setMessage(null);
+
+    if (!routingNumber || !accountNumber) {
+      setMessage({ type: 'error', text: 'Routing number and account number are required' });
+      return;
+    }
+
+    if (!/^\d{9}$/.test(routingNumber)) {
+      setMessage({ type: 'error', text: 'Routing number must be 9 digits' });
+      return;
+    }
+
+    if (accountNumber !== confirmAccountNumber) {
+      setMessage({ type: 'error', text: 'Account numbers do not match' });
+      return;
+    }
+
+    setIsConnectAction(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/connect/setup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          routingNumber,
+          accountNumber,
+          accountHolderName: accountHolderName || undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Bank account added successfully!' });
+        setShowBankForm(false);
+        setRoutingNumber('');
+        setAccountNumber('');
+        setConfirmAccountNumber('');
+        setAccountHolderName('');
+        loadConnectStatus();
+      } else {
+        throw new Error(data.error || 'Failed to set up bank account');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to set up bank account',
+      });
+    } finally {
+      setIsConnectAction(false);
+    }
+  };
+
+  // Handle remove bank account
+  const handleRemoveBankAccount = async () => {
+    if (!confirm('Are you sure you want to remove your bank account? You will not receive payouts until you add a new one.')) return;
+
+    setIsConnectAction(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/connect/bank-account`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Bank account removed' });
+        loadConnectStatus();
+      } else {
+        throw new Error(data.error || 'Failed to remove bank account');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to remove bank account',
+      });
+    } finally {
+      setIsConnectAction(false);
+    }
+  };
+
+  // Load payment methods and connect status on mount
+  useEffect(() => {
+    loadPaymentMethods();
+    loadConnectStatus();
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -612,6 +840,253 @@ export default function Profile() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Payment Methods */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Payment Methods</h2>
+            {!showAddPaymentMethod && (
+              <button
+                onClick={() => setShowAddPaymentMethod(true)}
+                className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Add Payment Method
+              </button>
+            )}
+          </div>
+
+          {showAddPaymentMethod ? (
+            <AddPaymentMethod
+              token={token || ''}
+              onSuccess={handlePaymentMethodAdded}
+              onCancel={() => setShowAddPaymentMethod(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              {isLoadingPaymentMethods ? (
+                <p className="text-gray-500 text-center py-4">Loading payment methods...</p>
+              ) : paymentMethods.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No payment methods saved. Add one to make payments easier.
+                </p>
+              ) : (
+                paymentMethods.map((pm) => (
+                  <div
+                    key={pm.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-md"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        {pm.brand && (
+                          <span className="text-sm font-medium capitalize">{pm.brand}</span>
+                        )}
+                        <span className="text-gray-600">•••• {pm.last4}</span>
+                        {pm.expiryMonth && pm.expiryYear && (
+                          <span className="text-sm text-gray-500">
+                            Expires {pm.expiryMonth}/{pm.expiryYear}
+                          </span>
+                        )}
+                      </div>
+                      {pm.isDefault && (
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {!pm.isDefault && (
+                        <button
+                          onClick={() => handleSetDefaultPaymentMethod(pm.id)}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Set as Default
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeletePaymentMethod(pm.id)}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Payout Settings */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Payout Settings</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Add your bank account to receive payouts when it's your turn in a ROSCA group.
+          </p>
+
+          {isLoadingConnect ? (
+            <p className="text-gray-500 text-center py-4">Loading payout settings...</p>
+          ) : connectStatus?.isOnboarded ? (
+            // Active - show bank info
+            <div>
+              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-md">
+                <div className="flex items-center space-x-3">
+                  <svg className="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {connectStatus.bankName || 'Bank Account'} •••• {connectStatus.bankLast4}
+                    </p>
+                    <p className="text-sm text-green-600">Active - ready to receive payouts</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowBankForm(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={handleRemoveBankAccount}
+                    disabled={isConnectAction}
+                    className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              {showBankForm && (
+                <div className="mt-4 p-4 border border-gray-200 rounded-md space-y-4">
+                  <h3 className="font-medium text-gray-900">Update Bank Account</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
+                    <input
+                      type="text"
+                      value={accountHolderName}
+                      onChange={(e) => setAccountHolderName(e.target.value)}
+                      placeholder={`${user?.firstName || ''} ${user?.lastName || ''}`}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to use your profile name</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Routing Number</label>
+                      <input
+                        type="text"
+                        value={routingNumber}
+                        onChange={(e) => setRoutingNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                        placeholder="9 digits"
+                        maxLength={9}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Account number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Account Number</label>
+                    <input
+                      type="text"
+                      value={confirmAccountNumber}
+                      onChange={(e) => setConfirmAccountNumber(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Re-enter account number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div className="flex space-x-3 pt-2">
+                    <button
+                      onClick={handleBankAccountSetup}
+                      disabled={isConnectAction}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isConnectAction ? 'Saving...' : 'Update Bank Account'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBankForm(false);
+                        setRoutingNumber('');
+                        setAccountNumber('');
+                        setConfirmAccountNumber('');
+                        setAccountHolderName('');
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : showBankForm || (!connectStatus?.hasAccount && !connectStatus?.isOnboarded) ? (
+            // No account or show form - bank details form
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
+                <input
+                  type="text"
+                  value={accountHolderName}
+                  onChange={(e) => setAccountHolderName(e.target.value)}
+                  placeholder={`${user?.firstName || ''} ${user?.lastName || ''}`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+                <p className="text-xs text-gray-500 mt-1">Leave blank to use your profile name</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Routing Number</label>
+                  <input
+                    type="text"
+                    value={routingNumber}
+                    onChange={(e) => setRoutingNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                    placeholder="9 digits"
+                    maxLength={9}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                  <input
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Account number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Account Number</label>
+                <input
+                  type="text"
+                  value={confirmAccountNumber}
+                  onChange={(e) => setConfirmAccountNumber(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Re-enter account number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="flex space-x-3 pt-2">
+                <button
+                  onClick={handleBankAccountSetup}
+                  disabled={isConnectAction}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isConnectAction ? 'Saving...' : 'Save Bank Account'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Account Stats */}

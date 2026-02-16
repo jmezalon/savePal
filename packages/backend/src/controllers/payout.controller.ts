@@ -102,9 +102,8 @@ class PayoutController {
   async processPayout(req: AuthRequest, res: Response) {
     try {
       const { payoutId } = req.params;
-      const { transactionReference } = req.body;
 
-      const payout = await payoutService.processPayout(payoutId, transactionReference);
+      const payout = await payoutService.processPayout(payoutId);
 
       res.json({
         success: true,

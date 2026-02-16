@@ -1,5 +1,7 @@
 import prisma from '../utils/prisma.js';
 import cycleService from './cycle.service.js';
+import stripeService from './stripe.service.js';
+import notificationService from './notification.service.js';
 
 interface ProcessPaymentData {
   paymentId: string;
@@ -226,6 +228,105 @@ class PaymentService {
     });
 
     return payments;
+  }
+
+  /**
+   * Charge a user's payment method via Stripe and process the payment
+   */
+  async chargeAndProcessPayment(
+    paymentId: string,
+    userId: string,
+    paymentMethodId?: string
+  ) {
+    const payment = await this.getPaymentById(paymentId);
+
+    if (payment.userId !== userId) {
+      throw new Error('Unauthorized: This payment does not belong to you');
+    }
+
+    if (payment.status === 'COMPLETED') {
+      throw new Error('Payment has already been completed');
+    }
+
+    if (payment.status === 'PROCESSING') {
+      throw new Error('Payment is already being processed');
+    }
+
+    // Mark as PROCESSING to prevent double-charges
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: { status: 'PROCESSING' },
+    });
+
+    try {
+      const result = await stripeService.chargePayment(
+        userId,
+        payment.amount,
+        paymentId,
+        paymentMethodId
+      );
+
+      if (result.status === 'succeeded') {
+        // Charge succeeded synchronously - update payment record
+        const updatedPayment = await this.processPayment({
+          paymentId,
+          userId,
+          transactionReference: result.paymentIntentId,
+        });
+
+        // Send success notification
+        await notificationService.sendPaymentReceivedNotification(
+          userId,
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          payment.amount
+        );
+
+        return updatedPayment;
+      } else {
+        // Charge requires additional action (e.g. 3DS) - not supported off-session
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            stripePaymentIntentId: result.paymentIntentId,
+            status: 'PENDING',
+          },
+        });
+        throw new Error('Payment requires additional authentication. Please try a different payment method.');
+      }
+    } catch (error: any) {
+      if (error.type === 'StripeCardError') {
+        // Card was declined
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: 'FAILED',
+            failureReason: error.message,
+            retryCount: { increment: 1 },
+          },
+        });
+
+        await notificationService.sendPaymentFailedNotification(
+          userId,
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          payment.amount
+        );
+
+        throw error;
+      }
+
+      // For non-Stripe errors (network, etc.), revert to PENDING
+      if (!error.message?.includes('requires additional authentication') &&
+          !error.message?.includes('already been completed')) {
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: { status: 'PENDING' },
+        });
+      }
+
+      throw error;
+    }
   }
 }
 
