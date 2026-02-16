@@ -18,6 +18,9 @@ router.get('/my-stats', paymentController.getMyPaymentStats);
 // Get specific payment
 router.get('/:paymentId', paymentController.getPaymentById);
 
+// Get charge breakdown (contribution + processing fee)
+router.get('/:paymentId/breakdown', paymentController.getChargeBreakdown);
+
 // Process payment
 router.post('/:paymentId/process', paymentController.processPayment);
 

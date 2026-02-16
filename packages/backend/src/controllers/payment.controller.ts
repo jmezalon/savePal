@@ -118,6 +118,29 @@ class PaymentController {
   }
 
   /**
+   * Get charge breakdown for a payment (contribution + processing fee)
+   * GET /api/payments/:paymentId/breakdown
+   */
+  async getChargeBreakdown(req: AuthRequest, res: Response) {
+    try {
+      const { paymentId } = req.params;
+
+      const payment = await paymentService.getPaymentById(paymentId);
+      const breakdown = paymentService.getChargeBreakdown(payment.amount);
+
+      res.json({
+        success: true,
+        data: breakdown,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
    * Process a payment via Stripe
    * POST /api/payments/:paymentId/process
    */

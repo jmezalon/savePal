@@ -231,6 +231,29 @@ class PaymentService {
   }
 
   /**
+   * Calculate the processing fee to cover Stripe's cut (2.9% + $0.30)
+   * We pass the fee to the payer so the platform keeps its full 3% payout fee
+   */
+  calculateProcessingFee(amount: number): number {
+    // Stripe charges 2.9% + $0.30 per transaction
+    // To net exactly `amount`, we solve: chargeAmount - (chargeAmount * 0.029 + 0.30) = amount
+    // chargeAmount * (1 - 0.029) = amount + 0.30
+    // chargeAmount = (amount + 0.30) / 0.971
+    const chargeAmount = (amount + 0.30) / 0.971;
+    const fee = Math.round((chargeAmount - amount) * 100) / 100; // round to cents
+    return fee;
+  }
+
+  /**
+   * Get the charge breakdown for a payment (for frontend display)
+   */
+  getChargeBreakdown(contributionAmount: number) {
+    const processingFee = this.calculateProcessingFee(contributionAmount);
+    const total = Math.round((contributionAmount + processingFee) * 100) / 100;
+    return { contribution: contributionAmount, processingFee, total };
+  }
+
+  /**
    * Charge a user's payment method via Stripe and process the payment
    */
   async chargeAndProcessPayment(
@@ -258,10 +281,13 @@ class PaymentService {
       data: { status: 'PROCESSING' },
     });
 
+    // Add processing fee so Stripe's cut doesn't eat into platform revenue
+    const { total: chargeAmount } = this.getChargeBreakdown(payment.amount);
+
     try {
       const result = await stripeService.chargePayment(
         userId,
-        payment.amount,
+        chargeAmount,
         paymentId,
         paymentMethodId
       );

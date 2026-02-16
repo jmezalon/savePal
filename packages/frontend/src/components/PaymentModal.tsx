@@ -35,10 +35,30 @@ export default function PaymentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<{
+    contribution: number;
+    processingFee: number;
+    total: number;
+  } | null>(null);
 
   useEffect(() => {
     loadPaymentMethods();
+    loadBreakdown();
   }, []);
+
+  const loadBreakdown = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/breakdown`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBreakdown(data.data);
+      }
+    } catch {
+      // Fall back to showing just the amount
+    }
+  };
 
   const loadPaymentMethods = async () => {
     try {
@@ -126,8 +146,25 @@ export default function PaymentModal({
 
           {/* Payment Details */}
           <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-700">{groupName}</p>
-            <p className="text-2xl font-bold text-blue-900">${amount.toFixed(2)}</p>
+            <p className="text-sm text-blue-700 mb-2">{groupName}</p>
+            {breakdown ? (
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm text-blue-800">
+                  <span>Contribution</span>
+                  <span>${breakdown.contribution.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-blue-600">
+                  <span>Processing fee</span>
+                  <span>${breakdown.processingFee.toFixed(2)}</span>
+                </div>
+                <div className="border-t border-blue-200 pt-1 flex justify-between font-bold text-blue-900">
+                  <span>Total</span>
+                  <span>${breakdown.total.toFixed(2)}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-blue-900">${amount.toFixed(2)}</p>
+            )}
           </div>
 
           {error && (
@@ -198,7 +235,7 @@ export default function PaymentModal({
                 disabled={isProcessing || !selectedMethodId}
                 className="w-full py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {isProcessing ? 'Processing...' : `Pay $${amount.toFixed(2)}`}
+                {isProcessing ? 'Processing...' : `Pay $${(breakdown?.total ?? amount).toFixed(2)}`}
               </button>
             </>
           )}
