@@ -107,10 +107,15 @@ export default function Landing() {
             <h4 className="text-lg font-semibold text-blue-900 mb-3">📊 Example:</h4>
             <p className="text-blue-800">
               <strong>10 friends</strong> each contribute <strong>$100/month</strong> for 10 months.
-              Each month, one person receives <strong>$1,000</strong>. Instead of saving $100/month for 10 months,
-              you could receive $1,000 in month 1, 2, 3... or whenever your turn comes! Perfect for big purchases,
+              Each month, one person receives the full pot. Instead of saving $100/month for 10 months,
+              you could receive your payout in month 1, 2, 3... or whenever your turn comes! Perfect for big purchases,
               debt payoff, or investment opportunities.
             </p>
+            <div className="mt-4 pt-4 border-t border-blue-200">
+              <p className="text-sm text-blue-700">
+                <strong>💰 Fees:</strong> A small <strong>6% service fee</strong> applies — approximately 3% is added to each contribution for secure payment processing, and 3% is deducted from your payout. For a $100 contribution, you'd pay ~$103.29/month, and the payout recipient receives $970 from the $1,000 pot.
+              </p>
+            </div>
           </div>
         </div>
       </div>
