@@ -294,16 +294,7 @@ export default function GroupDetails() {
 
   if (error || !group) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <Link to="/dashboard" className="flex items-center text-2xl font-bold text-blue-600">
-                SavePal
-              </Link>
-            </div>
-          </div>
-        </nav>
+      <div className="bg-gray-50">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error || 'Group not found'}

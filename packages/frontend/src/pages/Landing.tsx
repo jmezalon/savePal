@@ -41,16 +41,16 @@ export default function Landing() {
           <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600">
             Join the modern way to save with friends and family. SavePal brings the traditional sousou (ROSCA) system into the digital age with transparency, security, and ease.
           </p>
-          <div className="mt-10 flex justify-center space-x-4">
+          <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link
               to="/register"
-              className="px-8 py-3 text-lg font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all"
+              className="w-full sm:w-auto text-center px-8 py-3 text-lg font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all"
             >
               Start Saving Now
             </Link>
             <a
               href="#how-it-works"
-              className="px-8 py-3 text-lg font-medium text-blue-600 bg-white rounded-lg hover:bg-gray-50 border-2 border-blue-600 transition-all"
+              className="w-full sm:w-auto text-center px-8 py-3 text-lg font-medium text-blue-600 bg-white rounded-lg hover:bg-gray-50 border-2 border-blue-600 transition-all"
             >
               Learn More
             </a>
