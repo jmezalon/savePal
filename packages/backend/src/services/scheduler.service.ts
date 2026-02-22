@@ -22,12 +22,12 @@ class SchedulerService {
       this.sendPaymentReminders().catch(console.error);
     });
 
-    // Every 6 hours: notify recipients of pending payouts
-    cron.schedule('0 */6 * * *', () => {
+    // Every 30 minutes: retry pending payouts
+    cron.schedule('*/30 * * * *', () => {
       this.processPendingPayouts().catch(console.error);
     });
 
-    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), payouts (6h)');
+    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), payouts (30min)');
   }
 
   async processDueDateAutoPayments() {
@@ -207,11 +207,16 @@ class SchedulerService {
     console.log(`[Scheduler] Sent ${upcomingPayments.length} payment due reminders`);
   }
 
+  private static MAX_RETRIES = 10;
+
   async processPendingPayouts() {
+    const now = new Date();
+
     const pendingPayouts = await prisma.payout.findMany({
       where: {
         status: 'PENDING',
         cycle: { isCompleted: true },
+        retryCount: { lt: SchedulerService.MAX_RETRIES },
       },
       include: {
         cycle: { include: { group: true } },
@@ -231,6 +236,16 @@ class SchedulerService {
     console.log(`[Scheduler] Processing ${pendingPayouts.length} pending payouts`);
 
     for (const payout of pendingPayouts) {
+      // Linear backoff: skip if last retry was less than (retryCount * 30 min) ago
+      if (payout.lastRetryAt && payout.retryCount > 0) {
+        const cooldownMs = payout.retryCount * 30 * 60 * 1000;
+        const elapsed = now.getTime() - new Date(payout.lastRetryAt).getTime();
+        if (elapsed < cooldownMs) {
+          console.log(`[Scheduler] Skipping payout ${payout.id}: cooling down (retry ${payout.retryCount}, next in ${Math.round((cooldownMs - elapsed) / 60000)}min)`);
+          continue;
+        }
+      }
+
       if (!payout.recipient.stripeConnectAccountId || !payout.recipient.stripeConnectOnboarded) {
         // Recipient hasn't set up their payout account yet, notify them
         await notificationService.createNotification({
@@ -244,11 +259,40 @@ class SchedulerService {
         continue;
       }
 
+      const wasFirstAttempt = payout.retryCount === 0;
+
       try {
         await payoutService.processPayout(payout.id);
         console.log(`[Scheduler] Payout ${payout.id} transferred successfully`);
       } catch (error: any) {
         console.error(`[Scheduler] Failed to process payout ${payout.id}:`, error.message);
+
+        // Notify recipient on first failure
+        if (wasFirstAttempt) {
+          await notificationService.sendPayoutPendingNotification(
+            payout.recipientId,
+            payout.cycle.group.id,
+            payout.cycle.group.name,
+            payout.netAmount
+          );
+        }
+      }
+    }
+
+    // Mark exhausted payouts (retryCount >= MAX_RETRIES) as FAILED
+    const exhaustedPayouts = await prisma.payout.findMany({
+      where: {
+        status: 'PENDING',
+        retryCount: { gte: SchedulerService.MAX_RETRIES },
+      },
+    });
+
+    for (const payout of exhaustedPayouts) {
+      try {
+        await payoutService.failPayout(payout.id, 'Maximum retry attempts exceeded. Please contact support or retry manually.');
+        console.log(`[Scheduler] Payout ${payout.id} marked as FAILED after ${payout.retryCount} retries`);
+      } catch (error: any) {
+        console.error(`[Scheduler] Failed to mark payout ${payout.id} as failed:`, error.message);
       }
     }
   }

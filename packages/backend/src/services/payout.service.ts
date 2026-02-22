@@ -136,6 +136,21 @@ class PayoutService {
       throw new Error('Recipient has not completed payout account setup');
     }
 
+    // Pre-check: verify platform has enough available balance
+    const balanceCheck = await stripeService.hasEnoughBalance(payout.netAmount);
+    if (!balanceCheck.sufficient) {
+      const reason = `Insufficient platform balance: $${balanceCheck.available.toFixed(2)} available, $${balanceCheck.required.toFixed(2)} required. Funds from contributions may still be settling.`;
+      await prisma.payout.update({
+        where: { id: payoutId },
+        data: {
+          failureReason: reason,
+          retryCount: { increment: 1 },
+          lastRetryAt: new Date(),
+        },
+      });
+      throw new Error(reason);
+    }
+
     // Set status to PROCESSING
     await prisma.payout.update({
       where: { id: payoutId },
@@ -156,6 +171,8 @@ class PayoutService {
           stripeTransferId: transferId,
           transferredAt: new Date(),
           failureReason: null,
+          retryCount: 0,
+          lastRetryAt: null,
         },
       });
 
@@ -175,6 +192,8 @@ class PayoutService {
         data: {
           status: 'PENDING',
           failureReason: error.message,
+          retryCount: { increment: 1 },
+          lastRetryAt: new Date(),
         },
       });
       throw error;

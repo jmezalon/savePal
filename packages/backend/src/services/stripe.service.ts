@@ -602,6 +602,27 @@ class StripeService {
   }
 
   /**
+   * Get the platform's available USD balance from Stripe
+   */
+  async getAvailableBalance(): Promise<number> {
+    const balance = await this.stripe.balance.retrieve();
+    const usdAvailable = balance.available.find(b => b.currency === 'usd');
+    return (usdAvailable?.amount || 0) / 100; // Convert from cents
+  }
+
+  /**
+   * Check if the platform has enough available balance for a transfer
+   */
+  async hasEnoughBalance(amount: number): Promise<{ sufficient: boolean; available: number; required: number }> {
+    const available = await this.getAvailableBalance();
+    return {
+      sufficient: available >= amount,
+      available,
+      required: amount,
+    };
+  }
+
+  /**
    * Charge a user's saved payment method for a ROSCA contribution
    */
   async chargePayment(

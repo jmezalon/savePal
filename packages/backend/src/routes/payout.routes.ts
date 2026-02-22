@@ -14,6 +14,9 @@ router.get('/my-payouts/pending', payoutController.getMyPendingPayouts);
 // Get payout statistics
 router.get('/my-stats', payoutController.getMyPayoutStats);
 
+// Retry a pending/failed payout (user-triggered)
+router.post('/:payoutId/retry', payoutController.retryPayout);
+
 // Get specific payout
 router.get('/:payoutId', payoutController.getPayoutById);
 

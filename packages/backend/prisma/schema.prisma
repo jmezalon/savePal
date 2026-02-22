@@ -164,6 +164,8 @@ model Payout {
   stripeTransferId      String?       @unique
   transferredAt         DateTime?
   failureReason         String?
+  retryCount            Int           @default(0)
+  lastRetryAt           DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 

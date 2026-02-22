@@ -28,6 +28,8 @@ interface Payout {
   netAmount: number;
   status: string;
   transferredAt?: string;
+  failureReason?: string;
+  retryCount?: number;
   createdAt: string;
   cycle: {
     cycleNumber: number;
@@ -53,6 +55,7 @@ export default function PaymentHistory() {
   const [stats, setStats] = useState<PaymentStats | null>(null);
   const [activeTab, setActiveTab] = useState<'payments' | 'payouts'>('payments');
   const [isLoading, setIsLoading] = useState(true);
+  const [retryingPayoutId, setRetryingPayoutId] = useState<string | null>(null);
   const { token, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -98,6 +101,29 @@ export default function PaymentHistory() {
       console.error('Failed to fetch payment history:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetryPayout = async (payoutId: string) => {
+    setRetryingPayoutId(payoutId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/payouts/${payoutId}/retry`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.status === 401) {
+        logout();
+        navigate('/login');
+        return;
+      }
+
+      // Refresh data to show updated status
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to retry payout:', err);
+    } finally {
+      setRetryingPayoutId(null);
     }
   };
 
@@ -253,6 +279,12 @@ export default function PaymentHistory() {
                           <p className="text-xs text-gray-500 mt-0.5">
                             Cycle {payout.cycle.cycleNumber}
                           </p>
+                          {(payout.status === 'PENDING' || payout.status === 'FAILED') && payout.failureReason && (
+                            <p className="text-xs text-red-500 mt-0.5">{payout.failureReason}</p>
+                          )}
+                          {payout.retryCount != null && payout.retryCount > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">Retry attempts: {payout.retryCount}</p>
+                          )}
                         </div>
                         <div className="text-right ml-4">
                           <p className="text-sm font-semibold text-gray-900">${payout.netAmount.toFixed(2)}</p>
@@ -262,6 +294,15 @@ export default function PaymentHistory() {
                           <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded ${getStatusBadge(payout.status)}`}>
                             {payout.status}
                           </span>
+                          {(payout.status === 'PENDING' || payout.status === 'FAILED') && (
+                            <button
+                              onClick={() => handleRetryPayout(payout.id)}
+                              disabled={retryingPayoutId === payout.id}
+                              className="block mt-2 ml-auto px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {retryingPayoutId === payout.id ? 'Retrying...' : 'Retry Payout'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

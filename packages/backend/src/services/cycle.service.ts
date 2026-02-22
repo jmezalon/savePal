@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js';
 import { Frequency } from '@prisma/client';
 import payoutService from './payout.service.js';
+import notificationService from './notification.service.js';
 
 class CycleService {
   /**
@@ -270,8 +271,14 @@ class CycleService {
     try {
       await payoutService.processPayout(payout.id);
     } catch (error: any) {
-      // Silently catch - scheduler will retry later
       console.log(`[Cycle] Immediate payout attempt failed for ${payout.id}: ${error.message}`);
+      // Notify recipient that payout is pending retry
+      await notificationService.sendPayoutPendingNotification(
+        cycle.recipientId,
+        cycle.groupId,
+        cycle.group.name,
+        payout.netAmount
+      );
     }
 
     // Create payments for the next cycle if it exists

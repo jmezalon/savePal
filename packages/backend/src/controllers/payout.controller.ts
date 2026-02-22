@@ -143,6 +143,54 @@ class PayoutController {
   }
 
   /**
+   * Retry a pending/failed payout (user-triggered)
+   * POST /api/payouts/:payoutId/retry
+   */
+  async retryPayout(req: AuthRequest, res: Response) {
+    try {
+      const { payoutId } = req.params;
+      const userId = req.userId!;
+
+      const payout = await payoutService.getPayoutById(payoutId);
+
+      // Verify payout belongs to requesting user
+      if (payout.recipientId !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can only retry your own payouts',
+        });
+      }
+
+      if (payout.status === 'COMPLETED') {
+        return res.status(400).json({
+          success: false,
+          error: 'Payout has already been completed',
+        });
+      }
+
+      if (payout.status === 'PROCESSING') {
+        return res.status(400).json({
+          success: false,
+          error: 'Payout is currently being processed',
+        });
+      }
+
+      const result = await payoutService.processPayout(payoutId);
+
+      return res.json({
+        success: true,
+        message: 'Payout processed successfully',
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
    * Get payout for a specific cycle
    * GET /api/cycles/:cycleId/payout
    */
