@@ -299,6 +299,32 @@ class StripeService {
     };
   }
   /**
+   * Check if a Stripe error indicates the Connect account is inaccessible
+   * (e.g. test-mode account accessed with live key, or revoked access)
+   */
+  private isStaleAccountError(error: any): boolean {
+    const msg = error?.message || '';
+    return (
+      error?.type === 'StripePermissionError' ||
+      msg.includes('does not have access to account') ||
+      msg.includes('that account does not exist')
+    );
+  }
+
+  /**
+   * Clear a stale Connect account reference from the database
+   */
+  private async clearStaleConnectAccount(userId: string): Promise<void> {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        stripeConnectAccountId: null,
+        stripeConnectOnboarded: false,
+      },
+    });
+  }
+
+  /**
    * Create a Stripe Connect Custom account and add a bank account
    */
   async setupConnectAccount(
@@ -319,6 +345,27 @@ class StripeService {
     });
 
     let accountId = user?.stripeConnectAccountId;
+
+    if (accountId) {
+      // Verify the existing account is still accessible
+      try {
+        const existingAccounts = await this.stripe.accounts.listExternalAccounts(accountId, {
+          object: 'bank_account',
+        });
+        // Remove existing external accounts before adding new one
+        for (const ea of existingAccounts.data) {
+          await this.stripe.accounts.deleteExternalAccount(accountId, ea.id);
+        }
+      } catch (error: any) {
+        if (this.isStaleAccountError(error)) {
+          // Stale account (e.g. test-mode account on live key) — clear and recreate
+          await this.clearStaleConnectAccount(userId);
+          accountId = null;
+        } else {
+          throw error;
+        }
+      }
+    }
 
     if (!accountId) {
       const account = await this.stripe.accounts.create({
@@ -351,14 +398,6 @@ class StripeService {
         where: { id: userId },
         data: { stripeConnectAccountId: accountId },
       });
-    } else {
-      // Remove existing external accounts before adding new one
-      const existingAccounts = await this.stripe.accounts.listExternalAccounts(accountId, {
-        object: 'bank_account',
-      });
-      for (const ea of existingAccounts.data) {
-        await this.stripe.accounts.deleteExternalAccount(accountId, ea.id);
-      }
     }
 
     // Add bank account as external account
@@ -413,8 +452,8 @@ class StripeService {
     let bankLast4: string | null = null;
     let bankName: string | null = null;
 
-    if (user.stripeConnectOnboarded) {
-      try {
+    try {
+      if (user.stripeConnectOnboarded) {
         const accounts = await this.stripe.accounts.listExternalAccounts(
           user.stripeConnectAccountId,
           { object: 'bank_account', limit: 1 }
@@ -424,9 +463,22 @@ class StripeService {
           bankLast4 = bank.last4 || null;
           bankName = bank.bank_name || null;
         }
-      } catch {
-        // Ignore errors fetching bank details
+      } else {
+        // Verify the account is still accessible even if not onboarded
+        await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
       }
+    } catch (error: any) {
+      if (this.isStaleAccountError(error)) {
+        await this.clearStaleConnectAccount(userId);
+        return {
+          hasAccount: false,
+          isOnboarded: false,
+          accountId: null,
+          bankLast4: null,
+          bankName: null,
+        };
+      }
+      // Ignore other errors fetching bank details
     }
 
     return {
@@ -451,19 +503,28 @@ class StripeService {
       throw new Error('No payout account found');
     }
 
-    const accounts = await this.stripe.accounts.listExternalAccounts(
-      user.stripeConnectAccountId,
-      { object: 'bank_account' }
-    );
+    try {
+      const accounts = await this.stripe.accounts.listExternalAccounts(
+        user.stripeConnectAccountId,
+        { object: 'bank_account' }
+      );
 
-    for (const ea of accounts.data) {
-      await this.stripe.accounts.deleteExternalAccount(user.stripeConnectAccountId, ea.id);
+      for (const ea of accounts.data) {
+        await this.stripe.accounts.deleteExternalAccount(user.stripeConnectAccountId, ea.id);
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { stripeConnectOnboarded: false },
+      });
+    } catch (error: any) {
+      if (this.isStaleAccountError(error)) {
+        // Stale account — clear entirely so user can set up fresh
+        await this.clearStaleConnectAccount(userId);
+      } else {
+        throw error;
+      }
     }
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { stripeConnectOnboarded: false },
-    });
   }
 
   /**
