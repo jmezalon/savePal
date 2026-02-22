@@ -21,6 +21,31 @@ class StripeService {
   }
 
   /**
+   * Check if a Stripe error indicates a resource doesn't exist
+   * (e.g. test-mode customer/payment method accessed with live key)
+   */
+  private isStaleResourceError(error: any): boolean {
+    const msg = error?.message || '';
+    return (
+      error?.code === 'resource_missing' ||
+      msg.includes('No such customer') ||
+      msg.includes('No such payment method') ||
+      msg.includes('No such SetupIntent')
+    );
+  }
+
+  /**
+   * Clear a stale customer and all associated payment methods from the database
+   */
+  private async clearStaleCustomerData(userId: string): Promise<void> {
+    await prisma.paymentMethod.deleteMany({ where: { userId } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stripeCustomerId: null },
+    });
+  }
+
+  /**
    * Create or retrieve a Stripe customer for a user
    */
   async getOrCreateCustomer(userId: string, email: string, name: string): Promise<string> {
@@ -31,7 +56,18 @@ class StripeService {
     });
 
     if (user?.stripeCustomerId) {
-      return user.stripeCustomerId;
+      // Verify the customer still exists in Stripe (handles test→live mode switch)
+      try {
+        await this.stripe.customers.retrieve(user.stripeCustomerId);
+        return user.stripeCustomerId;
+      } catch (error: any) {
+        if (this.isStaleResourceError(error) || this.isStaleAccountError(error)) {
+          // Stale test-mode customer — clear and recreate
+          await this.clearStaleCustomerData(userId);
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Create new Stripe customer
@@ -192,8 +228,15 @@ class StripeService {
       }
     }
 
-    // Detach from Stripe
-    await this.stripe.paymentMethods.detach(paymentMethod.stripePaymentMethodId);
+    // Detach from Stripe (ignore if stale test-mode payment method)
+    try {
+      await this.stripe.paymentMethods.detach(paymentMethod.stripePaymentMethodId);
+    } catch (error: any) {
+      if (!this.isStaleResourceError(error)) {
+        throw error;
+      }
+      // Stale payment method (e.g. test-mode) — just remove from DB
+    }
 
     // Delete from database
     await prisma.paymentMethod.delete({
@@ -237,12 +280,19 @@ class StripeService {
       data: { isDefault: true },
     });
 
-    // Set as default in Stripe
-    await this.stripe.customers.update(user.stripeCustomerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethod.stripePaymentMethodId,
-      },
-    });
+    // Set as default in Stripe (ignore if stale test-mode customer)
+    try {
+      await this.stripe.customers.update(user.stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethod.stripePaymentMethodId,
+        },
+      });
+    } catch (error: any) {
+      if (!this.isStaleResourceError(error)) {
+        throw error;
+      }
+      // Stale customer — DB default is still set, will sync on next customer creation
+    }
   }
 
   /**
