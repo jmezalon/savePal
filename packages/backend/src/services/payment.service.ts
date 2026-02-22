@@ -147,8 +147,16 @@ class PaymentService {
       },
     });
 
-    // TODO: Implement penalty system for failed payments
-    // This could affect trust score or trigger notifications
+    // Notify the group owner about this member's failed payment
+    const memberName = `${payment.user.firstName} ${payment.user.lastName}`;
+    await notificationService.notifyGroupOwnerOfPaymentFailure(
+      payment.cycle.group.id,
+      payment.cycle.group.name,
+      userId,
+      memberName,
+      payment.amount,
+      reason
+    );
 
     return updatedPayment;
   }
@@ -337,6 +345,17 @@ class PaymentService {
           payment.cycle.group.id,
           payment.cycle.group.name,
           payment.amount
+        );
+
+        // Notify the group owner about this member's failed payment
+        const memberName = `${payment.user.firstName} ${payment.user.lastName}`;
+        await notificationService.notifyGroupOwnerOfPaymentFailure(
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          userId,
+          memberName,
+          payment.amount,
+          error.message
         );
 
         throw error;

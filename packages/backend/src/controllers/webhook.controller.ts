@@ -81,7 +81,10 @@ class WebhookController {
 
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
-      include: { cycle: { include: { group: true } } },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+        cycle: { include: { group: true } },
+      },
     });
 
     if (!payment || payment.status === 'FAILED') return;
@@ -102,6 +105,17 @@ class WebhookController {
       payment.cycle.group.id,
       payment.cycle.group.name,
       payment.amount
+    );
+
+    // Notify the group owner about this member's failed payment
+    const memberName = `${payment.user.firstName} ${payment.user.lastName}`;
+    await notificationService.notifyGroupOwnerOfPaymentFailure(
+      payment.cycle.group.id,
+      payment.cycle.group.name,
+      payment.userId,
+      memberName,
+      payment.amount,
+      failureMessage
     );
 
     console.log(`Webhook: Payment ${paymentId} marked as FAILED - ${failureMessage}`);
