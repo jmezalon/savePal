@@ -304,6 +304,19 @@ class NotificationService {
   }
 
   /**
+   * Send upcoming payment reminder notification (2 days before due date)
+   */
+  async sendUpcomingPaymentReminderNotification(userId: string, groupId: string, groupName: string, amount: number, dueDate: Date) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'REMINDER',
+      title: 'Upcoming Payment in 2 Days',
+      message: `Your auto-payment of $${amount} for "${groupName}" is scheduled for ${dueDate.toLocaleDateString()} (in 2 days). Please ensure sufficient funds are available.`,
+    });
+  }
+
+  /**
    * Send auto-payment processed notification
    */
   async sendAutoPaymentProcessedNotification(userId: string, groupId: string, groupName: string, amount: number) {

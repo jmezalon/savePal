@@ -22,12 +22,17 @@ class SchedulerService {
       this.sendPaymentReminders().catch(console.error);
     });
 
+    // Daily at 9 AM: send 48-hour payment reminders (2 days before due)
+    cron.schedule('0 9 * * *', () => {
+      this.send48HourPaymentReminders().catch(console.error);
+    });
+
     // Every 30 minutes: retry pending payouts
     cron.schedule('*/30 * * * *', () => {
       this.processPendingPayouts().catch(console.error);
     });
 
-    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), payouts (30min)');
+    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), 48h reminders (daily 9AM), payouts (30min)');
   }
 
   async processDueDateAutoPayments() {
@@ -205,6 +210,69 @@ class SchedulerService {
     }
 
     console.log(`[Scheduler] Sent ${upcomingPayments.length} payment due reminders`);
+  }
+
+  async send48HourPaymentReminders() {
+    const now = new Date();
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const upcomingPayments = await prisma.payment.findMany({
+      where: {
+        status: 'PENDING',
+        cycle: {
+          dueDate: { gt: in24h, lte: in48h },
+          isCompleted: false,
+          group: { status: 'ACTIVE' },
+        },
+      },
+      include: {
+        user: { select: { id: true, email: true, firstName: true } },
+        cycle: { include: { group: true } },
+      },
+    });
+
+    let sentCount = 0;
+
+    for (const payment of upcomingPayments) {
+      const membership = await prisma.membership.findFirst({
+        where: {
+          groupId: payment.cycle.groupId,
+          userId: payment.userId,
+          isActive: true,
+          autoPaymentConsented: true,
+        },
+      });
+
+      if (!membership) continue;
+
+      await notificationService.sendUpcomingPaymentReminderNotification(
+        payment.userId,
+        payment.cycle.group.id,
+        payment.cycle.group.name,
+        payment.amount,
+        payment.cycle.dueDate
+      );
+
+      const prefs = await notificationService.getUserPreferences(payment.userId);
+      if (prefs.emailNotifications) {
+        try {
+          await emailService.sendUpcomingPaymentReminderEmail(
+            payment.user.email,
+            payment.user.firstName,
+            payment.cycle.group.name,
+            payment.amount,
+            payment.cycle.dueDate
+          );
+        } catch (emailErr) {
+          console.error(`[Scheduler] Failed to send 48h reminder email for payment ${payment.id}:`, emailErr);
+        }
+      }
+
+      sentCount++;
+    }
+
+    console.log(`[Scheduler] Sent ${sentCount} 48-hour payment reminders`);
   }
 
   private static MAX_RETRIES = 10;

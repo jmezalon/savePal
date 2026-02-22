@@ -255,6 +255,39 @@ class EmailService {
   }
 
   /**
+   * Send upcoming payment reminder email (2 days before due date)
+   */
+  async sendUpcomingPaymentReminderEmail(
+    email: string,
+    name: string,
+    groupName: string,
+    amount: number,
+    dueDate: Date
+  ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const formattedDate = dueDate.toLocaleDateString();
+    const subject = `Upcoming Payment in 2 Days - ${groupName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Upcoming Payment Reminder</h2>
+        <p>Hi ${name},</p>
+        <p>This is a friendly reminder that your card will be <strong>automatically charged $${amount}</strong> for <strong>"${groupName}"</strong> on <strong>${formattedDate}</strong> (in 2 days).</p>
+        <p>Please ensure sufficient funds are available on your saved payment method to avoid any issues.</p>
+        <div style="margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/dashboard"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Dashboard
+          </a>
+        </div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `Hi ${name},\n\nThis is a friendly reminder that your card will be automatically charged $${amount} for "${groupName}" on ${formattedDate} (in 2 days).\n\nPlease ensure sufficient funds are available on your saved payment method to avoid any issues.\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
+
+    await this.sendEmail({ to: email, subject, html, text });
+  }
+
+  /**
    * Send payment failure notification email to group owner/admin
    */
   async sendPaymentFailedAdminEmail(
