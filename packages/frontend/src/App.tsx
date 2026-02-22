@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { StripeProvider } from './contexts/StripeContext';
 import Navbar from './components/Navbar';
 import HelpButton from './components/HelpButton';
+import Footer from './components/Footer';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -28,30 +30,36 @@ function AppContent() {
   const publicPages = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/sms-consent', '/privacy', '/terms'];
   const showNavbar = !publicPages.includes(location.pathname);
 
+  // Landing page has its own footer
+  const showFooter = location.pathname !== '/';
+
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       {showNavbar && <Navbar />}
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/sms-consent" element={<SmsConsent />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<TermsAndConditions />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/groups" element={<Groups />} />
-        <Route path="/groups/create" element={<CreateGroup />} />
-        <Route path="/groups/join" element={<JoinGroup />} />
-        <Route path="/groups/:id" element={<GroupDetails />} />
-        <Route path="/payments" element={<PaymentHistory />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
+      <main className="flex-1">
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/sms-consent" element={<SmsConsent />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/groups/create" element={<CreateGroup />} />
+          <Route path="/groups/join" element={<JoinGroup />} />
+          <Route path="/groups/:id" element={<GroupDetails />} />
+          <Route path="/payments" element={<PaymentHistory />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+      </main>
+      {showFooter && <Footer />}
       <HelpButton />
-    </>
+    </div>
   );
 }
 
@@ -59,9 +67,11 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <StripeProvider>
-          <AppContent />
-        </StripeProvider>
+        <NotificationProvider>
+          <StripeProvider>
+            <AppContent />
+          </StripeProvider>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );

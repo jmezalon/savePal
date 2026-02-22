@@ -95,6 +95,8 @@ model Membership {
   payoutPosition Int
   joinedAt       DateTime   @default(now())
   isActive       Boolean    @default(true)
+  autoPaymentConsented   Boolean  @default(false)
+  autoPaymentConsentedAt DateTime?
 
   // Relations
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -262,4 +264,6 @@ enum NotificationType {
   PAYMENT_FAILED
   CONNECT_ONBOARDING_REQUIRED
   REMINDER
+  AUTO_PAYMENT_SCHEDULED
+  AUTO_PAYMENT_PROCESSED
 }

@@ -74,6 +74,7 @@ async function testJoinNotification() {
     await groupService.joinGroup({
       inviteCode: group.inviteCode,
       userId: nonMember.id,
+      autoPaymentConsent: true,
     });
 
     console.log('\n✅ SUCCESS!');

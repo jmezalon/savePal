@@ -17,6 +17,7 @@ interface CreateGroupData {
 interface JoinGroupData {
   inviteCode: string;
   userId: string;
+  autoPaymentConsent: boolean;
 }
 
 class GroupService {
@@ -61,6 +62,8 @@ class GroupService {
           role: 'OWNER',
           payoutPosition: 1,
           isActive: true,
+          autoPaymentConsented: true,
+          autoPaymentConsentedAt: new Date(),
         },
       });
 
@@ -74,7 +77,11 @@ class GroupService {
    * Join a group using invite code
    */
   async joinGroup(data: JoinGroupData) {
-    const { inviteCode, userId } = data;
+    const { inviteCode, userId, autoPaymentConsent } = data;
+
+    if (!autoPaymentConsent) {
+      throw new Error('You must consent to automatic payments before joining a group');
+    }
 
     // Find the group by invite code
     const group = await prisma.group.findUnique({
@@ -150,6 +157,8 @@ class GroupService {
           role: 'MEMBER',
           payoutPosition: nextPosition,
           isActive: true,
+          autoPaymentConsented: true,
+          autoPaymentConsentedAt: new Date(),
         },
       });
 

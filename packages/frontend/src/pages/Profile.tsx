@@ -747,7 +747,7 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">Email Notifications</p>
-                <p className="text-sm text-gray-500">Receive notifications via email</p>
+                <p className="text-sm text-gray-500">Receive payment reminders and auto-payment confirmations via email</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -763,7 +763,7 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">SMS Notifications</p>
-                <p className="text-sm text-gray-500">Receive notifications via text message</p>
+                <p className="text-sm text-gray-500">Receive notifications via text message (Coming soon)</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -779,7 +779,7 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">Push Notifications</p>
-                <p className="text-sm text-gray-500">Receive notifications in the app</p>
+                <p className="text-sm text-gray-500">Receive notifications in the app (bell icon)</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input

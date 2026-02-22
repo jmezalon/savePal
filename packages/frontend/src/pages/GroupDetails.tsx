@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import PaymentModal from '../components/PaymentModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface GroupMember {
   id: string;
@@ -78,6 +79,7 @@ export default function GroupDetails() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [readiness, setReadiness] = useState<{
     ready: boolean;
     membersWithoutPaymentMethod: { firstName: string; lastName: string }[];
@@ -394,6 +396,25 @@ export default function GroupDetails() {
                 </div>
               </div>
 
+              {group.status === 'ACTIVE' && (
+                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <svg className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+                    </svg>
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-900">Automatic Payments Active</h3>
+                      <p className="text-sm text-blue-800 mt-1">
+                        Your card will be automatically charged on each cycle's due date.
+                        {currentCycle && !currentCycle.isCompleted && (
+                          <span className="font-medium"> Next auto-charge: {new Date(currentCycle.dueDate).toLocaleDateString()}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isOwner && group.status === 'PENDING' && (
                 <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-yellow-900 mb-2">Invite Members</h3>
@@ -490,7 +511,7 @@ export default function GroupDetails() {
                         All member spots are filled. You can now start the group to begin payment cycles.
                       </p>
                       <button
-                        onClick={handleStartGroup}
+                        onClick={() => setShowStartConfirm(true)}
                         className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
                       >
                         Start Group
@@ -559,7 +580,7 @@ export default function GroupDetails() {
                               onClick={() => setShowPaymentModal(true)}
                               className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
                             >
-                              Pay Now
+                              {currentCycle && new Date(currentCycle.dueDate) > new Date() ? 'Pay Early' : 'Pay Now'}
                             </button>
                           )}
                           {myPayment.status === 'FAILED' && (
@@ -654,6 +675,20 @@ export default function GroupDetails() {
             onSuccess={handlePaymentSuccess}
           />
         )}
+
+        {/* Start Group Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showStartConfirm}
+          title="Start Group"
+          message={`Once started, all members' cards will be automatically charged $${group.contributionAmount} on each cycle's due date. This action cannot be undone.`}
+          confirmLabel="Start Group"
+          variant="warning"
+          onConfirm={() => {
+            setShowStartConfirm(false);
+            handleStartGroup();
+          }}
+          onCancel={() => setShowStartConfirm(false)}
+        />
       </main>
     </div>
   );

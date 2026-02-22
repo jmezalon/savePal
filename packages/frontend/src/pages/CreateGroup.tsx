@@ -248,6 +248,7 @@ export default function CreateGroup() {
                 <h3 className="text-sm font-medium text-blue-900 mb-2">How it works:</h3>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Each member contributes the set amount on schedule</li>
+                  <li>• <strong>Payments are automatic</strong> — members' cards are charged on each due date</li>
                   <li>• One member receives the full pot each cycle</li>
                   <li>• Group continues until everyone has received a payout</li>
                   <li>• You'll be the group owner and can invite members</li>

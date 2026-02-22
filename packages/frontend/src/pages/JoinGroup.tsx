@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
 
 export default function JoinGroup() {
   const [inviteCode, setInviteCode] = useState('');
+  const [autoPaymentConsent, setAutoPaymentConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
@@ -48,7 +49,7 @@ export default function JoinGroup() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ inviteCode: inviteCode.trim() }),
+        body: JSON.stringify({ inviteCode: inviteCode.trim(), autoPaymentConsent }),
       });
 
       if (response.status === 401) {
@@ -162,16 +163,32 @@ export default function JoinGroup() {
                 <h3 className="text-sm font-medium text-blue-900 mb-2">Before joining:</h3>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Make sure you understand the group's contribution amount and frequency</li>
+                  <li>• <strong>Payments are automatic</strong> — your card will be charged on each cycle's due date</li>
                   <li>• You'll be assigned a payout position based on join order</li>
                   <li>• Once the group is full, the owner will start the payment cycles</li>
                   <li>• You cannot leave once the group has started</li>
                 </ul>
               </div>
 
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                <label className="flex items-start space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoPaymentConsent}
+                    onChange={(e) => setAutoPaymentConsent(e.target.checked)}
+                    className="mt-1 h-4 w-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500"
+                  />
+                  <span className="text-sm text-amber-900">
+                    I authorize SavePal to automatically charge my saved payment method for each contribution on the scheduled due date.
+                    I understand that it is my responsibility to ensure sufficient funds are available.
+                  </span>
+                </label>
+              </div>
+
               <div className="flex space-x-4">
                 <button
                   type="submit"
-                  disabled={isLoading || hasPaymentMethod === false}
+                  disabled={isLoading || hasPaymentMethod === false || !autoPaymentConsent}
                   className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Joining...' : 'Join Group'}

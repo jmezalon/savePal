@@ -221,6 +221,69 @@ class EmailService {
 
     await this.sendEmail({ to: email, subject, html, text });
   }
+  /**
+   * Send auto-payment scheduled email (day before due date)
+   */
+  async sendAutoPaymentScheduledEmail(
+    email: string,
+    name: string,
+    groupName: string,
+    amount: number,
+    dueDate: Date
+  ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const formattedDate = dueDate.toLocaleDateString();
+    const subject = `Auto-Payment Scheduled: $${amount} for ${groupName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Auto-Payment Scheduled</h2>
+        <p>Hi ${name},</p>
+        <p>This is a reminder that your card will be <strong>automatically charged $${amount}</strong> for <strong>"${groupName}"</strong> tomorrow (<strong>${formattedDate}</strong>).</p>
+        <p>Please ensure sufficient funds are available on your saved payment method.</p>
+        <div style="margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/dashboard"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Dashboard
+          </a>
+        </div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `Hi ${name},\n\nThis is a reminder that your card will be automatically charged $${amount} for "${groupName}" tomorrow (${formattedDate}).\n\nPlease ensure sufficient funds are available on your saved payment method.\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
+
+    await this.sendEmail({ to: email, subject, html, text });
+  }
+
+  /**
+   * Send auto-payment processed email
+   */
+  async sendAutoPaymentProcessedEmail(
+    email: string,
+    name: string,
+    groupName: string,
+    amount: number
+  ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const subject = `Payment Processed: $${amount} for ${groupName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Auto-Payment Processed</h2>
+        <p>Hi ${name},</p>
+        <p>Your automatic payment of <strong>$${amount}</strong> for <strong>"${groupName}"</strong> has been successfully processed.</p>
+        <p>You can view your payment details in your SavePal dashboard.</p>
+        <div style="margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/dashboard"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Dashboard
+          </a>
+        </div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `Hi ${name},\n\nYour automatic payment of $${amount} for "${groupName}" has been successfully processed.\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
+
+    await this.sendEmail({ to: email, subject, html, text });
+  }
 }
 
 export default new EmailService();

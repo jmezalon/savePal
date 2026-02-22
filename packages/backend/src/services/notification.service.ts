@@ -7,13 +7,37 @@ interface CreateNotificationData {
   type: NotificationType;
   title: string;
   message: string;
+  checkPreferences?: boolean;
 }
 
 class NotificationService {
   /**
-   * Create a new notification
+   * Check if a user has push (in-app) notifications enabled
+   */
+  async getUserPreferences(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { emailNotifications: true, pushNotifications: true },
+    });
+    return {
+      emailNotifications: user?.emailNotifications ?? true,
+      pushNotifications: user?.pushNotifications ?? true,
+    };
+  }
+
+  /**
+   * Create a new notification (respects pushNotifications preference by default)
    */
   async createNotification(data: CreateNotificationData) {
+    const checkPreferences = data.checkPreferences ?? true;
+
+    if (checkPreferences) {
+      const prefs = await this.getUserPreferences(data.userId);
+      if (!prefs.pushNotifications) {
+        return null;
+      }
+    }
+
     const notification = await prisma.notification.create({
       data: {
         userId: data.userId,
@@ -262,6 +286,32 @@ class NotificationService {
       type: 'REMINDER',
       title,
       message,
+    });
+  }
+
+  /**
+   * Send auto-payment scheduled notification (day before due date)
+   */
+  async sendAutoPaymentScheduledNotification(userId: string, groupId: string, groupName: string, amount: number, dueDate: Date) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'AUTO_PAYMENT_SCHEDULED',
+      title: 'Auto-Payment Scheduled',
+      message: `Your card will be automatically charged $${amount} for "${groupName}" tomorrow (${dueDate.toLocaleDateString()}). Please ensure sufficient funds are available.`,
+    });
+  }
+
+  /**
+   * Send auto-payment processed notification
+   */
+  async sendAutoPaymentProcessedNotification(userId: string, groupId: string, groupName: string, amount: number) {
+    return this.createNotification({
+      userId,
+      groupId,
+      type: 'AUTO_PAYMENT_PROCESSED',
+      title: 'Auto-Payment Processed',
+      message: `Your automatic payment of $${amount} for "${groupName}" has been successfully processed.`,
     });
   }
 }

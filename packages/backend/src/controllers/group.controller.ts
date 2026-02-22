@@ -92,7 +92,7 @@ class GroupController {
   async joinGroup(req: Request, res: Response) {
     try {
       const userId = (req as any).userId;
-      const { inviteCode } = req.body;
+      const { inviteCode, autoPaymentConsent } = req.body;
 
       if (!inviteCode) {
         return res.status(400).json({
@@ -104,6 +104,7 @@ class GroupController {
       const membership = await groupService.joinGroup({
         inviteCode,
         userId,
+        autoPaymentConsent: autoPaymentConsent === true,
       });
 
       return res.status(200).json({
@@ -114,7 +115,7 @@ class GroupController {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to join group';
 
-      if (errorMessage.includes('Invalid') || errorMessage.includes('full') || errorMessage.includes('already') || errorMessage.includes('payment method')) {
+      if (errorMessage.includes('Invalid') || errorMessage.includes('full') || errorMessage.includes('already') || errorMessage.includes('payment method') || errorMessage.includes('consent')) {
         return res.status(400).json({
           success: false,
           error: errorMessage,

@@ -3,9 +3,15 @@ import prisma from '../utils/prisma.js';
 import paymentService from './payment.service.js';
 import payoutService from './payout.service.js';
 import notificationService from './notification.service.js';
+import emailService from './email.service.js';
 
 class SchedulerService {
   init() {
+    // Daily at 8 AM: auto-charge due-date payments
+    cron.schedule('0 8 * * *', () => {
+      this.processDueDateAutoPayments().catch(console.error);
+    });
+
     // Every hour: auto-charge overdue payments
     cron.schedule('0 * * * *', () => {
       this.processOverduePayments().catch(console.error);
@@ -21,7 +27,81 @@ class SchedulerService {
       this.processPendingPayouts().catch(console.error);
     });
 
-    console.log('Scheduler initialized: overdue payments (hourly), reminders (daily 9AM), payouts (6h)');
+    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), payouts (6h)');
+  }
+
+  async processDueDateAutoPayments() {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+    const duePayments = await prisma.payment.findMany({
+      where: {
+        status: { in: ['PENDING', 'FAILED'] },
+        retryCount: { lt: 3 },
+        cycle: {
+          dueDate: { gte: startOfDay, lt: endOfDay },
+          isCompleted: false,
+          group: { status: 'ACTIVE' },
+        },
+      },
+      include: {
+        user: { select: { id: true, email: true, firstName: true, stripeCustomerId: true } },
+        cycle: { include: { group: true } },
+      },
+    });
+
+    console.log(`[Scheduler] Processing ${duePayments.length} due-date auto-payments`);
+
+    for (const payment of duePayments) {
+      if (!payment.user.stripeCustomerId) {
+        console.log(`[Scheduler] Skipping payment ${payment.id}: user has no Stripe customer`);
+        continue;
+      }
+
+      // Check if user has consented to auto-payments for this group
+      const membership = await prisma.membership.findFirst({
+        where: {
+          groupId: payment.cycle.groupId,
+          userId: payment.userId,
+          isActive: true,
+          autoPaymentConsented: true,
+        },
+      });
+
+      if (!membership) {
+        console.log(`[Scheduler] Skipping payment ${payment.id}: user has not consented to auto-payments`);
+        continue;
+      }
+
+      try {
+        await paymentService.chargeAndProcessPayment(payment.id, payment.userId);
+        console.log(`[Scheduler] Auto-charged due-date payment ${payment.id} successfully`);
+
+        await notificationService.sendAutoPaymentProcessedNotification(
+          payment.userId,
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          payment.amount
+        );
+
+        const prefs = await notificationService.getUserPreferences(payment.userId);
+        if (prefs.emailNotifications) {
+          try {
+            await emailService.sendAutoPaymentProcessedEmail(
+              payment.user.email,
+              payment.user.firstName,
+              payment.cycle.group.name,
+              payment.amount
+            );
+          } catch (emailErr) {
+            console.error(`[Scheduler] Failed to send auto-payment processed email for payment ${payment.id}:`, emailErr);
+          }
+        }
+      } catch (error: any) {
+        console.error(`[Scheduler] Failed to auto-charge due-date payment ${payment.id}:`, error.message);
+      }
+    }
   }
 
   async processOverduePayments() {
@@ -29,7 +109,7 @@ class SchedulerService {
 
     const overduePayments = await prisma.payment.findMany({
       where: {
-        status: 'PENDING',
+        status: { in: ['PENDING', 'FAILED'] },
         retryCount: { lt: 3 },
         cycle: {
           dueDate: { lt: now },
@@ -74,19 +154,54 @@ class SchedulerService {
         },
       },
       include: {
-        user: { select: { id: true, firstName: true } },
+        user: { select: { id: true, email: true, firstName: true } },
         cycle: { include: { group: true } },
       },
     });
 
     for (const payment of upcomingPayments) {
-      await notificationService.sendPaymentDueNotification(
-        payment.userId,
-        payment.cycle.group.id,
-        payment.cycle.group.name,
-        payment.amount,
-        payment.cycle.dueDate
-      );
+      // Check if user has consented to auto-payments for this group
+      const membership = await prisma.membership.findFirst({
+        where: {
+          groupId: payment.cycle.groupId,
+          userId: payment.userId,
+          isActive: true,
+          autoPaymentConsented: true,
+        },
+      });
+
+      if (membership) {
+        await notificationService.sendAutoPaymentScheduledNotification(
+          payment.userId,
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          payment.amount,
+          payment.cycle.dueDate
+        );
+
+        const prefs = await notificationService.getUserPreferences(payment.userId);
+        if (prefs.emailNotifications) {
+          try {
+            await emailService.sendAutoPaymentScheduledEmail(
+              payment.user.email,
+              payment.user.firstName,
+              payment.cycle.group.name,
+              payment.amount,
+              payment.cycle.dueDate
+            );
+          } catch (emailErr) {
+            console.error(`[Scheduler] Failed to send auto-payment scheduled email for payment ${payment.id}:`, emailErr);
+          }
+        }
+      } else {
+        await notificationService.sendPaymentDueNotification(
+          payment.userId,
+          payment.cycle.group.id,
+          payment.cycle.group.name,
+          payment.amount,
+          payment.cycle.dueDate
+        );
+      }
     }
 
     console.log(`[Scheduler] Sent ${upcomingPayments.length} payment due reminders`);
