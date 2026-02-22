@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { StripeProvider } from './contexts/StripeContext';
 import Navbar from './components/Navbar';
+import HelpButton from './components/HelpButton';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -47,6 +48,7 @@ function AppContent() {
         <Route path="/payments" element={<PaymentHistory />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
+      <HelpButton />
     </>
   );
 }
