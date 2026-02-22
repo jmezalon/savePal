@@ -255,6 +255,48 @@ class EmailService {
   }
 
   /**
+   * Send payment failure notification email to group owner/admin
+   */
+  async sendPaymentFailedAdminEmail(
+    ownerEmail: string,
+    ownerName: string,
+    memberName: string,
+    groupName: string,
+    amount: number,
+    failureReason?: string
+  ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+    const subject = `Payment Failed: ${memberName} in ${groupName}`;
+    const reasonLine = failureReason
+      ? `<p style="margin: 0 0 15px 0; color: #333; font-size: 16px;"><strong>Reason:</strong> ${failureReason}</p>`
+      : '';
+    const reasonText = failureReason ? `\nReason: ${failureReason}` : '';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Member Payment Failed</h2>
+        <p>Hi ${ownerName},</p>
+        <p style="margin: 0 0 15px 0; color: #333; font-size: 16px;">
+          <strong>${memberName}</strong>'s payment of <strong>$${amount}</strong> for your group <strong>"${groupName}"</strong> has failed.
+        </p>
+        ${reasonLine}
+        <p style="margin: 0 0 15px 0; color: #333; font-size: 16px;">
+          Please follow up with this member to reconcile the missed payment.
+        </p>
+        <div style="margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/dashboard"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Dashboard
+          </a>
+        </div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `Hi ${ownerName},\n\n${memberName}'s payment of $${amount} for your group "${groupName}" has failed.${reasonText}\n\nPlease follow up with this member to reconcile the missed payment.\n\nView your dashboard: ${process.env.FRONTEND_URL}/dashboard\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
+
+    await this.sendEmail({ to: ownerEmail, subject, html, text });
+  }
+
+  /**
    * Send auto-payment processed email
    */
   async sendAutoPaymentProcessedEmail(

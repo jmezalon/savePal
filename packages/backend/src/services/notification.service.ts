@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.js';
 import { NotificationType } from '@prisma/client';
+import emailService from './email.service.js';
 
 interface CreateNotificationData {
   userId: string;
@@ -313,6 +314,66 @@ class NotificationService {
       title: 'Auto-Payment Processed',
       message: `Your automatic payment of $${amount} for "${groupName}" has been successfully processed.`,
     });
+  }
+
+  /**
+   * Notify the group owner (creator) when a member's payment fails.
+   * Sends both an in-app notification and an email (if the owner has email notifications enabled).
+   */
+  async notifyGroupOwnerOfPaymentFailure(
+    groupId: string,
+    groupName: string,
+    failingUserId: string,
+    failingUserName: string,
+    amount: number,
+    failureReason?: string
+  ) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            emailNotifications: true,
+          },
+        },
+      },
+    });
+
+    if (!group) return;
+
+    const owner = group.createdBy;
+
+    // Don't notify the owner about their own failed payment
+    if (owner.id === failingUserId) return;
+
+    // In-app notification
+    const reasonSuffix = failureReason ? ` Reason: ${failureReason}.` : '';
+    await this.createNotification({
+      userId: owner.id,
+      groupId,
+      type: 'PAYMENT_FAILED',
+      title: 'Member Payment Failed',
+      message: `${failingUserName}'s payment of $${amount} for "${groupName}" has failed.${reasonSuffix} Please follow up to reconcile.`,
+    });
+
+    // Email notification
+    if (owner.emailNotifications) {
+      try {
+        await emailService.sendPaymentFailedAdminEmail(
+          owner.email,
+          owner.firstName,
+          failingUserName,
+          groupName,
+          amount,
+          failureReason
+        );
+      } catch (emailErr) {
+        console.error(`Failed to send payment failure admin email for group ${groupId}:`, emailErr);
+      }
+    }
   }
 }
 
