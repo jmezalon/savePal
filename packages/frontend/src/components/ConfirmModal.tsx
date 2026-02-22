@@ -4,8 +4,9 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: 'danger' | 'warning' | 'info' | 'success';
   isLoading?: boolean;
+  showCancel?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -18,6 +19,7 @@ export default function ConfirmModal({
   cancelLabel = 'Cancel',
   variant = 'danger',
   isLoading = false,
+  showCancel = true,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -51,6 +53,15 @@ export default function ConfirmModal({
       iconBg: 'bg-blue-100',
       button: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
     },
+    success: {
+      icon: (
+        <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      ),
+      iconBg: 'bg-green-100',
+      button: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
+    },
   };
 
   const styles = variantStyles[variant];
@@ -79,13 +90,15 @@ export default function ConfirmModal({
           </div>
 
           <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3">
-            <button
-              onClick={onCancel}
-              disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 disabled:opacity-50"
-            >
-              {cancelLabel}
-            </button>
+            {showCancel && (
+              <button
+                onClick={onCancel}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 disabled:opacity-50"
+              >
+                {cancelLabel}
+              </button>
+            )}
             <button
               onClick={onConfirm}
               disabled={isLoading}

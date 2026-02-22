@@ -21,13 +21,13 @@ export default function HelpButton() {
   }, [open]);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
       {/* Support panel */}
       <div
         ref={panelRef}
         className={`bg-white rounded-2xl shadow-2xl border border-gray-100 w-80 overflow-hidden transform transition-all duration-200 origin-bottom-right ${
           open
-            ? 'scale-100 opacity-100 translate-y-0'
+            ? 'scale-100 opacity-100 translate-y-0 pointer-events-auto'
             : 'scale-95 opacity-0 translate-y-2 pointer-events-none'
         }`}
       >
@@ -93,7 +93,7 @@ export default function HelpButton() {
       <button
         ref={buttonRef}
         onClick={() => setOpen((prev) => !prev)}
-        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 ${
+        className={`pointer-events-auto w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 ${
           open
             ? 'bg-gray-700 hover:bg-gray-800 rotate-45'
             : 'bg-blue-600 hover:bg-blue-700 hover:shadow-xl hover:scale-105'

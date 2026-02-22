@@ -80,6 +80,8 @@ export default function GroupDetails() {
   const [showSettings, setShowSettings] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ title: string; message: string; variant: 'success' | 'danger'; onClose?: () => void } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [readiness, setReadiness] = useState<{
     ready: boolean;
     membersWithoutPaymentMethod: { firstName: string; lastName: string }[];
@@ -198,13 +200,13 @@ export default function GroupDetails() {
         if (id) {
           await fetchCycles(id);
         }
-        alert('Group started successfully! Payment cycles have been created.');
+        setAlertModal({ title: 'Group Started', message: 'Group started successfully! Payment cycles have been created.', variant: 'success' });
       } else {
         const data = await response.json();
         throw new Error(data.error || 'Failed to start group');
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to start group');
+      setAlertModal({ title: 'Error', message: err instanceof Error ? err.message : 'Failed to start group', variant: 'danger' });
     }
   };
 
@@ -224,10 +226,8 @@ export default function GroupDetails() {
   };
 
   const handleDeleteGroup = async () => {
-    if (!id || !confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
-      return;
-    }
-
+    if (!id) return;
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/groups/${id}`, {
@@ -238,14 +238,13 @@ export default function GroupDetails() {
       });
 
       if (response.ok) {
-        alert('Group deleted successfully');
-        navigate('/groups');
+        setAlertModal({ title: 'Group Deleted', message: 'Group deleted successfully.', variant: 'success', onClose: () => navigate('/groups') });
       } else {
         const data = await response.json();
         throw new Error(data.error || 'Failed to delete group');
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete group');
+      setAlertModal({ title: 'Error', message: err instanceof Error ? err.message : 'Failed to delete group', variant: 'danger' });
     } finally {
       setIsDeleting(false);
     }
@@ -351,7 +350,7 @@ export default function GroupDetails() {
                     Delete this group permanently. This action cannot be undone. All member data will be lost.
                   </p>
                   <button
-                    onClick={handleDeleteGroup}
+                    onClick={() => setShowDeleteConfirm(true)}
                     disabled={isDeleting}
                     className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
@@ -679,6 +678,38 @@ export default function GroupDetails() {
             handleStartGroup();
           }}
           onCancel={() => setShowStartConfirm(false)}
+        />
+
+        {/* Delete Group Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          title="Delete Group"
+          message="Are you sure you want to delete this group? This action cannot be undone. All member data will be lost."
+          confirmLabel="Delete Group"
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={handleDeleteGroup}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+
+        {/* Alert Modal (success/error feedback) */}
+        <ConfirmModal
+          isOpen={alertModal !== null}
+          title={alertModal?.title ?? ''}
+          message={alertModal?.message ?? ''}
+          confirmLabel="OK"
+          variant={alertModal?.variant ?? 'success'}
+          showCancel={false}
+          onConfirm={() => {
+            const onClose = alertModal?.onClose;
+            setAlertModal(null);
+            onClose?.();
+          }}
+          onCancel={() => {
+            const onClose = alertModal?.onClose;
+            setAlertModal(null);
+            onClose?.();
+          }}
         />
       </main>
     </div>
