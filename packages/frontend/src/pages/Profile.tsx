@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AddPaymentMethod from '../components/AddPaymentMethod';
+import ConfirmModal from '../components/ConfirmModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -62,6 +63,25 @@ export default function Profile() {
   const [accountNumber, setAccountNumber] = useState('');
   const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    variant: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    variant: 'danger',
+    onConfirm: () => {},
+  });
+
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
   useEffect(() => {
     if (user) {
@@ -332,31 +352,39 @@ export default function Profile() {
   };
 
   // Delete payment method
-  const handleDeletePaymentMethod = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this payment method?')) return;
+  const handleDeletePaymentMethod = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Payment Method',
+      message: 'Are you sure you want to delete this payment method? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/payment-methods/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/payment-methods/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+          const data = await response.json();
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Payment method deleted successfully' });
-        loadPaymentMethods();
-      } else {
-        throw new Error(data.error || 'Failed to delete payment method');
-      }
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to delete payment method',
-      });
-    }
+          if (response.ok) {
+            setMessage({ type: 'success', text: 'Payment method deleted successfully' });
+            loadPaymentMethods();
+          } else {
+            throw new Error(data.error || 'Failed to delete payment method');
+          }
+        } catch (error) {
+          setMessage({
+            type: 'error',
+            text: error instanceof Error ? error.message : 'Failed to delete payment method',
+          });
+        }
+      },
+    });
   };
 
   // Set default payment method
@@ -470,31 +498,39 @@ export default function Profile() {
   };
 
   // Handle remove bank account
-  const handleRemoveBankAccount = async () => {
-    if (!confirm('Are you sure you want to remove your bank account? You will not receive payouts until you add a new one.')) return;
+  const handleRemoveBankAccount = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Bank Account',
+      message: 'Are you sure you want to remove your bank account? You will not receive payouts until you add a new one.',
+      confirmLabel: 'Remove',
+      variant: 'warning',
+      onConfirm: async () => {
+        closeConfirmModal();
+        setIsConnectAction(true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/connect/bank-account`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
 
-    setIsConnectAction(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/connect/bank-account`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Bank account removed' });
-        loadConnectStatus();
-      } else {
-        throw new Error(data.error || 'Failed to remove bank account');
-      }
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to remove bank account',
-      });
-    } finally {
-      setIsConnectAction(false);
-    }
+          const data = await response.json();
+          if (response.ok) {
+            setMessage({ type: 'success', text: 'Bank account removed' });
+            loadConnectStatus();
+          } else {
+            throw new Error(data.error || 'Failed to remove bank account');
+          }
+        } catch (error) {
+          setMessage({
+            type: 'error',
+            text: error instanceof Error ? error.message : 'Failed to remove bank account',
+          });
+        } finally {
+          setIsConnectAction(false);
+        }
+      },
+    });
   };
 
   // Load payment methods and connect status on mount
@@ -1128,6 +1164,17 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirmModal}
+      />
     </div>
   );
 }
