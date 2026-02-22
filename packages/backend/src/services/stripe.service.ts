@@ -434,6 +434,7 @@ class StripeService {
         },
         capabilities: {
           transfers: { requested: true },
+          card_payments: { requested: true },
         },
         tos_acceptance: {
           date: Math.floor(Date.now() / 1000),
