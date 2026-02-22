@@ -50,6 +50,18 @@ export default function Navbar() {
               >
                 Payments
               </Link>
+              {user?.role === 'SUPERADMIN' && (
+                <Link
+                  to="/admin"
+                  className={`px-3 py-2 text-sm font-medium ${
+                    isActive('/admin')
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
 
@@ -142,6 +154,19 @@ export default function Navbar() {
             >
               Profile
             </Link>
+            {user?.role === 'SUPERADMIN' && (
+              <Link
+                to="/admin"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive('/admin')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Admin
+              </Link>
+            )}
             <div className="px-3 py-2 text-sm text-gray-500">
               {user?.firstName} {user?.lastName}
             </div>

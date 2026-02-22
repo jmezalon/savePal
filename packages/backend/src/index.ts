@@ -10,6 +10,7 @@ import notificationRoutes from './routes/notification.routes.js';
 import paymentMethodRoutes from './routes/paymentMethod.routes.js';
 import connectRoutes from './routes/connect.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import schedulerService from './services/scheduler.service.js';
 
 // Load environment variables
@@ -97,6 +98,9 @@ app.use('/api/payment-methods', paymentMethodRoutes);
 
 // Connect routes
 app.use('/api/connect', connectRoutes);
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

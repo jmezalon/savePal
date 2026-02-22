@@ -9,6 +9,7 @@ interface User {
   emailVerified: boolean;
   phoneVerified: boolean;
   trustScore: number;
+  role: 'USER' | 'SUPERADMIN';
   emailNotifications: boolean;
   smsNotifications: boolean;
   pushNotifications: boolean;

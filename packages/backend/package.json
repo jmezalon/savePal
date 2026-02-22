@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "script:send-verification": "tsx src/scripts/send-verification-to-existing-users.ts",
     "script:auto-verify": "tsx src/scripts/auto-verify-existing-users.ts",
-    "script:test-join-notification": "tsx src/scripts/test-join-notification.ts"
+    "script:test-join-notification": "tsx src/scripts/test-join-notification.ts",
+    "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

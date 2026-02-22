@@ -19,6 +19,7 @@ import SmsConsent from './pages/SmsConsent';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import PaymentHistory from './pages/PaymentHistory';
+import AdminDashboard from './pages/AdminDashboard';
 
 function AppContent() {
   const location = useLocation();
@@ -46,6 +47,7 @@ function AppContent() {
         <Route path="/groups/join" element={<JoinGroup />} />
         <Route path="/groups/:id" element={<GroupDetails />} />
         <Route path="/payments" element={<PaymentHistory />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
       <HelpButton />

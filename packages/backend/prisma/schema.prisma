@@ -22,6 +22,7 @@ model User {
   emailVerified Boolean  @default(false)
   phoneVerified Boolean  @default(false)
   trustScore    Float    @default(0)
+  role          SystemRole @default(USER)
 
   // Notification Preferences
   emailNotifications Boolean @default(true)
@@ -242,6 +243,11 @@ enum MemberRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum SystemRole {
+  USER
+  SUPERADMIN
 }
 
 enum NotificationType {
