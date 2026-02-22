@@ -903,12 +903,21 @@ export default function Profile() {
                           Set as Default
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDeletePaymentMethod(pm.id)}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
+                      {paymentMethods.length === 1 ? (
+                        <span
+                          className="text-sm text-gray-400 cursor-not-allowed"
+                          title="Add another card before removing this one"
+                        >
+                          Delete
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleDeletePaymentMethod(pm.id)}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

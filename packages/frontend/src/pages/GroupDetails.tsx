@@ -78,6 +78,10 @@ export default function GroupDetails() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [readiness, setReadiness] = useState<{
+    ready: boolean;
+    membersWithoutPaymentMethod: { firstName: string; lastName: string }[];
+  } | null>(null);
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -109,6 +113,22 @@ export default function GroupDetails() {
       }
 
       setGroup(data.data);
+
+      // Check readiness if group is full and pending
+      const g = data.data;
+      if (g.status === 'PENDING' && g.currentMembers === g.maxMembers) {
+        try {
+          const readinessRes = await fetch(`${API_BASE_URL}/api/groups/${id}/readiness`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (readinessRes.ok) {
+            const readinessData = await readinessRes.json();
+            setReadiness(readinessData.data);
+          }
+        } catch {
+          // Fail open
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch group details');
     } finally {
@@ -443,17 +463,40 @@ export default function GroupDetails() {
               </div>
 
               {isOwner && group.status === 'PENDING' && group.currentMembers === group.maxMembers && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-green-900 mb-2">Group is Full!</h3>
-                  <p className="text-sm text-green-800 mb-3">
-                    All member spots are filled. You can now start the group to begin payment cycles.
-                  </p>
-                  <button
-                    onClick={handleStartGroup}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-                  >
-                    Start Group
-                  </button>
+                <div className={`border rounded-lg p-4 ${readiness && !readiness.ready ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                  <h3 className={`text-sm font-semibold mb-2 ${readiness && !readiness.ready ? 'text-yellow-900' : 'text-green-900'}`}>
+                    Group is Full!
+                  </h3>
+                  {readiness && !readiness.ready ? (
+                    <>
+                      <p className="text-sm text-yellow-800 mb-2">
+                        The following members still need to add a payment method before the group can start:
+                      </p>
+                      <ul className="text-sm text-yellow-800 mb-3 list-disc list-inside">
+                        {readiness.membersWithoutPaymentMethod.map((m, i) => (
+                          <li key={i}>{m.firstName} {m.lastName}</li>
+                        ))}
+                      </ul>
+                      <button
+                        disabled
+                        className="px-4 py-2 text-sm font-medium text-white bg-gray-400 rounded-md cursor-not-allowed"
+                      >
+                        Start Group
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-green-800 mb-3">
+                        All member spots are filled. You can now start the group to begin payment cycles.
+                      </p>
+                      <button
+                        onClick={handleStartGroup}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                      >
+                        Start Group
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
 

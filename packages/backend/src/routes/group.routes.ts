@@ -24,6 +24,9 @@ router.get('/:id', groupController.getGroupById.bind(groupController));
 // Update group details (owner only)
 router.put('/:id', groupController.updateGroup.bind(groupController));
 
+// Check group readiness (all members have payment methods)
+router.get('/:id/readiness', groupController.checkReadiness.bind(groupController));
+
 // Start a group (owner only)
 router.post('/:id/start', groupController.startGroup.bind(groupController));
 

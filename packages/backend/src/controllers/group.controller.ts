@@ -114,7 +114,7 @@ class GroupController {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to join group';
 
-      if (errorMessage.includes('Invalid') || errorMessage.includes('full') || errorMessage.includes('already')) {
+      if (errorMessage.includes('Invalid') || errorMessage.includes('full') || errorMessage.includes('already') || errorMessage.includes('payment method')) {
         return res.status(400).json({
           success: false,
           error: errorMessage,
@@ -257,7 +257,7 @@ class GroupController {
         });
       }
 
-      if (errorMessage.includes('started') || errorMessage.includes('needs')) {
+      if (errorMessage.includes('started') || errorMessage.includes('needs') || errorMessage.includes('Cannot start group')) {
         return res.status(400).json({
           success: false,
           error: errorMessage,
@@ -268,6 +268,36 @@ class GroupController {
         success: false,
         error: errorMessage,
       });
+    }
+  }
+
+  /**
+   * GET /api/groups/:id/readiness
+   * Check if all members have payment methods
+   */
+  async checkReadiness(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { id } = req.params;
+
+      const readiness = await groupService.checkGroupReadiness(id, userId);
+
+      return res.status(200).json({
+        success: true,
+        data: readiness,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check group readiness';
+
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ success: false, error: errorMessage });
+      }
+
+      if (errorMessage.includes('not a member')) {
+        return res.status(403).json({ success: false, error: errorMessage });
+      }
+
+      return res.status(500).json({ success: false, error: errorMessage });
     }
   }
 

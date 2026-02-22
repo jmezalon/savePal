@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,8 +8,27 @@ export default function JoinGroup() {
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
   const { token, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkPaymentMethods = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/payment-methods`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setHasPaymentMethod((data.data || []).length > 0);
+        }
+      } catch {
+        // Fail open — backend will enforce anyway
+        setHasPaymentMethod(true);
+      }
+    };
+    checkPaymentMethods();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +120,18 @@ export default function JoinGroup() {
               Enter the invite code shared by the group owner to join.
             </p>
 
+            {hasPaymentMethod === false && (
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded">
+                <p className="font-medium">Payment method required</p>
+                <p className="text-sm mt-1">
+                  You need to add a payment method before joining a group.{' '}
+                  <Link to="/profile" className="text-blue-600 hover:text-blue-700 underline font-medium">
+                    Go to Profile
+                  </Link>
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                 {error}
@@ -140,7 +171,7 @@ export default function JoinGroup() {
               <div className="flex space-x-4">
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || hasPaymentMethod === false}
                   className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Joining...' : 'Join Group'}

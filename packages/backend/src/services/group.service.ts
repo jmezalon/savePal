@@ -110,6 +110,15 @@ class GroupService {
       throw new Error('You are already a member of this group');
     }
 
+    // Check if user has at least one payment method
+    const paymentMethodCount = await prisma.paymentMethod.count({
+      where: { userId },
+    });
+
+    if (paymentMethodCount === 0) {
+      throw new Error('You must add a payment method before joining a group');
+    }
+
     // Get user details for the new member
     const newMember = await prisma.user.findUnique({
       where: { id: userId },
@@ -346,6 +355,23 @@ class GroupService {
       throw new Error(`Group needs ${group.maxMembers - group.currentMembers} more members before starting`);
     }
 
+    // Verify all members have at least one payment method
+    const memberUserIds = group.memberships.map((m) => m.userId);
+    const membersWithCards = await prisma.paymentMethod.groupBy({
+      by: ['userId'],
+      where: { userId: { in: memberUserIds } },
+    });
+    const usersWithCards = new Set(membersWithCards.map((m) => m.userId));
+
+    if (usersWithCards.size < memberUserIds.length) {
+      const missingMembers = await prisma.user.findMany({
+        where: { id: { in: memberUserIds.filter((id) => !usersWithCards.has(id)) } },
+        select: { firstName: true },
+      });
+      const names = missingMembers.map((m) => m.firstName).join(', ');
+      throw new Error(`Cannot start group: the following members need to add a payment method: ${names}`);
+    }
+
     // Update group status to ACTIVE
     const updatedGroup = await prisma.group.update({
       where: { id: groupId },
@@ -359,6 +385,50 @@ class GroupService {
     await cycleService.createCyclesForGroup(groupId);
 
     return updatedGroup;
+  }
+
+  /**
+   * Check if all members have a payment method (readiness to start)
+   */
+  async checkGroupReadiness(groupId: string, userId: string) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        memberships: {
+          where: { isActive: true },
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    const isMember = group.memberships.some((m) => m.userId === userId);
+    if (!isMember) {
+      throw new Error('You are not a member of this group');
+    }
+
+    const memberUserIds = group.memberships.map((m) => m.userId);
+    const membersWithCards = await prisma.paymentMethod.groupBy({
+      by: ['userId'],
+      where: { userId: { in: memberUserIds } },
+    });
+    const usersWithCards = new Set(membersWithCards.map((m) => m.userId));
+
+    const membersWithoutPaymentMethod = group.memberships
+      .filter((m) => !usersWithCards.has(m.userId))
+      .map((m) => ({ firstName: m.user.firstName, lastName: m.user.lastName }));
+
+    return {
+      ready: membersWithoutPaymentMethod.length === 0,
+      membersWithoutPaymentMethod,
+    };
   }
 
   /**

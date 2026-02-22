@@ -174,6 +174,24 @@ class StripeService {
       throw new Error('Payment method not found');
     }
 
+    // Block deleting last card if user is in an active or pending group
+    const cardCount = await prisma.paymentMethod.count({ where: { userId } });
+    if (cardCount === 1) {
+      const activeGroupMembership = await prisma.membership.findFirst({
+        where: {
+          userId,
+          isActive: true,
+          group: { status: { in: ['PENDING', 'ACTIVE'] } },
+        },
+      });
+
+      if (activeGroupMembership) {
+        throw new Error(
+          'You cannot delete your only payment card while you are in an active or pending group. Please add another card first.'
+        );
+      }
+    }
+
     // Detach from Stripe
     await this.stripe.paymentMethods.detach(paymentMethod.stripePaymentMethodId);
 
