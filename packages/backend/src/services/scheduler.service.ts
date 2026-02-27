@@ -147,13 +147,14 @@ class SchedulerService {
 
   async sendPaymentReminders() {
     const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const tomorrowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
 
     const upcomingPayments = await prisma.payment.findMany({
       where: {
         status: 'PENDING',
         cycle: {
-          dueDate: { gte: now, lte: tomorrow },
+          dueDate: { gte: tomorrowStart, lt: tomorrowEnd },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
@@ -214,14 +215,14 @@ class SchedulerService {
 
   async send48HourPaymentReminders() {
     const now = new Date();
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const twoDaysStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+    const twoDaysEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
 
     const upcomingPayments = await prisma.payment.findMany({
       where: {
         status: 'PENDING',
         cycle: {
-          dueDate: { gt: in24h, lte: in48h },
+          dueDate: { gte: twoDaysStart, lt: twoDaysEnd },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
