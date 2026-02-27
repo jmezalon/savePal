@@ -106,26 +106,26 @@ class CycleController {
   }
 
   /**
-   * Get user's payment for a specific cycle
-   * GET /api/cycles/:cycleId/my-payment
+   * Get user's payments for a specific cycle (multiple contribution periods)
+   * GET /api/cycles/:cycleId/my-payments
    */
-  async getMyPayment(req: AuthRequest, res: Response) {
+  async getMyPayments(req: AuthRequest, res: Response) {
     try {
       const { cycleId } = req.params;
       const userId = req.userId!;
 
-      const payment = await cycleService.getUserPaymentForCycle(cycleId, userId);
+      const payments = await cycleService.getUserPaymentsForCycle(cycleId, userId);
 
-      if (!payment) {
+      if (!payments || payments.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Payment not found',
+          error: 'No payments found',
         });
       }
 
       return res.json({
         success: true,
-        data: payment,
+        data: payments,
       });
     } catch (error: any) {
       return res.status(400).json({

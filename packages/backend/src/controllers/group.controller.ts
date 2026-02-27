@@ -15,6 +15,7 @@ class GroupController {
         description,
         contributionAmount,
         frequency,
+        payoutFrequency,
         payoutMethod,
         maxMembers,
         startDate,
@@ -60,11 +61,30 @@ class GroupController {
         });
       }
 
+      // Validate payout frequency if provided
+      if (payoutFrequency) {
+        if (!['WEEKLY', 'BIWEEKLY', 'MONTHLY'].includes(payoutFrequency)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid payout frequency. Must be WEEKLY, BIWEEKLY, or MONTHLY',
+          });
+        }
+
+        const freqOrder: Record<string, number> = { WEEKLY: 1, BIWEEKLY: 2, MONTHLY: 3 };
+        if (freqOrder[payoutFrequency] < freqOrder[frequency]) {
+          return res.status(400).json({
+            success: false,
+            error: 'Payout frequency cannot be more frequent than contribution frequency',
+          });
+        }
+      }
+
       const group = await groupService.createGroup({
         name,
         description,
         contributionAmount: parseFloat(contributionAmount),
         frequency: frequency as Frequency,
+        payoutFrequency: payoutFrequency ? (payoutFrequency as Frequency) : undefined,
         payoutMethod: payoutMethod as PayoutMethod,
         maxMembers: parseInt(maxMembers),
         startDate: startDate ? new Date(startDate) : undefined,
@@ -200,6 +220,38 @@ class GroupController {
       const userId = (req as any).userId;
       const { id } = req.params;
       const updateData = req.body;
+
+      // Validate payoutFrequency if provided
+      if (updateData.payoutFrequency !== undefined && updateData.payoutFrequency !== null) {
+        if (!['WEEKLY', 'BIWEEKLY', 'MONTHLY'].includes(updateData.payoutFrequency)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid payout frequency. Must be WEEKLY, BIWEEKLY, or MONTHLY',
+          });
+        }
+
+        // Determine which contribution frequency to validate against
+        const frequency = updateData.frequency || (await groupService.getGroupById(id, userId))?.frequency;
+        if (frequency) {
+          const freqOrder: Record<string, number> = { WEEKLY: 1, BIWEEKLY: 2, MONTHLY: 3 };
+          if (freqOrder[updateData.payoutFrequency] < freqOrder[frequency]) {
+            return res.status(400).json({
+              success: false,
+              error: 'Payout frequency cannot be more frequent than contribution frequency',
+            });
+          }
+        }
+      }
+
+      // Validate frequency if provided
+      if (updateData.frequency) {
+        if (!['WEEKLY', 'BIWEEKLY', 'MONTHLY'].includes(updateData.frequency)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid frequency. Must be WEEKLY, BIWEEKLY, or MONTHLY',
+          });
+        }
+      }
 
       const group = await groupService.updateGroup(id, userId, updateData);
 

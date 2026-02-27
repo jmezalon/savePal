@@ -44,8 +44,8 @@ class SchedulerService {
       where: {
         status: { in: ['PENDING', 'FAILED'] },
         retryCount: { lt: 3 },
+        dueDate: { gte: startOfDay, lt: endOfDay },
         cycle: {
-          dueDate: { gte: startOfDay, lt: endOfDay },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
@@ -116,8 +116,8 @@ class SchedulerService {
       where: {
         status: { in: ['PENDING', 'FAILED'] },
         retryCount: { lt: 3 },
+        dueDate: { lt: now },
         cycle: {
-          dueDate: { lt: now },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
@@ -153,8 +153,8 @@ class SchedulerService {
     const upcomingPayments = await prisma.payment.findMany({
       where: {
         status: 'PENDING',
+        dueDate: { gte: tomorrowStart, lt: tomorrowEnd },
         cycle: {
-          dueDate: { gte: tomorrowStart, lt: tomorrowEnd },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
@@ -166,6 +166,8 @@ class SchedulerService {
     });
 
     for (const payment of upcomingPayments) {
+      const paymentDueDate = payment.dueDate || payment.cycle.dueDate;
+
       // Check if user has consented to auto-payments for this group
       const membership = await prisma.membership.findFirst({
         where: {
@@ -182,7 +184,7 @@ class SchedulerService {
           payment.cycle.group.id,
           payment.cycle.group.name,
           payment.amount,
-          payment.cycle.dueDate
+          paymentDueDate
         );
 
         const prefs = await notificationService.getUserPreferences(payment.userId);
@@ -193,7 +195,7 @@ class SchedulerService {
               payment.user.firstName,
               payment.cycle.group.name,
               payment.amount,
-              payment.cycle.dueDate
+              paymentDueDate
             );
           } catch (emailErr) {
             console.error(`[Scheduler] Failed to send auto-payment scheduled email for payment ${payment.id}:`, emailErr);
@@ -205,7 +207,7 @@ class SchedulerService {
           payment.cycle.group.id,
           payment.cycle.group.name,
           payment.amount,
-          payment.cycle.dueDate
+          paymentDueDate
         );
       }
     }
@@ -221,8 +223,8 @@ class SchedulerService {
     const upcomingPayments = await prisma.payment.findMany({
       where: {
         status: 'PENDING',
+        dueDate: { gte: twoDaysStart, lt: twoDaysEnd },
         cycle: {
-          dueDate: { gte: twoDaysStart, lt: twoDaysEnd },
           isCompleted: false,
           group: { status: 'ACTIVE' },
         },
@@ -236,6 +238,8 @@ class SchedulerService {
     let sentCount = 0;
 
     for (const payment of upcomingPayments) {
+      const paymentDueDate = payment.dueDate || payment.cycle.dueDate;
+
       const membership = await prisma.membership.findFirst({
         where: {
           groupId: payment.cycle.groupId,
@@ -252,7 +256,7 @@ class SchedulerService {
         payment.cycle.group.id,
         payment.cycle.group.name,
         payment.amount,
-        payment.cycle.dueDate
+        paymentDueDate
       );
 
       const prefs = await notificationService.getUserPreferences(payment.userId);
@@ -263,7 +267,7 @@ class SchedulerService {
             payment.user.firstName,
             payment.cycle.group.name,
             payment.amount,
-            payment.cycle.dueDate
+            paymentDueDate
           );
         } catch (emailErr) {
           console.error(`[Scheduler] Failed to send 48h reminder email for payment ${payment.id}:`, emailErr);

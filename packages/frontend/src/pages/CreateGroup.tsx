@@ -10,6 +10,7 @@ export default function CreateGroup() {
     description: '',
     contributionAmount: '',
     frequency: 'MONTHLY',
+    payoutFrequency: '',
     payoutMethod: 'SEQUENTIAL',
     maxMembers: '',
   });
@@ -19,10 +20,18 @@ export default function CreateGroup() {
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    const updated = { ...formData, [name]: value };
+
+    // Reset payoutFrequency if contribution frequency changes to make current selection invalid
+    if (name === 'frequency') {
+      const freqOrder: Record<string, number> = { WEEKLY: 1, BIWEEKLY: 2, MONTHLY: 3 };
+      if (updated.payoutFrequency && freqOrder[updated.payoutFrequency] < freqOrder[value]) {
+        updated.payoutFrequency = '';
+      }
+    }
+
+    setFormData(updated);
     setError(null);
   };
 
@@ -60,6 +69,7 @@ export default function CreateGroup() {
           ...formData,
           contributionAmount: parseFloat(formData.contributionAmount),
           maxMembers: maxMembers,
+          payoutFrequency: formData.payoutFrequency || undefined,
         }),
       });
 
@@ -212,12 +222,62 @@ export default function CreateGroup() {
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="payoutFrequency" className="block text-sm font-medium text-gray-700 mb-2">
+                  Payout Frequency (Optional)
+                </label>
+                <select
+                  id="payoutFrequency"
+                  name="payoutFrequency"
+                  value={formData.payoutFrequency}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Same as contribution frequency</option>
+                  {formData.frequency === 'WEEKLY' && (
+                    <>
+                      <option value="BIWEEKLY">Bi-weekly</option>
+                      <option value="MONTHLY">Monthly</option>
+                    </>
+                  )}
+                  {formData.frequency === 'BIWEEKLY' && (
+                    <option value="MONTHLY">Monthly</option>
+                  )}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  How often a member receives the pot. Leave blank to match the contribution frequency.
+                </p>
+              </div>
+
+              {formData.contributionAmount && formData.maxMembers && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                  <h3 className="text-sm font-medium text-green-900 mb-1">Pot Summary</h3>
+                  <p className="text-sm text-green-800">
+                    {(() => {
+                      const contrib = parseFloat(formData.contributionAmount);
+                      const members = parseInt(formData.maxMembers);
+                      const multiplierMap: Record<string, Record<string, number>> = {
+                        WEEKLY: { WEEKLY: 1, BIWEEKLY: 2, MONTHLY: 4 },
+                        BIWEEKLY: { BIWEEKLY: 1, MONTHLY: 2 },
+                        MONTHLY: { MONTHLY: 1 },
+                      };
+                      const payoutFreq = formData.payoutFrequency || formData.frequency;
+                      const multiplier = multiplierMap[formData.frequency]?.[payoutFreq] ?? 1;
+                      const pot = contrib * multiplier * members;
+                      if (isNaN(pot) || contrib <= 0 || members < 2) return 'Enter valid amounts to see pot summary';
+                      return `Each payout: $${contrib.toFixed(2)} x ${multiplier} contribution${multiplier > 1 ? 's' : ''} x ${members} members = $${pot.toFixed(2)}`;
+                    })()}
+                  </p>
+                </div>
+              )}
+
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                 <h3 className="text-sm font-medium text-blue-900 mb-2">How it works:</h3>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Each member contributes the set amount on schedule</li>
-                  <li>• <strong>Payments are automatic</strong> — members' cards are charged on each due date</li>
-                  <li>• One member receives the full pot each cycle</li>
+                  <li>• Each member contributes the set amount on the contribution schedule</li>
+                  <li>• <strong>Payments are automatic</strong> — members' cards are charged on each contribution due date</li>
+                  <li>• If payout frequency differs, contributions accumulate into a bigger pot</li>
+                  <li>• One member receives the full pot each payout cycle</li>
                   <li>• Group continues until everyone has received a payout</li>
                   <li>• You'll be the group owner and can invite members</li>
                 </ul>

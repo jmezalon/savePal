@@ -8,6 +8,8 @@ interface Payment {
   id: string;
   amount: number;
   status: string;
+  contributionPeriod?: number;
+  dueDate?: string;
   paidAt?: string;
   failureReason?: string;
   createdAt: string;
@@ -233,7 +235,9 @@ export default function PaymentHistory() {
                             {payment.cycle.group.name}
                           </Link>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Cycle {payment.cycle.cycleNumber} &middot; Due {new Date(payment.cycle.dueDate).toLocaleDateString()}
+                            Cycle {payment.cycle.cycleNumber}
+                            {payment.contributionPeriod && payment.contributionPeriod > 1 ? `, Period ${payment.contributionPeriod}` : ''}
+                            {' '}&middot; Due {new Date(payment.dueDate || payment.cycle.dueDate).toLocaleDateString()}
                           </p>
                           {payment.status === 'FAILED' && payment.failureReason && (
                             <p className="text-xs text-red-500 mt-0.5">{payment.failureReason}</p>

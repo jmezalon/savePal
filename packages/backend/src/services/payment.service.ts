@@ -193,10 +193,11 @@ class PaymentService {
       where: {
         userId,
         status: 'PENDING',
+        dueDate: {
+          lt: now,
+        },
         cycle: {
-          dueDate: {
-            lt: now,
-          },
+          isCompleted: false,
         },
       },
       include: {
@@ -207,7 +208,7 @@ class PaymentService {
         },
       },
       orderBy: {
-        createdAt: 'asc',
+        dueDate: 'asc',
       },
     });
 

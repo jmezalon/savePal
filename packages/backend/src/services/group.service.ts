@@ -8,6 +8,7 @@ interface CreateGroupData {
   description?: string;
   contributionAmount: number;
   frequency: Frequency;
+  payoutFrequency?: Frequency;
   payoutMethod: PayoutMethod;
   maxMembers: number;
   startDate?: Date;
@@ -30,6 +31,7 @@ class GroupService {
       description,
       contributionAmount,
       frequency,
+      payoutFrequency,
       payoutMethod,
       maxMembers,
       startDate,
@@ -45,6 +47,7 @@ class GroupService {
           description,
           contributionAmount,
           frequency,
+          payoutFrequency: payoutFrequency || null,
           payoutMethod,
           maxMembers,
           startDate,
@@ -341,6 +344,7 @@ class GroupService {
         description: updateData.description,
         contributionAmount: updateData.contributionAmount,
         frequency: updateData.frequency,
+        payoutFrequency: updateData.payoutFrequency !== undefined ? (updateData.payoutFrequency || null) : undefined,
         payoutMethod: updateData.payoutMethod,
         maxMembers: updateData.maxMembers,
         startDate: updateData.startDate,

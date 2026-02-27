@@ -3,6 +3,19 @@ import { Frequency } from '@prisma/client';
 import payoutService from './payout.service.js';
 import notificationService from './notification.service.js';
 
+function getContributionsPerPayout(contributionFreq: Frequency, payoutFreq: Frequency): number {
+  const map: Record<string, Record<string, number>> = {
+    WEEKLY:   { WEEKLY: 1, BIWEEKLY: 2, MONTHLY: 4 },
+    BIWEEKLY: { BIWEEKLY: 1, MONTHLY: 2 },
+    MONTHLY:  { MONTHLY: 1 },
+  };
+  const result = map[contributionFreq]?.[payoutFreq];
+  if (result === undefined) {
+    throw new Error(`Invalid frequency combination: contribution=${contributionFreq}, payout=${payoutFreq}`);
+  }
+  return result;
+}
+
 class CycleService {
   /**
    * Create all cycles for a group when it starts
@@ -50,16 +63,18 @@ class CycleService {
     // Calculate cycle dates
     const cycles = [];
     const startDate = group.startDate || new Date();
+    const effectivePayoutFrequency = group.payoutFrequency || group.frequency;
+    const contributionsPerPayout = getContributionsPerPayout(group.frequency, effectivePayoutFrequency);
 
     for (let i = 0; i < group.maxMembers; i++) {
-      const dueDate = this.calculateDueDate(startDate, i, group.frequency);
+      const dueDate = this.calculateDueDate(startDate, i, effectivePayoutFrequency);
 
       cycles.push({
         groupId: group.id,
         cycleNumber: i + 1,
         recipientId: payoutOrder[i],
         dueDate,
-        totalAmount: group.contributionAmount * group.maxMembers,
+        totalAmount: group.contributionAmount * contributionsPerPayout * group.maxMembers,
         isCompleted: false,
       });
     }
@@ -98,8 +113,13 @@ class CycleService {
 
   /**
    * Create payment records for all members in a cycle
+   * Creates multiple payments per member when payout frequency > contribution frequency
    */
   async createPaymentsForCycle(cycleId: string, groupId: string) {
+    const cycle = await prisma.cycle.findUnique({
+      where: { id: cycleId },
+    });
+
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: {
@@ -109,16 +129,40 @@ class CycleService {
       },
     });
 
-    if (!group) {
-      throw new Error('Group not found');
+    if (!group || !cycle) {
+      throw new Error('Group or cycle not found');
     }
 
-    const payments = group.memberships.map(membership => ({
-      cycleId,
-      userId: membership.userId,
-      amount: group.contributionAmount,
-      status: 'PENDING' as const,
-    }));
+    const effectivePayoutFrequency = group.payoutFrequency || group.frequency;
+    const contributionsPerPayout = getContributionsPerPayout(group.frequency, effectivePayoutFrequency);
+    const groupStartDate = group.startDate || new Date();
+    const cycleIndex = cycle.cycleNumber - 1;
+
+    const payments: Array<{
+      cycleId: string;
+      userId: string;
+      amount: number;
+      status: 'PENDING';
+      contributionPeriod: number;
+      dueDate: Date;
+    }> = [];
+
+    for (const membership of group.memberships) {
+      for (let period = 1; period <= contributionsPerPayout; period++) {
+        // Overall contribution index from start of the group
+        const overallContributionIndex = cycleIndex * contributionsPerPayout + (period - 1);
+        const dueDate = this.calculateDueDate(groupStartDate, overallContributionIndex, group.frequency);
+
+        payments.push({
+          cycleId,
+          userId: membership.userId,
+          amount: group.contributionAmount,
+          status: 'PENDING',
+          contributionPeriod: period,
+          dueDate,
+        });
+      }
+    }
 
     await prisma.payment.createMany({
       data: payments,
@@ -334,15 +378,13 @@ class CycleService {
   }
 
   /**
-   * Get user's payments for a specific cycle
+   * Get user's payments for a specific cycle (returns array for multiple contribution periods)
    */
-  async getUserPaymentForCycle(cycleId: string, userId: string) {
-    const payment = await prisma.payment.findUnique({
+  async getUserPaymentsForCycle(cycleId: string, userId: string) {
+    const payments = await prisma.payment.findMany({
       where: {
-        cycleId_userId: {
-          cycleId,
-          userId,
-        },
+        cycleId,
+        userId,
       },
       include: {
         cycle: {
@@ -351,9 +393,12 @@ class CycleService {
           },
         },
       },
+      orderBy: {
+        contributionPeriod: 'asc',
+      },
     });
 
-    return payment;
+    return payments;
   }
 }
 

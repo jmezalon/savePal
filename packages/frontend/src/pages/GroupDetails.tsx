@@ -22,6 +22,8 @@ interface Payment {
   id: string;
   amount: number;
   status: string;
+  contributionPeriod: number;
+  dueDate?: string;
   paidAt?: string;
   failureReason?: string;
   retryCount?: number;
@@ -50,6 +52,7 @@ interface GroupDetails {
   description?: string;
   contributionAmount: number;
   frequency: string;
+  payoutFrequency?: string;
   payoutMethod: string;
   status: string;
   maxMembers: number;
@@ -72,7 +75,8 @@ export default function GroupDetails() {
   const [group, setGroup] = useState<GroupDetails | null>(null);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [currentCycle, setCurrentCycle] = useState<Cycle | null>(null);
-  const [myPayment, setMyPayment] = useState<Payment | null>(null);
+  const [myPayments, setMyPayments] = useState<Payment[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -164,9 +168,9 @@ export default function GroupDetails() {
           const currentData = await currentResponse.json();
           setCurrentCycle(currentData.data);
 
-          // Fetch user's payment for current cycle
+          // Fetch user's payments for current cycle (multiple contribution periods)
           if (currentData.data) {
-            const paymentResponse = await fetch(`${API_BASE_URL}/api/cycles/${currentData.data.id}/my-payment`, {
+            const paymentResponse = await fetch(`${API_BASE_URL}/api/cycles/${currentData.data.id}/my-payments`, {
               headers: {
                 'Authorization': `Bearer ${token}`,
               },
@@ -174,7 +178,8 @@ export default function GroupDetails() {
 
             if (paymentResponse.ok) {
               const paymentData = await paymentResponse.json();
-              setMyPayment(paymentData.data);
+              const payments = Array.isArray(paymentData.data) ? paymentData.data : [paymentData.data];
+              setMyPayments(payments);
             }
           }
         }
@@ -364,7 +369,12 @@ export default function GroupDetails() {
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-blue-900 mb-1">Contribution</h3>
                   <p className="text-2xl font-bold text-blue-600">${group.contributionAmount}</p>
-                  <p className="text-sm text-blue-700">{getFrequencyLabel(group.frequency)}</p>
+                  <p className="text-sm text-blue-700">
+                    {getFrequencyLabel(group.frequency)}
+                    {group.payoutFrequency && group.payoutFrequency !== group.frequency && (
+                      <span> / {getFrequencyLabel(group.payoutFrequency)} payouts</span>
+                    )}
+                  </p>
                 </div>
 
                 <div className="bg-green-50 rounded-lg p-4">
@@ -396,10 +406,17 @@ export default function GroupDetails() {
                     <div>
                       <h3 className="text-sm font-semibold text-blue-900">Automatic Payments Active</h3>
                       <p className="text-sm text-blue-800 mt-1">
-                        Your card will be automatically charged on each cycle's due date.
-                        {currentCycle && !currentCycle.isCompleted && (
-                          <span className="font-medium"> Next auto-charge: {new Date(currentCycle.dueDate).toLocaleDateString()}</span>
-                        )}
+                        Your card will be automatically charged on each contribution due date.
+                        {(() => {
+                          const nextDue = myPayments.find(p => p.status === 'PENDING' && p.dueDate);
+                          if (nextDue?.dueDate) {
+                            return <span className="font-medium"> Next auto-charge: {new Date(nextDue.dueDate).toLocaleDateString()}</span>;
+                          }
+                          if (currentCycle && !currentCycle.isCompleted) {
+                            return <span className="font-medium"> Payout due: {new Date(currentCycle.dueDate).toLocaleDateString()}</span>;
+                          }
+                          return null;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -579,56 +596,54 @@ export default function GroupDetails() {
                     </div>
 
                     {/* User's Payment Status */}
-                    {myPayment && (
+                    {myPayments.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-blue-200">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Your Contribution</p>
-                            <p className="text-xl font-bold text-gray-900">${myPayment.amount}</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Status: <span className={`font-semibold ${
-                                myPayment.status === 'COMPLETED' ? 'text-green-600' :
-                                myPayment.status === 'PROCESSING' ? 'text-blue-600' :
-                                myPayment.status === 'FAILED' ? 'text-red-600' :
-                                'text-yellow-600'
-                              }`}>
-                                {myPayment.status}
-                              </span>
-                            </p>
-                            {myPayment.status === 'FAILED' && myPayment.failureReason && (
-                              <p className="text-xs text-red-500 mt-1">{myPayment.failureReason}</p>
-                            )}
-                          </div>
-                          {myPayment.status === 'PENDING' && (
-                            <button
-                              onClick={() => setShowPaymentModal(true)}
-                              className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-                            >
-                              {currentCycle && new Date(currentCycle.dueDate) > new Date() ? 'Pay Early' : 'Pay Now'}
-                            </button>
-                          )}
-                          {myPayment.status === 'FAILED' && (
-                            <button
-                              onClick={() => setShowPaymentModal(true)}
-                              className="px-6 py-3 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                            >
-                              Retry Payment
-                            </button>
-                          )}
-                          {myPayment.status === 'PROCESSING' && (
-                            <div className="text-right">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto"></div>
-                              <p className="text-xs text-blue-600 mt-1">Processing...</p>
+                        <p className="text-sm font-medium text-gray-700 mb-3">
+                          Your Contributions ({myPayments.filter(p => p.status === 'COMPLETED').length}/{myPayments.length} paid)
+                        </p>
+                        <div className="space-y-2">
+                          {myPayments.map((payment) => (
+                            <div key={payment.id} className="flex justify-between items-center p-3 bg-white rounded-lg border">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {myPayments.length > 1 ? `Period ${payment.contributionPeriod}` : 'Contribution'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Due: {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : 'N/A'}
+                                </p>
+                                {payment.status === 'FAILED' && payment.failureReason && (
+                                  <p className="text-xs text-red-500 mt-0.5">{payment.failureReason}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-sm font-bold">${payment.amount}</span>
+                                <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                                  payment.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                  payment.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
+                                  payment.status === 'FAILED' ? 'bg-red-100 text-red-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {payment.status}
+                                </span>
+                                {(payment.status === 'PENDING' || payment.status === 'FAILED') && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPayment(payment);
+                                      setShowPaymentModal(true);
+                                    }}
+                                    className={`px-3 py-1 text-xs font-medium text-white rounded ${
+                                      payment.status === 'FAILED' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                                    }`}
+                                  >
+                                    {payment.status === 'FAILED' ? 'Retry' : (payment.dueDate && new Date(payment.dueDate) > new Date() ? 'Pay Early' : 'Pay Now')}
+                                  </button>
+                                )}
+                                {payment.status === 'COMPLETED' && payment.paidAt && (
+                                  <span className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleDateString()}</span>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {myPayment.status === 'COMPLETED' && myPayment.paidAt && (
-                            <div className="text-right">
-                              <p className="text-sm text-green-600 font-semibold">Paid</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(myPayment.paidAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          )}
+                          ))}
                         </div>
                       </div>
                     )}
@@ -669,6 +684,11 @@ export default function GroupDetails() {
                               <p className="text-sm text-gray-600">
                                 Due: {new Date(cycle.dueDate).toLocaleDateString()}
                                 {cycle.completedDate && ` • Completed: ${new Date(cycle.completedDate).toLocaleDateString()}`}
+                                {cycle.payments && (
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    ({cycle.payments.filter(p => p.status === 'COMPLETED').length}/{cycle.payments.length} payments)
+                                  </span>
+                                )}
                               </p>
                             </div>
                           </div>
@@ -693,13 +713,13 @@ export default function GroupDetails() {
         </div>
 
         {/* Payment Modal */}
-        {showPaymentModal && myPayment && token && (
+        {showPaymentModal && selectedPayment && token && (
           <PaymentModal
-            paymentId={myPayment.id}
-            amount={myPayment.amount}
+            paymentId={selectedPayment.id}
+            amount={selectedPayment.amount}
             groupName={group.name}
             token={token}
-            onClose={() => setShowPaymentModal(false)}
+            onClose={() => { setShowPaymentModal(false); setSelectedPayment(null); }}
             onSuccess={handlePaymentSuccess}
           />
         )}

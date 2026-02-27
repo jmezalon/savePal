@@ -8,6 +8,7 @@ interface Group {
   description?: string;
   contributionAmount: number;
   frequency: string;
+  payoutFrequency?: string;
   payoutMethod: string;
   status: string;
   maxMembers: number;
@@ -176,7 +177,12 @@ export default function Groups() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Frequency:</span>
-                      <span className="font-medium">{getFrequencyLabel(group.frequency)}</span>
+                      <span className="font-medium">
+                        {getFrequencyLabel(group.frequency)}
+                        {group.payoutFrequency && group.payoutFrequency !== group.frequency && (
+                          <span className="text-gray-400 font-normal"> / {getFrequencyLabel(group.payoutFrequency)} payouts</span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Members:</span>

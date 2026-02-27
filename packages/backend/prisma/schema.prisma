@@ -66,6 +66,7 @@ model Group {
   description        String?
   contributionAmount Float
   frequency          Frequency
+  payoutFrequency    Frequency?
   payoutMethod       PayoutMethod
   status             GroupStatus  @default(PENDING)
   maxMembers         Int
@@ -136,6 +137,8 @@ model Payment {
   userId                 String
   amount                 Float
   status                 PaymentStatus @default(PENDING)
+  contributionPeriod     Int           @default(1)
+  dueDate                DateTime?
   stripePaymentIntentId  String?       @unique
   stripeChargeId         String?
   failureReason          String?
@@ -148,7 +151,8 @@ model Payment {
   cycle Cycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([cycleId, userId])
+  @@unique([cycleId, userId, contributionPeriod])
+  @@index([dueDate, status])
   @@map("payments")
 }
 

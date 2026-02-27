@@ -58,6 +58,7 @@ export interface Group {
   description?: string;
   contributionAmount: number;
   frequency: Frequency;
+  payoutFrequency?: Frequency;
   payoutMethod: PayoutMethod;
   status: GroupStatus;
   maxMembers: number;
@@ -99,6 +100,8 @@ export interface Payment {
   userId: string;
   amount: number;
   status: PaymentStatus;
+  contributionPeriod: number;
+  dueDate?: Date;
   stripePaymentIntentId?: string;
   paidAt?: Date;
   createdAt: Date;
@@ -151,7 +154,22 @@ export interface CreateGroupData {
   description?: string;
   contributionAmount: number;
   frequency: Frequency;
+  payoutFrequency?: Frequency;
   payoutMethod: PayoutMethod;
   maxMembers: number;
   startDate?: string;
+}
+
+// Helper: fixed multiplier for contributions per payout period
+export function getContributionsPerPayout(contributionFreq: Frequency, payoutFreq: Frequency): number {
+  const map: Record<string, Record<string, number>> = {
+    [Frequency.WEEKLY]:   { [Frequency.WEEKLY]: 1, [Frequency.BIWEEKLY]: 2, [Frequency.MONTHLY]: 4 },
+    [Frequency.BIWEEKLY]: { [Frequency.BIWEEKLY]: 1, [Frequency.MONTHLY]: 2 },
+    [Frequency.MONTHLY]:  { [Frequency.MONTHLY]: 1 },
+  };
+  const result = map[contributionFreq]?.[payoutFreq];
+  if (result === undefined) {
+    throw new Error(`Invalid frequency combination: contribution=${contributionFreq}, payout=${payoutFreq}`);
+  }
+  return result;
 }

@@ -12,8 +12,10 @@ router.use(authenticate);
 // Get specific cycle by ID
 router.get('/:cycleId', cycleController.getCycleById);
 
-// Get user's payment for a cycle
-router.get('/:cycleId/my-payment', cycleController.getMyPayment);
+// Get user's payments for a cycle (supports multiple contribution periods)
+router.get('/:cycleId/my-payments', cycleController.getMyPayments);
+// Keep old route as alias for backward compatibility
+router.get('/:cycleId/my-payment', cycleController.getMyPayments);
 
 // Get all payments for a cycle
 router.get('/:cycleId/payments', paymentController.getPaymentsForCycle);
