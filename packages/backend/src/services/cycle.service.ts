@@ -130,7 +130,7 @@ class CycleService {
   /**
    * Get all cycles for a group
    */
-  async getCyclesForGroup(groupId: string) {
+  async getCyclesForGroup(groupId: string, userId?: string) {
     const cycles = await prisma.cycle.findMany({
       where: { groupId },
       include: {
@@ -151,13 +151,27 @@ class CycleService {
       orderBy: { cycleNumber: 'asc' },
     });
 
+    // If userId provided, check role and filter for non-owners
+    if (userId) {
+      const membership = await prisma.membership.findFirst({
+        where: { groupId, userId, isActive: true },
+      });
+
+      if (membership && membership.role !== 'OWNER') {
+        return cycles.map((cycle) => ({
+          ...cycle,
+          payments: cycle.payments.filter((p) => p.userId === userId),
+        }));
+      }
+    }
+
     return cycles;
   }
 
   /**
    * Get current active cycle for a group
    */
-  async getCurrentCycle(groupId: string) {
+  async getCurrentCycle(groupId: string, userId?: string) {
     const cycle = await prisma.cycle.findFirst({
       where: {
         groupId,
@@ -180,6 +194,20 @@ class CycleService {
       },
       orderBy: { cycleNumber: 'asc' },
     });
+
+    // If userId provided, check role and filter for non-owners
+    if (cycle && userId) {
+      const membership = await prisma.membership.findFirst({
+        where: { groupId, userId, isActive: true },
+      });
+
+      if (membership && membership.role !== 'OWNER') {
+        return {
+          ...cycle,
+          payments: cycle.payments.filter((p) => p.userId === userId),
+        };
+      }
+    }
 
     return cycle;
   }

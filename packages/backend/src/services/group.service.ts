@@ -233,7 +233,20 @@ class GroupService {
       },
     });
 
-    return memberships.map((m) => m.group);
+    return memberships.map((m) => {
+      const group = m.group;
+      const isOwner = group.createdById === userId;
+
+      // Non-owners can only see their own membership
+      if (!isOwner) {
+        return {
+          ...group,
+          memberships: group.memberships.filter((mem) => mem.userId === userId),
+        };
+      }
+
+      return group;
+    });
   }
 
   /**
@@ -275,13 +288,24 @@ class GroupService {
       throw new Error('Group not found');
     }
 
-    // Check if user is a member
-    const isMember = group.memberships.some((m) => m.userId === userId);
-    if (!isMember) {
+    // Check if user is a member and determine role
+    const userMembership = group.memberships.find((m) => m.userId === userId);
+    if (!userMembership) {
       throw new Error('You are not a member of this group');
     }
 
-    return group;
+    const userRole = userMembership.role;
+
+    // Non-owners can only see their own membership
+    if (userRole !== 'OWNER') {
+      return {
+        ...group,
+        memberships: group.memberships.filter((m) => m.userId === userId),
+        userRole,
+      };
+    }
+
+    return { ...group, userRole };
   }
 
   /**

@@ -57,6 +57,7 @@ interface GroupDetails {
   inviteCode: string;
   createdAt: string;
   memberships: GroupMember[];
+  userRole?: string;
   createdBy: {
     id: string;
     firstName: string;
@@ -434,44 +435,73 @@ export default function GroupDetails() {
                 </div>
               )}
 
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Members ({group.currentMembers})</h2>
-                <div className="space-y-3">
-                  {group.memberships
-                    .sort((a, b) => a.payoutPosition - b.payoutPosition)
-                    .map((membership) => (
-                      <div
-                        key={membership.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium">
-                            {membership.user.firstName[0]}{membership.user.lastName[0]}
+              {isOwner ? (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Members ({group.currentMembers})</h2>
+                  <div className="space-y-3">
+                    {group.memberships
+                      .sort((a, b) => a.payoutPosition - b.payoutPosition)
+                      .map((membership) => (
+                        <div
+                          key={membership.id}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium">
+                              {membership.user.firstName[0]}{membership.user.lastName[0]}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {membership.user.firstName} {membership.user.lastName}
+                                {membership.role === 'OWNER' && (
+                                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
+                                    Owner
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-500">{membership.user.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {membership.user.firstName} {membership.user.lastName}
-                              {membership.role === 'OWNER' && (
-                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
-                                  Owner
-                                </span>
-                              )}
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">
+                              Position #{membership.payoutPosition}
                             </p>
-                            <p className="text-sm text-gray-500">{membership.user.email}</p>
+                            <p className="text-xs text-gray-500">
+                              Joined {new Date(membership.joinedAt).toLocaleDateString()}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">
-                            Position #{membership.payoutPosition}
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Position</h2>
+                  {group.memberships.filter(m => m.user.id === user?.id).map((membership) => (
+                    <div
+                      key={membership.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium">
+                          {membership.user.firstName[0]}{membership.user.lastName[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {membership.user.firstName} {membership.user.lastName}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            Joined {new Date(membership.joinedAt).toLocaleDateString()}
-                          </p>
+                          <p className="text-sm text-gray-500">Payout Position #{membership.payoutPosition}</p>
                         </div>
                       </div>
-                    ))}
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">
+                          {group.currentMembers}/{group.maxMembers} members
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
 
               {isOwner && group.status === 'PENDING' && group.currentMembers === group.maxMembers && (
                 <div className={`border rounded-lg p-4 ${readiness && !readiness.ready ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
@@ -539,7 +569,11 @@ export default function GroupDetails() {
                       <div>
                         <p className="text-sm text-gray-600">Recipient</p>
                         <p className="text-lg font-semibold text-gray-900">
-                          {group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown'}
+                          {currentCycle.recipientId === user?.id
+                            ? 'You'
+                            : isOwner
+                              ? (group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown')
+                              : 'Another member'}
                         </p>
                       </div>
                     </div>
@@ -641,7 +675,11 @@ export default function GroupDetails() {
                           <div className="text-right">
                             <p className="text-sm font-medium text-gray-700">Recipient</p>
                             <p className="text-sm text-gray-900">
-                              {group.memberships.find(m => m.user.id === cycle.recipientId)?.user.firstName || 'Unknown'}
+                              {cycle.recipientId === user?.id
+                                ? 'You'
+                                : isOwner
+                                  ? (group.memberships.find(m => m.user.id === cycle.recipientId)?.user.firstName || 'Unknown')
+                                  : 'Another member'}
                             </p>
                           </div>
                         </div>

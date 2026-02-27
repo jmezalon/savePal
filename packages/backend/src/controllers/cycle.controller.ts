@@ -14,8 +14,9 @@ class CycleController {
   async getCyclesForGroup(req: AuthRequest, res: Response) {
     try {
       const { groupId } = req.params;
+      const userId = req.userId;
 
-      const cycles = await cycleService.getCyclesForGroup(groupId);
+      const cycles = await cycleService.getCyclesForGroup(groupId, userId);
 
       res.json({
         success: true,
@@ -36,8 +37,9 @@ class CycleController {
   async getCurrentCycle(req: AuthRequest, res: Response) {
     try {
       const { groupId } = req.params;
+      const userId = req.userId;
 
-      const cycle = await cycleService.getCurrentCycle(groupId);
+      const cycle = await cycleService.getCurrentCycle(groupId, userId);
 
       if (!cycle) {
         return res.status(404).json({

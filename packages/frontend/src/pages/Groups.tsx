@@ -187,22 +187,28 @@ export default function Groups() {
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex -space-x-2">
-                      {group.memberships.slice(0, 3).map((membership, idx) => (
-                        <div
-                          key={idx}
-                          className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-medium border-2 border-white"
-                          title={`${membership.user.firstName} ${membership.user.lastName}`}
-                        >
-                          {membership.user.firstName[0]}{membership.user.lastName[0]}
-                        </div>
-                      ))}
-                      {group.memberships.length > 3 && (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-xs font-medium border-2 border-white">
-                          +{group.memberships.length - 3}
-                        </div>
-                      )}
-                    </div>
+                    {group.memberships.length < group.currentMembers ? (
+                      <p className="text-sm text-gray-500">
+                        {group.currentMembers} members
+                      </p>
+                    ) : (
+                      <div className="flex -space-x-2">
+                        {group.memberships.slice(0, 3).map((membership, idx) => (
+                          <div
+                            key={idx}
+                            className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-medium border-2 border-white"
+                            title={`${membership.user.firstName} ${membership.user.lastName}`}
+                          >
+                            {membership.user.firstName[0]}{membership.user.lastName[0]}
+                          </div>
+                        ))}
+                        {group.memberships.length > 3 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-xs font-medium border-2 border-white">
+                            +{group.memberships.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}
