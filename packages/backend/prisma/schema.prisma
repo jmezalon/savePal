@@ -15,9 +15,10 @@ datasource db {
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
-  password      String
+  password      String?
   firstName     String
   lastName      String
+  googleId      String?  @unique
   phoneNumber   String?
   emailVerified Boolean  @default(false)
   phoneVerified Boolean  @default(false)

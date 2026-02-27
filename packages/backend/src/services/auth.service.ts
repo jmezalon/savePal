@@ -4,6 +4,7 @@ import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
 import emailService from './email.service.js';
 import { smsService } from './smsService.js';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 
 export interface RegisterInput {
   email: string;
@@ -102,6 +103,11 @@ class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    // Check if user has a password (Google-only users won't)
+    if (!user.password) {
+      throw new Error('This account uses Google sign-in. Please sign in with Google.');
+    }
+
     // Verify password
     const isPasswordValid = await comparePassword(data.password, user.password);
 
@@ -110,6 +116,88 @@ class AuthService {
     }
 
     // Generate token
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword,
+      token,
+    };
+  }
+
+  /**
+   * Authenticate with Google
+   * Verifies the Google ID token and either logs in an existing user or creates a new one.
+   */
+  async googleAuth(credential: string): Promise<AuthResponse> {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      throw new Error('Google authentication is not configured');
+    }
+
+    const client = new OAuth2Client(clientId);
+
+    // Verify the Google ID token
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: clientId,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new Error('Invalid Google credential');
+    }
+
+    if (!payload || !payload.email) {
+      throw new Error('Invalid Google credential');
+    }
+
+    const { sub: googleId, email, given_name, family_name, email_verified } = payload;
+
+    const normalizedEmail = email!.toLowerCase().trim();
+
+    // Check if a user with this Google ID already exists
+    let user = await prisma.user.findUnique({
+      where: { googleId: googleId },
+    });
+
+    if (!user) {
+      // Check if a user with this email already exists (registered via email/password)
+      user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (user) {
+        // Link Google account to existing user
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleId: googleId,
+            emailVerified: user.emailVerified || email_verified || false,
+          },
+        });
+      } else {
+        // Create a new user from Google data
+        user = await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            googleId: googleId,
+            firstName: given_name || 'User',
+            lastName: family_name || '',
+            emailVerified: email_verified || false,
+            trustScore: email_verified ? 20 : 0,
+          },
+        });
+      }
+    }
+
+    // Generate JWT token
     const token = generateToken({
       userId: user.id,
       email: user.email,
@@ -250,6 +338,11 @@ class AuthService {
 
     if (!user) {
       throw new Error('User not found');
+    }
+
+    // Check if user has a password (Google-only users won't)
+    if (!user.password) {
+      throw new Error('This account uses Google sign-in and does not have a password set.');
     }
 
     // Verify current password

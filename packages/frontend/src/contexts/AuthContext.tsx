@@ -23,6 +23,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (credential: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   error: string | null;
@@ -119,6 +120,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const googleLogin = async (credential: string) => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error || 'Google authentication failed';
+        setIsLoading(false);
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      localStorage.setItem('token', data.data.token);
+      setToken(data.data.token);
+      setUser(data.data.user);
+      setIsLoading(false);
+    } catch (err) {
+      setIsLoading(false);
+      const errorMessage = err instanceof Error ? err.message : 'Google authentication failed';
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
   const register = async (data: RegisterData) => {
     try {
       setError(null);
@@ -167,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isLoading,
     login,
+    googleLogin,
     register,
     logout,
     error,

@@ -106,6 +106,45 @@ class AuthController {
   }
 
   /**
+   * POST /api/auth/google
+   * Authenticate with Google
+   */
+  async googleAuth(req: Request, res: Response) {
+    try {
+      const { credential } = req.body;
+
+      if (!credential) {
+        return res.status(400).json({
+          success: false,
+          error: 'Google credential is required',
+        });
+      }
+
+      const result = await authService.googleAuth(credential);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Google authentication successful',
+        data: result,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Google authentication failed';
+
+      if (errorMessage.includes('Invalid') || errorMessage.includes('not configured')) {
+        return res.status(400).json({
+          success: false,
+          error: errorMessage,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
    * GET /api/auth/me
    * Get current user profile
    */

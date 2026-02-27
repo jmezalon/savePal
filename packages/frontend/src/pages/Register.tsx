@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Register() {
@@ -12,7 +13,7 @@ export default function Register() {
     phoneNumber: '',
   });
   const [passwordError, setPasswordError] = useState('');
-  const { register, isAuthenticated, isLoading, error, clearError } = useAuth();
+  const { register, googleLogin, isAuthenticated, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,6 +60,16 @@ export default function Register() {
       navigate('/dashboard');
     } catch (err) {
       // Error is handled by AuthContext
+    }
+  };
+
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) return;
+    try {
+      await googleLogin(response.credential);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Google sign-up failed:', err);
     }
   };
 
@@ -210,6 +221,24 @@ export default function Register() {
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">Or sign up with</span>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => console.error('Google Sign-up Failed')}
+              width="100%"
+              text="signup_with"
+            />
           </div>
         </form>
       </div>
