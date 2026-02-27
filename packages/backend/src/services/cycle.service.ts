@@ -259,7 +259,7 @@ class CycleService {
   /**
    * Get cycle by ID
    */
-  async getCycleById(cycleId: string) {
+  async getCycleById(cycleId: string, userId?: string) {
     const cycle = await prisma.cycle.findUnique({
       where: { id: cycleId },
       include: {
@@ -284,6 +284,24 @@ class CycleService {
       throw new Error('Cycle not found');
     }
 
+    // If userId provided, verify membership and filter for non-owners
+    if (userId) {
+      const membership = await prisma.membership.findFirst({
+        where: { groupId: cycle.groupId, userId, isActive: true },
+      });
+
+      if (!membership) {
+        throw new Error('Not authorized to view this cycle');
+      }
+
+      if (membership.role !== 'OWNER') {
+        return {
+          ...cycle,
+          payments: cycle.payments.filter((p) => p.userId === userId),
+        };
+      }
+    }
+
     return cycle;
   }
 
@@ -301,77 +319,164 @@ class CycleService {
   /**
    * Complete a cycle and trigger payout
    */
-  async completeCycle(cycleId: string) {
-    const cycle = await this.getCycleById(cycleId);
+  async completeCycle(cycleId: string, userId?: string) {
+    // If called with a userId (user-initiated), verify the user is the group owner
+    if (userId) {
+      const cycle = await prisma.cycle.findUnique({
+        where: { id: cycleId },
+        select: { groupId: true },
+      });
 
-    if (cycle.isCompleted) {
-      throw new Error('Cycle is already completed');
+      if (!cycle) {
+        throw new Error('Cycle not found');
+      }
+
+      const ownerMembership = await prisma.membership.findFirst({
+        where: { groupId: cycle.groupId, userId, role: 'OWNER', isActive: true },
+      });
+
+      if (!ownerMembership) {
+        throw new Error('Only the group owner can complete a cycle');
+      }
     }
 
-    // Check if all payments are completed
-    const isFullyPaid = await this.isCycleFullyPaid(cycleId);
+    // Run all DB mutations in a transaction with a row lock to prevent races
+    const { updatedCycle, payoutId, payoutData } = await prisma.$transaction(async (tx) => {
+      // Lock the cycle row to prevent concurrent completions
+      const [lockedCycle] = await tx.$queryRaw<any[]>`
+        SELECT id, "isCompleted", "totalAmount", "recipientId", "groupId", "cycleNumber"
+        FROM "Cycle" WHERE id = ${cycleId} FOR UPDATE
+      `;
 
-    if (!isFullyPaid) {
-      throw new Error('Not all payments have been completed');
-    }
+      if (!lockedCycle) {
+        throw new Error('Cycle not found');
+      }
 
-    // Mark cycle as completed
-    const updatedCycle = await prisma.cycle.update({
-      where: { id: cycleId },
-      data: {
-        isCompleted: true,
-        completedDate: new Date(),
-      },
-    });
+      if (lockedCycle.isCompleted) {
+        throw new Error('Cycle is already completed');
+      }
 
-    // Create payout record (actual payout will be handled by payment service)
-    const feeAmount = cycle.totalAmount * 0.03; // 3% platform fee
-    const netAmount = cycle.totalAmount - feeAmount;
+      // Check if all payments are completed
+      const payments = await tx.payment.findMany({ where: { cycleId } });
+      const allCompleted = payments.every(p => p.status === 'COMPLETED');
 
-    const payout = await prisma.payout.create({
-      data: {
-        cycleId: cycle.id,
-        recipientId: cycle.recipientId,
-        amount: cycle.totalAmount,
-        feeAmount,
-        netAmount,
-        status: 'PENDING',
-      },
-    });
+      if (!allCompleted) {
+        throw new Error('Not all payments have been completed');
+      }
 
-    // Attempt immediate payout via Stripe Connect
-    try {
-      await payoutService.processPayout(payout.id);
-    } catch (error: any) {
-      console.log(`[Cycle] Immediate payout attempt failed for ${payout.id}: ${error.message}`);
-      // Notify recipient that payout is pending retry
-      await notificationService.sendPayoutPendingNotification(
-        cycle.recipientId,
-        cycle.groupId,
-        cycle.group.name,
-        payout.netAmount
-      );
-    }
-
-    // Create payments for the next cycle if it exists
-    const nextCycle = await prisma.cycle.findFirst({
-      where: {
-        groupId: cycle.groupId,
-        cycleNumber: cycle.cycleNumber + 1,
-      },
-    });
-
-    if (nextCycle) {
-      await this.createPaymentsForCycle(nextCycle.id, cycle.groupId);
-    } else {
-      // This was the last cycle, mark group as completed
-      await prisma.group.update({
-        where: { id: cycle.groupId },
+      // Mark cycle as completed
+      const updated = await tx.cycle.update({
+        where: { id: cycleId },
         data: {
-          status: 'COMPLETED',
-          endDate: new Date(),
+          isCompleted: true,
+          completedDate: new Date(),
         },
       });
+
+      // Create payout record
+      const feeAmount = lockedCycle.totalAmount * 0.03; // 3% platform fee
+      const netAmount = lockedCycle.totalAmount - feeAmount;
+
+      const payout = await tx.payout.create({
+        data: {
+          cycleId: lockedCycle.id,
+          recipientId: lockedCycle.recipientId,
+          amount: lockedCycle.totalAmount,
+          feeAmount,
+          netAmount,
+          status: 'PENDING',
+        },
+      });
+
+      // Check for next cycle
+      const nextCycle = await tx.cycle.findFirst({
+        where: {
+          groupId: lockedCycle.groupId,
+          cycleNumber: lockedCycle.cycleNumber + 1,
+        },
+      });
+
+      if (nextCycle) {
+        // Create payments for the next cycle inside the transaction
+        const group = await tx.group.findUnique({
+          where: { id: lockedCycle.groupId },
+          include: {
+            memberships: { where: { isActive: true } },
+          },
+        });
+
+        if (group) {
+          const effectivePayoutFrequency = group.payoutFrequency || group.frequency;
+          const contributionsPerPayout = getContributionsPerPayout(group.frequency, effectivePayoutFrequency);
+          const groupStartDate = group.startDate || new Date();
+          const nextCycleIndex = nextCycle.cycleNumber - 1;
+
+          const newPayments: Array<{
+            cycleId: string;
+            userId: string;
+            amount: number;
+            status: 'PENDING';
+            contributionPeriod: number;
+            dueDate: Date;
+          }> = [];
+
+          for (const membership of group.memberships) {
+            for (let period = 1; period <= contributionsPerPayout; period++) {
+              const overallContributionIndex = nextCycleIndex * contributionsPerPayout + (period - 1);
+              const dueDate = this.calculateDueDate(groupStartDate, overallContributionIndex, group.frequency);
+
+              newPayments.push({
+                cycleId: nextCycle.id,
+                userId: membership.userId,
+                amount: group.contributionAmount,
+                status: 'PENDING',
+                contributionPeriod: period,
+                dueDate,
+              });
+            }
+          }
+
+          await tx.payment.createMany({ data: newPayments });
+        }
+      } else {
+        // This was the last cycle, mark group as completed
+        await tx.group.update({
+          where: { id: lockedCycle.groupId },
+          data: {
+            status: 'COMPLETED',
+            endDate: new Date(),
+          },
+        });
+      }
+
+      return {
+        updatedCycle: updated,
+        payoutId: payout.id,
+        payoutData: {
+          recipientId: lockedCycle.recipientId,
+          groupId: lockedCycle.groupId,
+          groupName: '', // fetched below if needed
+          netAmount,
+        },
+      };
+    }, { timeout: 15000 });
+
+    // Best-effort payout via Stripe Connect (outside transaction)
+    try {
+      await payoutService.processPayout(payoutId);
+    } catch (error: any) {
+      console.log(`[Cycle] Immediate payout attempt failed for ${payoutId}: ${error.message}`);
+      // Fetch group name for notification
+      const group = await prisma.group.findUnique({
+        where: { id: payoutData.groupId },
+        select: { name: true },
+      });
+      await notificationService.sendPayoutPendingNotification(
+        payoutData.recipientId,
+        payoutData.groupId,
+        group?.name || '',
+        payoutData.netAmount
+      );
     }
 
     return updatedCycle;

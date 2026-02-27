@@ -67,8 +67,9 @@ class CycleController {
   async getCycleById(req: AuthRequest, res: Response) {
     try {
       const { cycleId } = req.params;
+      const userId = req.userId!;
 
-      const cycle = await cycleService.getCycleById(cycleId);
+      const cycle = await cycleService.getCycleById(cycleId, userId);
 
       res.json({
         success: true,
@@ -89,8 +90,9 @@ class CycleController {
   async completeCycle(req: AuthRequest, res: Response) {
     try {
       const { cycleId } = req.params;
+      const userId = req.userId!;
 
-      const cycle = await cycleService.completeCycle(cycleId);
+      const cycle = await cycleService.completeCycle(cycleId, userId);
 
       res.json({
         success: true,
