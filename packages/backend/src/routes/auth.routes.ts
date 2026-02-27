@@ -11,6 +11,7 @@ router.post('/forgot-password', authController.forgotPassword.bind(authControlle
 router.post('/reset-password', authController.resetPassword.bind(authController));
 router.get('/verify-email/:token', authController.verifyEmail.bind(authController));
 router.post('/resend-verification', authController.resendVerification.bind(authController));
+router.post('/google', authController.googleAuth.bind(authController));
 
 // Protected routes
 router.get('/me', authenticate, authController.getMe.bind(authController));

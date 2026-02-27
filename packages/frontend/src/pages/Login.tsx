@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, isAuthenticated, isLoading, error } = useAuth();
+  const { login, googleLogin, isAuthenticated, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +42,16 @@ export default function Login() {
     } catch (err) {
       // Error is handled by AuthContext and displayed in the UI
       console.error('Login failed:', err);
+    }
+  };
+
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) return;
+    try {
+      await googleLogin(response.credential);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Google login failed:', err);
     }
   };
 
@@ -133,6 +144,24 @@ export default function Login() {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => console.error('Google Login Failed')}
+              width="100%"
+              text="signin_with"
+            />
           </div>
         </form>
       </div>
