@@ -406,16 +406,16 @@ class StripeService {
 
     let accountId = user?.stripeConnectAccountId;
 
+    let oldExternalAccountIds: string[] = [];
+
     if (accountId) {
       // Verify the existing account is still accessible
       try {
         const existingAccounts = await this.stripe.accounts.listExternalAccounts(accountId, {
           object: 'bank_account',
         });
-        // Remove existing external accounts before adding new one
-        for (const ea of existingAccounts.data) {
-          await this.stripe.accounts.deleteExternalAccount(accountId, ea.id);
-        }
+        // Collect old account IDs — we'll delete them after adding the new one
+        oldExternalAccountIds = existingAccounts.data.map(ea => ea.id);
 
         // Update existing account with identity details if provided
         if (identityDetails) {
@@ -445,6 +445,7 @@ class StripeService {
           // Stale account (e.g. test-mode account on live key) — clear and recreate
           await this.clearStaleConnectAccount(userId);
           accountId = null;
+          oldExternalAccountIds = [];
         } else {
           throw error;
         }
@@ -502,7 +503,7 @@ class StripeService {
       });
     }
 
-    // Add bank account as external account
+    // Add new bank account first (becomes the new default)
     const bankAccount = await this.stripe.accounts.createExternalAccount(accountId, {
       external_account: {
         object: 'bank_account',
@@ -514,6 +515,11 @@ class StripeService {
         account_holder_type: 'individual',
       },
     });
+
+    // Now safe to remove old external accounts (new one is the default)
+    for (const oldId of oldExternalAccountIds) {
+      await this.stripe.accounts.deleteExternalAccount(accountId, oldId);
+    }
 
     // Check transfers capability status before marking onboarded
     const account = await this.stripe.accounts.retrieve(accountId);
