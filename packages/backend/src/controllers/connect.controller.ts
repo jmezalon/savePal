@@ -112,7 +112,7 @@ class ConnectController {
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, firstName: true, lastName: true },
+        select: { email: true, firstName: true, lastName: true, phoneNumber: true },
       });
 
       if (!user) {
@@ -127,6 +127,7 @@ class ConnectController {
         user.email,
         user.firstName,
         user.lastName,
+        user.phoneNumber,
         { routingNumber, accountNumber, accountHolderName },
         ipAddress,
         identityDetails
@@ -233,7 +234,7 @@ class ConnectController {
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, firstName: true, lastName: true },
+        select: { email: true, firstName: true, lastName: true, phoneNumber: true },
       });
 
       if (!user) {
@@ -246,6 +247,7 @@ class ConnectController {
         user.email,
         user.firstName,
         user.lastName,
+        user.phoneNumber,
         {
           dobDay: day,
           dobMonth: month,

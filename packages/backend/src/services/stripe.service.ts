@@ -382,6 +382,7 @@ class StripeService {
     email: string,
     firstName: string,
     lastName: string,
+    phone: string | null,
     bankDetails: {
       routingNumber: string;
       accountNumber: string;
@@ -413,26 +414,26 @@ class StripeService {
 
         // Update existing account with identity details if provided
         if (identityDetails) {
-          await this.stripe.accounts.update(accountId, {
-            individual: {
-              first_name: firstName,
-              last_name: lastName,
-              email,
-              dob: {
-                day: identityDetails.dobDay,
-                month: identityDetails.dobMonth,
-                year: identityDetails.dobYear,
-              },
-              address: {
-                line1: identityDetails.addressLine1,
-                city: identityDetails.addressCity,
-                state: identityDetails.addressState,
-                postal_code: identityDetails.addressPostalCode,
-                country: 'US',
-              },
-              ssn_last_4: identityDetails.ssnLast4,
+          const updateData: Record<string, any> = {
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            dob: {
+              day: identityDetails.dobDay,
+              month: identityDetails.dobMonth,
+              year: identityDetails.dobYear,
             },
-          });
+            address: {
+              line1: identityDetails.addressLine1,
+              city: identityDetails.addressCity,
+              state: identityDetails.addressState,
+              postal_code: identityDetails.addressPostalCode,
+              country: 'US',
+            },
+            ssn_last_4: identityDetails.ssnLast4,
+          };
+          if (phone) updateData.phone = phone;
+          await this.stripe.accounts.update(accountId, { individual: updateData });
         }
       } catch (error: any) {
         if (this.isStaleAccountError(error)) {
@@ -450,6 +451,7 @@ class StripeService {
         first_name: firstName,
         last_name: lastName,
         email,
+        ...(phone ? { phone } : {}),
       };
 
       if (identityDetails) {
@@ -532,6 +534,7 @@ class StripeService {
     email: string,
     firstName: string,
     lastName: string,
+    phone: string | null,
     identityDetails: {
       dobDay: number;
       dobMonth: number;
@@ -552,25 +555,31 @@ class StripeService {
       throw new Error('No Connect account found. Please set up your bank account first.');
     }
 
-    await this.stripe.accounts.update(user.stripeConnectAccountId, {
-      individual: {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        dob: {
-          day: identityDetails.dobDay,
-          month: identityDetails.dobMonth,
-          year: identityDetails.dobYear,
-        },
-        address: {
-          line1: identityDetails.addressLine1,
-          city: identityDetails.addressCity,
-          state: identityDetails.addressState,
-          postal_code: identityDetails.addressPostalCode,
-          country: 'US',
-        },
-        ssn_last_4: identityDetails.ssnLast4,
+    const individualData: Record<string, any> = {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      dob: {
+        day: identityDetails.dobDay,
+        month: identityDetails.dobMonth,
+        year: identityDetails.dobYear,
       },
+      address: {
+        line1: identityDetails.addressLine1,
+        city: identityDetails.addressCity,
+        state: identityDetails.addressState,
+        postal_code: identityDetails.addressPostalCode,
+        country: 'US',
+      },
+      ssn_last_4: identityDetails.ssnLast4,
+    };
+
+    if (phone) {
+      individualData.phone = phone;
+    }
+
+    await this.stripe.accounts.update(user.stripeConnectAccountId, {
+      individual: individualData,
     });
 
     const account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
