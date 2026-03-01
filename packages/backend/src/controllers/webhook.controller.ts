@@ -63,7 +63,8 @@ class WebhookController {
       include: { cycle: { include: { group: true } } },
     });
 
-    if (!payment || payment.status === 'COMPLETED') return;
+    if (!payment) return;
+    // Let processPayment handle idempotency and cycle-completion checks
 
     // Safety net: update payment if synchronous confirm missed it
     await paymentService.processPayment({

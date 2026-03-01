@@ -100,9 +100,17 @@ class PaymentService {
       throw new Error('Unauthorized: This payment does not belong to you');
     }
 
-    // Check if payment is already completed
+    // Idempotent: if already completed, still check cycle completion
+    // (a race between sync response and webhook may have skipped it)
     if (payment.status === 'COMPLETED') {
-      throw new Error('Payment has already been completed');
+      const isFullyPaid = await cycleService.isCycleFullyPaid(payment.cycleId);
+      if (isFullyPaid) {
+        const cycle = await prisma.cycle.findUnique({ where: { id: payment.cycleId } });
+        if (cycle && !cycle.isCompleted) {
+          await cycleService.completeCycle(payment.cycleId);
+        }
+      }
+      return payment;
     }
 
     // Update payment status

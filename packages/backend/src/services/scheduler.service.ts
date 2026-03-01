@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import prisma from '../utils/prisma.js';
 import paymentService from './payment.service.js';
+import cycleService from './cycle.service.js';
 import payoutService from './payout.service.js';
 import notificationService from './notification.service.js';
 import emailService from './email.service.js';
@@ -32,7 +33,12 @@ class SchedulerService {
       this.processPendingPayouts().catch(console.error);
     });
 
-    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), 48h reminders (daily 9AM), payouts (30min)');
+    // Every 15 minutes: recover stale cycles (all payments done but cycle not completed)
+    cron.schedule('*/15 * * * *', () => {
+      this.completeStaleCycles().catch(console.error);
+    });
+
+    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), 48h reminders (daily 9AM), payouts (30min), stale cycles (15min)');
   }
 
   async processDueDateAutoPayments() {
@@ -278,6 +284,38 @@ class SchedulerService {
     }
 
     console.log(`[Scheduler] Sent ${sentCount} 48-hour payment reminders`);
+  }
+
+  async completeStaleCycles() {
+    // Find cycles where isCompleted=false but ALL payments are COMPLETED
+    const staleCycles = await prisma.cycle.findMany({
+      where: {
+        isCompleted: false,
+        group: { status: 'ACTIVE' },
+        payments: {
+          every: { status: 'COMPLETED' },
+          some: {},  // ensure at least one payment exists
+        },
+      },
+      select: {
+        id: true,
+        cycleNumber: true,
+        group: { select: { id: true, name: true } },
+      },
+    });
+
+    if (staleCycles.length > 0) {
+      console.log(`[Scheduler] Found ${staleCycles.length} stale cycle(s) to complete`);
+    }
+
+    for (const cycle of staleCycles) {
+      try {
+        await cycleService.completeCycle(cycle.id);
+        console.log(`[Scheduler] Recovered stale cycle ${cycle.id} (cycle #${cycle.cycleNumber} of "${cycle.group.name}")`);
+      } catch (error: any) {
+        console.error(`[Scheduler] Failed to complete stale cycle ${cycle.id}:`, error.message);
+      }
+    }
   }
 
   private static MAX_RETRIES = 10;
