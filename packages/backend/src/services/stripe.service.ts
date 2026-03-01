@@ -609,7 +609,7 @@ class StripeService {
   }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { stripeConnectAccountId: true, stripeConnectOnboarded: true },
+      select: { stripeConnectAccountId: true, stripeConnectOnboarded: true, phoneNumber: true },
     });
 
     if (!user?.stripeConnectAccountId) {
@@ -631,9 +631,21 @@ class StripeService {
     let currentlyDue: string[] = [];
 
     try {
-      const account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
+      let account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
       transfersStatus = account.capabilities?.transfers || 'inactive';
       currentlyDue = (account.requirements?.currently_due as string[]) || [];
+
+      // Auto-fill phone if Stripe requires it and we have it on the user's profile
+      if (currentlyDue.includes('individual.phone') && user.phoneNumber) {
+        await this.stripe.accounts.update(user.stripeConnectAccountId, {
+          individual: { phone: user.phoneNumber },
+        });
+        // Re-fetch to get updated status
+        account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
+        transfersStatus = account.capabilities?.transfers || 'inactive';
+        currentlyDue = (account.requirements?.currently_due as string[]) || [];
+        console.log(`Auto-filled phone for Connect account ${user.stripeConnectAccountId}, currently_due now: [${currentlyDue.join(', ')}]`);
+      }
 
       // Sync onboarded flag with actual Stripe state
       const shouldBeOnboarded = transfersStatus === 'active';
