@@ -1195,9 +1195,10 @@ export default function Profile() {
                 <h3 className="font-medium text-gray-900 mb-1">Identity Verification</h3>
                 <p className="text-xs text-gray-500 mb-4">Required by Stripe to enable payouts. Sent directly to Stripe, not stored by SavePal.</p>
 
-                {connectStatus?.currentlyDue && connectStatus.currentlyDue.length > 0 && (
-                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600">
-                    <p className="font-medium mb-1">Stripe requires: {connectStatus.currentlyDue.join(', ')}</p>
+                {!user?.phoneNumber && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800 font-medium">Phone number required</p>
+                    <p className="text-xs text-yellow-700 mt-1">Stripe requires a phone number to verify your identity. Please add one in the Personal Information section above, then come back here.</p>
                   </div>
                 )}
 
@@ -1248,7 +1249,7 @@ export default function Profile() {
               <div className="pt-2">
                 <button
                   onClick={handleVerifyIdentity}
-                  disabled={isConnectAction}
+                  disabled={isConnectAction || !user?.phoneNumber}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   {isConnectAction ? 'Submitting...' : 'Complete Verification'}
@@ -1310,6 +1311,13 @@ export default function Profile() {
               <div className="border-t border-gray-200 pt-4 mt-4">
                 <h3 className="font-medium text-gray-900 mb-1">Identity Verification</h3>
                 <p className="text-xs text-gray-500 mb-4">Required by Stripe to enable payouts. Sent directly to Stripe, not stored by SavePal.</p>
+
+                {!user?.phoneNumber && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800 font-medium">Phone number required</p>
+                    <p className="text-xs text-yellow-700 mt-1">Stripe requires a phone number to verify your identity. Please add one in the Personal Information section above, then come back here.</p>
+                  </div>
+                )}
 
                 {/* Date of Birth */}
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
