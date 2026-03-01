@@ -661,6 +661,8 @@ class StripeService {
       // Ignore other errors fetching bank details
     }
 
+    console.log(`Connect status for ${userId}: transfers=${transfersStatus}, currently_due=[${currentlyDue.join(', ')}]`);
+
     const requiresVerification = transfersStatus !== null && transfersStatus !== 'active' && currentlyDue.length > 0;
 
     return {

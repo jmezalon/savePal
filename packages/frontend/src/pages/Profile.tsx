@@ -1195,6 +1195,12 @@ export default function Profile() {
                 <h3 className="font-medium text-gray-900 mb-1">Identity Verification</h3>
                 <p className="text-xs text-gray-500 mb-4">Required by Stripe to enable payouts. Sent directly to Stripe, not stored by SavePal.</p>
 
+                {connectStatus?.currentlyDue && connectStatus.currentlyDue.length > 0 && (
+                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600">
+                    <p className="font-medium mb-1">Stripe requires: {connectStatus.currentlyDue.join(', ')}</p>
+                  </div>
+                )}
+
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <select value={dobMonth} onChange={(e) => setDobMonth(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md">
