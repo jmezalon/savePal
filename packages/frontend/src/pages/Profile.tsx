@@ -1157,8 +1157,8 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-          ) : connectStatus?.hasAccount && connectStatus?.transfersStatus === 'pending' && !showBankForm ? (
-            // Pending verification
+          ) : connectStatus?.hasAccount && connectStatus?.transfersStatus !== 'active' && !connectStatus?.requiresVerification && !showBankForm ? (
+            // Submitted, Stripe is reviewing — nothing left for user to do
             <div>
               <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-md">
                 <div className="flex items-center space-x-3">

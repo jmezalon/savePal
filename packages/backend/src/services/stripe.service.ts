@@ -661,7 +661,7 @@ class StripeService {
       // Ignore other errors fetching bank details
     }
 
-    const requiresVerification = transfersStatus !== null && transfersStatus !== 'active';
+    const requiresVerification = transfersStatus !== null && transfersStatus !== 'active' && currentlyDue.length > 0;
 
     return {
       hasAccount: true,
