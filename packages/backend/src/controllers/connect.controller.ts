@@ -174,6 +174,106 @@ class ConnectController {
   }
 
   /**
+   * Update identity verification details on existing Connect account
+   * POST /api/connect/verify-identity
+   */
+  async verifyIdentity(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+      const {
+        dobDay,
+        dobMonth,
+        dobYear,
+        addressLine1,
+        addressCity,
+        addressState,
+        addressPostalCode,
+        ssnLast4,
+      } = req.body;
+
+      if (!dobDay || !dobMonth || !dobYear || !addressLine1 || !addressCity || !addressState || !addressPostalCode || !ssnLast4) {
+        res.status(400).json({ success: false, error: 'All identity verification fields are required' });
+        return;
+      }
+
+      const day = parseInt(dobDay, 10);
+      const month = parseInt(dobMonth, 10);
+      const year = parseInt(dobYear, 10);
+
+      const dob = new Date(year, month - 1, day);
+      if (dob.getFullYear() !== year || dob.getMonth() !== month - 1 || dob.getDate() !== day) {
+        res.status(400).json({ success: false, error: 'Invalid date of birth' });
+        return;
+      }
+
+      const today = new Date();
+      let age = today.getFullYear() - year;
+      if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) {
+        age--;
+      }
+      if (age < 18) {
+        res.status(400).json({ success: false, error: 'You must be at least 18 years old' });
+        return;
+      }
+
+      if (!/^\d{4}$/.test(ssnLast4)) {
+        res.status(400).json({ success: false, error: 'SSN last 4 must be exactly 4 digits' });
+        return;
+      }
+
+      if (!/^\d{5}(-\d{4})?$/.test(addressPostalCode)) {
+        res.status(400).json({ success: false, error: 'Invalid ZIP code format' });
+        return;
+      }
+
+      if (!addressLine1.trim() || !addressCity.trim() || !addressState.trim()) {
+        res.status(400).json({ success: false, error: 'Complete address is required' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      const result = await stripeService.updateConnectIdentity(
+        userId,
+        user.email,
+        user.firstName,
+        user.lastName,
+        {
+          dobDay: day,
+          dobMonth: month,
+          dobYear: year,
+          addressLine1: addressLine1.trim(),
+          addressCity: addressCity.trim(),
+          addressState: addressState.trim(),
+          addressPostalCode: addressPostalCode.trim(),
+          ssnLast4,
+        }
+      );
+
+      res.json({
+        success: true,
+        message: result.transfersStatus === 'active'
+          ? 'Identity verified successfully. Payouts are now active.'
+          : 'Identity details submitted. Stripe is reviewing your information.',
+        data: { transfersStatus: result.transfersStatus },
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
    * Remove bank account
    * DELETE /api/connect/bank-account
    */

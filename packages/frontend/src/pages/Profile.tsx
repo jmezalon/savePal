@@ -575,6 +575,82 @@ export default function Profile() {
     }
   };
 
+  // Handle identity-only verification (existing bank account)
+  const handleVerifyIdentity = async () => {
+    setMessage(null);
+
+    if (!dobMonth || !dobDay || !dobYear || !addressLine1 || !addressCity || !addressState || !addressPostalCode || !ssnLast4) {
+      setMessage({ type: 'error', text: 'All identity verification fields are required' });
+      return;
+    }
+
+    if (!/^\d{4}$/.test(ssnLast4)) {
+      setMessage({ type: 'error', text: 'SSN last 4 must be exactly 4 digits' });
+      return;
+    }
+    if (!/^\d{5}(-\d{4})?$/.test(addressPostalCode)) {
+      setMessage({ type: 'error', text: 'Invalid ZIP code format' });
+      return;
+    }
+    const year = parseInt(dobYear, 10);
+    const month = parseInt(dobMonth, 10);
+    const day = parseInt(dobDay, 10);
+    const dob = new Date(year, month - 1, day);
+    if (dob.getFullYear() !== year || dob.getMonth() !== month - 1 || dob.getDate() !== day) {
+      setMessage({ type: 'error', text: 'Invalid date of birth' });
+      return;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - year;
+    if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) {
+      age--;
+    }
+    if (age < 18) {
+      setMessage({ type: 'error', text: 'You must be at least 18 years old' });
+      return;
+    }
+
+    setIsConnectAction(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/connect/verify-identity`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dobDay, dobMonth, dobYear,
+          addressLine1, addressCity, addressState, addressPostalCode,
+          ssnLast4,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMessage({ type: 'success', text: data.message || 'Identity details submitted successfully!' });
+        setShowBankForm(false);
+        setSsnLast4('');
+        setDobMonth('');
+        setDobDay('');
+        setDobYear('');
+        setAddressLine1('');
+        setAddressCity('');
+        setAddressState('');
+        setAddressPostalCode('');
+        loadConnectStatus();
+      } else {
+        throw new Error(data.error || 'Failed to submit identity details');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to submit identity details',
+      });
+    } finally {
+      setIsConnectAction(false);
+    }
+  };
+
   // Handle remove bank account
   const handleRemoveBankAccount = () => {
     setConfirmModal({
@@ -1098,10 +1174,10 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-          ) : connectStatus?.hasAccount && connectStatus?.requiresVerification && !showBankForm ? (
-            // Requires verification - show warning and form button
-            <div>
-              <div className="p-4 border border-red-200 bg-red-50 rounded-md mb-4">
+          ) : connectStatus?.hasAccount && connectStatus?.requiresVerification ? (
+            // Requires verification - show identity-only form inline (bank already on file)
+            <div className="space-y-4">
+              <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                 <div className="flex items-center space-x-3">
                   <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -1114,20 +1190,70 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setShowBankForm(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Complete Verification
-              </button>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-1">Identity Verification</h3>
+                <p className="text-xs text-gray-500 mb-4">Required by Stripe to enable payouts. Sent directly to Stripe, not stored by SavePal.</p>
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <select value={dobMonth} onChange={(e) => setDobMonth(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Month</option>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={String(i + 1)}>{new Date(2000, i).toLocaleString('default', { month: 'long' })}</option>
+                    ))}
+                  </select>
+                  <select value={dobDay} onChange={(e) => setDobDay(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Day</option>
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
+                    ))}
+                  </select>
+                  <input type="text" value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Year" maxLength={4} className="px-3 py-2 border border-gray-300 rounded-md" />
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                <input type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" className="w-full px-3 py-2 border border-gray-300 rounded-md mb-4" />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input type="text" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="City" className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    <select value={addressState} onChange={(e) => setAddressState(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                      <option value="">Select</option>
+                      {US_STATES.map((s) => (<option key={s} value={s}>{s}</option>))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                    <input type="text" value={addressPostalCode} onChange={(e) => setAddressPostalCode(e.target.value.replace(/[^\d-]/g, '').slice(0, 10))} placeholder="12345" maxLength={10} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSN Last 4 Digits</label>
+                  <input type="password" value={ssnLast4} onChange={(e) => setSsnLast4(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="••••" maxLength={4} className="w-32 px-3 py-2 border border-gray-300 rounded-md" />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={handleVerifyIdentity}
+                  disabled={isConnectAction}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isConnectAction ? 'Submitting...' : 'Complete Verification'}
+                </button>
+              </div>
             </div>
           ) : showBankForm || !connectStatus?.hasAccount ? (
-            // Show full form - new setup or update
+            // Show full form - new setup or bank update
             <div className="space-y-4">
               {connectStatus?.hasAccount && (
-                <h3 className="font-medium text-gray-900">
-                  {connectStatus.requiresVerification ? 'Complete Identity Verification' : 'Update Bank Account'}
-                </h3>
+                <h3 className="font-medium text-gray-900">Update Bank Account</h3>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
@@ -1281,7 +1407,7 @@ export default function Profile() {
                   disabled={isConnectAction}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {isConnectAction ? 'Saving...' : connectStatus?.hasAccount ? 'Update & Verify' : 'Save Bank Account'}
+                  {isConnectAction ? 'Saving...' : connectStatus?.hasAccount ? 'Update Bank Account' : 'Save Bank Account'}
                 </button>
                 {connectStatus?.hasAccount && (
                   <button

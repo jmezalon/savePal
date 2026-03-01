@@ -10,6 +10,9 @@ router.use(authenticate);
 // Set up payout account with bank details
 router.post('/setup', connectController.setup);
 
+// Update identity verification details on existing account
+router.post('/verify-identity', connectController.verifyIdentity);
+
 // Get Connect account status
 router.get('/status', connectController.getStatus);
 

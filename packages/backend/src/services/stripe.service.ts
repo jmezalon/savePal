@@ -406,16 +406,10 @@ class StripeService {
 
     let accountId = user?.stripeConnectAccountId;
 
-    let oldExternalAccountIds: string[] = [];
-
     if (accountId) {
       // Verify the existing account is still accessible
       try {
-        const existingAccounts = await this.stripe.accounts.listExternalAccounts(accountId, {
-          object: 'bank_account',
-        });
-        // Collect old account IDs — we'll delete them after adding the new one
-        oldExternalAccountIds = existingAccounts.data.map(ea => ea.id);
+        await this.stripe.accounts.retrieve(accountId);
 
         // Update existing account with identity details if provided
         if (identityDetails) {
@@ -445,7 +439,6 @@ class StripeService {
           // Stale account (e.g. test-mode account on live key) — clear and recreate
           await this.clearStaleConnectAccount(userId);
           accountId = null;
-          oldExternalAccountIds = [];
         } else {
           throw error;
         }
@@ -503,7 +496,7 @@ class StripeService {
       });
     }
 
-    // Add new bank account first (becomes the new default)
+    // Add bank account as external account
     const bankAccount = await this.stripe.accounts.createExternalAccount(accountId, {
       external_account: {
         object: 'bank_account',
@@ -516,14 +509,9 @@ class StripeService {
       },
     });
 
-    // Now safe to remove old external accounts (new one is the default)
-    for (const oldId of oldExternalAccountIds) {
-      await this.stripe.accounts.deleteExternalAccount(accountId, oldId);
-    }
-
     // Check transfers capability status before marking onboarded
-    const account = await this.stripe.accounts.retrieve(accountId);
-    const transfersStatus = account.capabilities?.transfers || 'inactive';
+    const acct = await this.stripe.accounts.retrieve(accountId);
+    const transfersStatus = acct.capabilities?.transfers || 'inactive';
     const isOnboarded = transfersStatus === 'active';
 
     await prisma.user.update({
@@ -534,6 +522,67 @@ class StripeService {
     const last4 = (bankAccount as any).last4 || bankDetails.accountNumber.slice(-4);
 
     return { accountId, bankLast4: last4, transfersStatus };
+  }
+
+  /**
+   * Update identity details on an existing Connect account (no bank changes)
+   */
+  async updateConnectIdentity(
+    userId: string,
+    email: string,
+    firstName: string,
+    lastName: string,
+    identityDetails: {
+      dobDay: number;
+      dobMonth: number;
+      dobYear: number;
+      addressLine1: string;
+      addressCity: string;
+      addressState: string;
+      addressPostalCode: string;
+      ssnLast4: string;
+    }
+  ): Promise<{ transfersStatus: string }> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeConnectAccountId: true },
+    });
+
+    if (!user?.stripeConnectAccountId) {
+      throw new Error('No Connect account found. Please set up your bank account first.');
+    }
+
+    await this.stripe.accounts.update(user.stripeConnectAccountId, {
+      individual: {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        dob: {
+          day: identityDetails.dobDay,
+          month: identityDetails.dobMonth,
+          year: identityDetails.dobYear,
+        },
+        address: {
+          line1: identityDetails.addressLine1,
+          city: identityDetails.addressCity,
+          state: identityDetails.addressState,
+          postal_code: identityDetails.addressPostalCode,
+          country: 'US',
+        },
+        ssn_last_4: identityDetails.ssnLast4,
+      },
+    });
+
+    const account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
+    const transfersStatus = account.capabilities?.transfers || 'inactive';
+    const isOnboarded = transfersStatus === 'active';
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stripeConnectOnboarded: isOnboarded },
+    });
+
+    return { transfersStatus };
   }
 
   /**
