@@ -136,6 +136,28 @@ class PayoutService {
       throw new Error('Recipient has not completed payout account setup');
     }
 
+    // Pre-check: verify transfers capability is active on the Connect account
+    const transfersActive = await stripeService.isTransferCapabilityActive(
+      recipient.stripeConnectAccountId
+    );
+    if (!transfersActive) {
+      // Sync the onboarded flag so the user sees the correct status
+      await prisma.user.update({
+        where: { id: recipient.id },
+        data: { stripeConnectOnboarded: false },
+      });
+
+      await notificationService.createNotification({
+        userId: payout.recipientId,
+        groupId: payout.cycle.group.id,
+        type: 'CONNECT_ONBOARDING_REQUIRED',
+        title: 'Identity Verification Required',
+        message: `Your payout of $${payout.netAmount.toFixed(2)} from "${payout.cycle.group.name}" cannot be processed until identity verification is complete. Please update your payout settings in Profile.`,
+      });
+
+      throw new Error('Recipient Connect account transfers capability is not active. Identity verification may be required.');
+    }
+
     // Pre-check: verify platform has enough available balance
     const balanceCheck = await stripeService.hasEnoughBalance(payout.netAmount);
     if (!balanceCheck.sufficient) {

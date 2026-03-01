@@ -15,7 +15,19 @@ class ConnectController {
   async setup(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId!;
-      const { routingNumber, accountNumber, accountHolderName } = req.body;
+      const {
+        routingNumber,
+        accountNumber,
+        accountHolderName,
+        dobDay,
+        dobMonth,
+        dobYear,
+        addressLine1,
+        addressCity,
+        addressState,
+        addressPostalCode,
+        ssnLast4,
+      } = req.body;
 
       if (!routingNumber || !accountNumber) {
         res.status(400).json({
@@ -31,6 +43,71 @@ class ConnectController {
           error: 'Routing number must be 9 digits',
         });
         return;
+      }
+
+      // Build identity details if provided
+      let identityDetails: {
+        dobDay: number;
+        dobMonth: number;
+        dobYear: number;
+        addressLine1: string;
+        addressCity: string;
+        addressState: string;
+        addressPostalCode: string;
+        ssnLast4: string;
+      } | undefined;
+
+      if (dobDay && dobMonth && dobYear && addressLine1 && addressCity && addressState && addressPostalCode && ssnLast4) {
+        const day = parseInt(dobDay, 10);
+        const month = parseInt(dobMonth, 10);
+        const year = parseInt(dobYear, 10);
+
+        // Validate DOB is a valid date
+        const dob = new Date(year, month - 1, day);
+        if (dob.getFullYear() !== year || dob.getMonth() !== month - 1 || dob.getDate() !== day) {
+          res.status(400).json({ success: false, error: 'Invalid date of birth' });
+          return;
+        }
+
+        // Validate age >= 18
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) {
+          age--;
+        }
+        if (age < 18) {
+          res.status(400).json({ success: false, error: 'You must be at least 18 years old' });
+          return;
+        }
+
+        // Validate SSN last 4
+        if (!/^\d{4}$/.test(ssnLast4)) {
+          res.status(400).json({ success: false, error: 'SSN last 4 must be exactly 4 digits' });
+          return;
+        }
+
+        // Validate postal code
+        if (!/^\d{5}(-\d{4})?$/.test(addressPostalCode)) {
+          res.status(400).json({ success: false, error: 'Invalid ZIP code format' });
+          return;
+        }
+
+        // Validate address fields are present
+        if (!addressLine1.trim() || !addressCity.trim() || !addressState.trim()) {
+          res.status(400).json({ success: false, error: 'Complete address is required' });
+          return;
+        }
+
+        identityDetails = {
+          dobDay: day,
+          dobMonth: month,
+          dobYear: year,
+          addressLine1: addressLine1.trim(),
+          addressCity: addressCity.trim(),
+          addressState: addressState.trim(),
+          addressPostalCode: addressPostalCode.trim(),
+          ssnLast4,
+        };
       }
 
       const user = await prisma.user.findUnique({
@@ -51,15 +128,19 @@ class ConnectController {
         user.firstName,
         user.lastName,
         { routingNumber, accountNumber, accountHolderName },
-        ipAddress
+        ipAddress,
+        identityDetails
       );
 
       res.json({
         success: true,
-        message: 'Payout account set up successfully',
+        message: result.transfersStatus === 'active'
+          ? 'Payout account set up successfully'
+          : 'Payout account created. Identity verification is being processed by Stripe.',
         data: {
           accountId: result.accountId,
           bankLast4: result.bankLast4,
+          transfersStatus: result.transfersStatus,
         },
       });
     } catch (error: any) {

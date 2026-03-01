@@ -387,8 +387,18 @@ class StripeService {
       accountNumber: string;
       accountHolderName?: string;
     },
-    ipAddress: string
-  ): Promise<{ accountId: string; bankLast4: string }> {
+    ipAddress: string,
+    identityDetails?: {
+      dobDay: number;
+      dobMonth: number;
+      dobYear: number;
+      addressLine1: string;
+      addressCity: string;
+      addressState: string;
+      addressPostalCode: string;
+      ssnLast4: string;
+    }
+  ): Promise<{ accountId: string; bankLast4: string; transfersStatus: string }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { stripeConnectAccountId: true },
@@ -406,6 +416,30 @@ class StripeService {
         for (const ea of existingAccounts.data) {
           await this.stripe.accounts.deleteExternalAccount(accountId, ea.id);
         }
+
+        // Update existing account with identity details if provided
+        if (identityDetails) {
+          await this.stripe.accounts.update(accountId, {
+            individual: {
+              first_name: firstName,
+              last_name: lastName,
+              email,
+              dob: {
+                day: identityDetails.dobDay,
+                month: identityDetails.dobMonth,
+                year: identityDetails.dobYear,
+              },
+              address: {
+                line1: identityDetails.addressLine1,
+                city: identityDetails.addressCity,
+                state: identityDetails.addressState,
+                postal_code: identityDetails.addressPostalCode,
+                country: 'US',
+              },
+              ssn_last_4: identityDetails.ssnLast4,
+            },
+          });
+        }
       } catch (error: any) {
         if (this.isStaleAccountError(error)) {
           // Stale account (e.g. test-mode account on live key) — clear and recreate
@@ -418,6 +452,28 @@ class StripeService {
     }
 
     if (!accountId) {
+      const individualData: Stripe.AccountCreateParams['individual'] = {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+      };
+
+      if (identityDetails) {
+        individualData.dob = {
+          day: identityDetails.dobDay,
+          month: identityDetails.dobMonth,
+          year: identityDetails.dobYear,
+        };
+        individualData.address = {
+          line1: identityDetails.addressLine1,
+          city: identityDetails.addressCity,
+          state: identityDetails.addressState,
+          postal_code: identityDetails.addressPostalCode,
+          country: 'US',
+        };
+        individualData.ssn_last_4 = identityDetails.ssnLast4;
+      }
+
       const account = await this.stripe.accounts.create({
         type: 'custom',
         country: 'US',
@@ -427,14 +483,9 @@ class StripeService {
           url: process.env.FRONTEND_URL || 'https://save-pal-frontend.vercel.app',
           mcc: '6012',
         },
-        individual: {
-          first_name: firstName,
-          last_name: lastName,
-          email,
-        },
+        individual: individualData,
         capabilities: {
           transfers: { requested: true },
-          card_payments: { requested: true },
         },
         tos_acceptance: {
           date: Math.floor(Date.now() / 1000),
@@ -464,19 +515,23 @@ class StripeService {
       },
     });
 
-    // Mark as onboarded
+    // Check transfers capability status before marking onboarded
+    const account = await this.stripe.accounts.retrieve(accountId);
+    const transfersStatus = account.capabilities?.transfers || 'inactive';
+    const isOnboarded = transfersStatus === 'active';
+
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeConnectOnboarded: true },
+      data: { stripeConnectOnboarded: isOnboarded },
     });
 
     const last4 = (bankAccount as any).last4 || bankDetails.accountNumber.slice(-4);
 
-    return { accountId, bankLast4: last4 };
+    return { accountId, bankLast4: last4, transfersStatus };
   }
 
   /**
-   * Get Connect account status for a user, including bank info
+   * Get Connect account status for a user, including bank info and transfers capability
    */
   async getConnectAccountStatus(userId: string): Promise<{
     hasAccount: boolean;
@@ -484,6 +539,9 @@ class StripeService {
     accountId: string | null;
     bankLast4: string | null;
     bankName: string | null;
+    transfersStatus: string | null;
+    requiresVerification: boolean;
+    currentlyDue: string[];
   }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -497,26 +555,39 @@ class StripeService {
         accountId: null,
         bankLast4: null,
         bankName: null,
+        transfersStatus: null,
+        requiresVerification: false,
+        currentlyDue: [],
       };
     }
 
     let bankLast4: string | null = null;
     let bankName: string | null = null;
+    let transfersStatus: string | null = null;
+    let currentlyDue: string[] = [];
 
     try {
-      if (user.stripeConnectOnboarded) {
-        const accounts = await this.stripe.accounts.listExternalAccounts(
-          user.stripeConnectAccountId,
-          { object: 'bank_account', limit: 1 }
-        );
-        if (accounts.data.length > 0) {
-          const bank = accounts.data[0] as Stripe.BankAccount;
-          bankLast4 = bank.last4 || null;
-          bankName = bank.bank_name || null;
-        }
-      } else {
-        // Verify the account is still accessible even if not onboarded
-        await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
+      const account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
+      transfersStatus = account.capabilities?.transfers || 'inactive';
+      currentlyDue = (account.requirements?.currently_due as string[]) || [];
+
+      // Sync onboarded flag with actual Stripe state
+      const shouldBeOnboarded = transfersStatus === 'active';
+      if (user.stripeConnectOnboarded !== shouldBeOnboarded) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { stripeConnectOnboarded: shouldBeOnboarded },
+        });
+      }
+
+      const accounts = await this.stripe.accounts.listExternalAccounts(
+        user.stripeConnectAccountId,
+        { object: 'bank_account', limit: 1 }
+      );
+      if (accounts.data.length > 0) {
+        const bank = accounts.data[0] as Stripe.BankAccount;
+        bankLast4 = bank.last4 || null;
+        bankName = bank.bank_name || null;
       }
     } catch (error: any) {
       if (this.isStaleAccountError(error)) {
@@ -527,17 +598,25 @@ class StripeService {
           accountId: null,
           bankLast4: null,
           bankName: null,
+          transfersStatus: null,
+          requiresVerification: false,
+          currentlyDue: [],
         };
       }
       // Ignore other errors fetching bank details
     }
 
+    const requiresVerification = transfersStatus !== null && transfersStatus !== 'active';
+
     return {
       hasAccount: true,
-      isOnboarded: user.stripeConnectOnboarded,
+      isOnboarded: transfersStatus === 'active',
       accountId: user.stripeConnectAccountId,
       bankLast4,
       bankName,
+      transfersStatus,
+      requiresVerification,
+      currentlyDue,
     };
   }
 
@@ -620,6 +699,14 @@ class StripeService {
       available,
       required: amount,
     };
+  }
+
+  /**
+   * Check if a Connect account's transfers capability is active
+   */
+  async isTransferCapabilityActive(connectAccountId: string): Promise<boolean> {
+    const account = await this.stripe.accounts.retrieve(connectAccountId);
+    return account.capabilities?.transfers === 'active';
   }
 
   /**

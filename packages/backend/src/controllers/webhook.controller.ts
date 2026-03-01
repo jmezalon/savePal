@@ -144,14 +144,15 @@ class WebhookController {
 
     if (!user) return;
 
-    const isOnboarded = !!(account.charges_enabled && account.payouts_enabled);
+    const transfersStatus = account.capabilities?.transfers;
+    const isOnboarded = transfersStatus === 'active';
 
     await prisma.user.update({
       where: { id: user.id },
       data: { stripeConnectOnboarded: isOnboarded },
     });
 
-    console.log(`Webhook: Connect account ${account.id} onboarded=${isOnboarded}`);
+    console.log(`Webhook: Connect account ${account.id} transfers=${transfersStatus} onboarded=${isOnboarded}`);
   }
 }
 
