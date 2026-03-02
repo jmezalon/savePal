@@ -38,6 +38,16 @@ class GroupService {
       createdById,
     } = data;
 
+    // Check if creator has both email and phone unverified
+    const creator = await prisma.user.findUnique({
+      where: { id: createdById },
+      select: { emailVerified: true, phoneVerified: true },
+    });
+
+    if (creator && !creator.emailVerified && !creator.phoneVerified) {
+      throw new Error('You must verify your email or phone number before creating a group');
+    }
+
     // Create group and add creator as owner in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the group
@@ -269,6 +279,8 @@ class GroupService {
                 lastName: true,
                 email: true,
                 trustScore: true,
+                emailVerified: true,
+                phoneVerified: true,
               },
             },
           },
@@ -376,6 +388,11 @@ class GroupService {
       include: {
         memberships: {
           where: { isActive: true },
+          include: {
+            user: {
+              select: { id: true, firstName: true, emailVerified: true, phoneVerified: true },
+            },
+          },
         },
       },
     });
@@ -409,6 +426,12 @@ class GroupService {
       throw new Error(`Cannot start group: the following members need to add a payment method: ${names}`);
     }
 
+    // Check if group creator has both email and phone unverified
+    const creatorMembership = group.memberships.find((m) => m.userId === userId);
+    if (creatorMembership && !creatorMembership.user.emailVerified && !creatorMembership.user.phoneVerified) {
+      throw new Error('You must verify your email or phone number before starting a group');
+    }
+
     // Update group status to ACTIVE
     const updatedGroup = await prisma.group.update({
       where: { id: groupId },
@@ -435,7 +458,7 @@ class GroupService {
           where: { isActive: true },
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true },
+              select: { id: true, firstName: true, lastName: true, emailVerified: true, phoneVerified: true },
             },
           },
         },
@@ -462,9 +485,15 @@ class GroupService {
       .filter((m) => !usersWithCards.has(m.userId))
       .map((m) => ({ firstName: m.user.firstName, lastName: m.user.lastName }));
 
+    // Members with both email and phone unverified
+    const membersWithoutVerification = group.memberships
+      .filter((m) => !m.user.emailVerified && !m.user.phoneVerified)
+      .map((m) => ({ firstName: m.user.firstName, lastName: m.user.lastName }));
+
     return {
       ready: membersWithoutPaymentMethod.length === 0,
       membersWithoutPaymentMethod,
+      membersWithoutVerification,
     };
   }
 

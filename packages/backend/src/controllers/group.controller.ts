@@ -98,6 +98,14 @@ class GroupController {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create group';
+
+      if (errorMessage.includes('verify your email or phone')) {
+        return res.status(403).json({
+          success: false,
+          error: errorMessage,
+        });
+      }
+
       return res.status(500).json({
         success: false,
         error: errorMessage,
@@ -312,6 +320,13 @@ class GroupController {
 
       if (errorMessage.includes('started') || errorMessage.includes('needs') || errorMessage.includes('Cannot start group')) {
         return res.status(400).json({
+          success: false,
+          error: errorMessage,
+        });
+      }
+
+      if (errorMessage.includes('verify your email or phone')) {
+        return res.status(403).json({
           success: false,
           error: errorMessage,
         });

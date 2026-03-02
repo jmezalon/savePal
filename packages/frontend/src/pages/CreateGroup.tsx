@@ -16,7 +16,7 @@ export default function CreateGroup() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { token, logout } = useAuth();
+  const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -106,6 +106,16 @@ export default function CreateGroup() {
 
           <div className="bg-white rounded-lg shadow p-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Savings Group</h1>
+
+            {user && !user.emailVerified && !user.phoneVerified && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-red-900 mb-1">Verification Required</h3>
+                <p className="text-sm text-red-800">
+                  You must verify your email address or phone number before creating a group.
+                  Please visit your <Link to="/profile" className="text-red-900 underline font-medium">Profile</Link> to complete verification.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -286,7 +296,7 @@ export default function CreateGroup() {
               <div className="flex space-x-4">
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || (user !== null && !user.emailVerified && !user.phoneVerified)}
                   className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Creating...' : 'Create Group'}
