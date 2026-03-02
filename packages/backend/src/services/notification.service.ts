@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js';
 import { NotificationType } from '@prisma/client';
 import emailService from './email.service.js';
+import { smsService } from './smsService.js';
 
 interface CreateNotificationData {
   userId: string;
@@ -226,16 +227,36 @@ class NotificationService {
   }
 
   /**
-   * Send payout completed notification
+   * Send payout completed notification (in-app + SMS if enabled)
    */
   async sendPayoutCompletedNotification(userId: string, groupId: string, groupName: string, amount: number) {
-    return this.createNotification({
+    const notification = await this.createNotification({
       userId,
       groupId,
       type: 'PAYOUT_COMPLETED',
       title: 'Payout Completed',
       message: `Your payout of $${amount} from "${groupName}" has been completed.`,
     });
+
+    // Send SMS if user has SMS notifications enabled and a verified phone number
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { smsNotifications: true, phoneNumber: true, phoneVerified: true },
+      });
+
+      if (user?.smsNotifications && user.phoneVerified && user.phoneNumber) {
+        const formattedPhone = smsService.formatPhoneNumber(user.phoneNumber);
+        await smsService.sendSMS(
+          formattedPhone,
+          `SavePal: Your payout of $${amount.toFixed(2)} from "${groupName}" has been initiated! You should see it in your bank account within 1-2 business days.`
+        );
+      }
+    } catch (smsError) {
+      console.error(`Failed to send payout SMS to user ${userId}:`, smsError);
+    }
+
+    return notification;
   }
 
   /**

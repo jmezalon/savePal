@@ -57,6 +57,35 @@ export class SMSService {
   }
 
   /**
+   * Send a generic SMS message
+   * @param phoneNumber - The phone number to send to (E.164 format)
+   * @param message - The message body
+   */
+  async sendSMS(phoneNumber: string, message: string): Promise<void> {
+    if (process.env.NODE_ENV === 'development' && !this.twilioClient) {
+      console.log(`\n📱 SMS to ${phoneNumber}: ${message}\n`);
+      return;
+    }
+
+    if (!this.twilioClient) {
+      throw new Error('SMS service not configured. Please add Twilio credentials to environment variables.');
+    }
+
+    const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+    if (!twilioPhone) {
+      throw new Error('TWILIO_PHONE_NUMBER not configured');
+    }
+
+    await this.twilioClient.messages.create({
+      body: message,
+      from: twilioPhone,
+      to: phoneNumber,
+    });
+
+    console.log(`✓ SMS sent to ${phoneNumber}`);
+  }
+
+  /**
    * Generate a random 6-digit verification code
    */
   generateVerificationCode(): string {

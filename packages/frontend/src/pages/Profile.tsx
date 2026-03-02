@@ -917,7 +917,7 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">SMS Notifications</p>
-                <p className="text-sm text-gray-500">Receive notifications via text message (Coming soon)</p>
+                <p className="text-sm text-gray-500">Receive notifications via text message</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
