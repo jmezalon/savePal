@@ -46,6 +46,11 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
+                <Link to="/help" className="text-sm hover:text-white transition-colors">
+                  Help Center
+                </Link>
+              </li>
+              <li>
                 <a
                   href="mailto:support@save-pals.com"
                   className="text-sm hover:text-white transition-colors"
