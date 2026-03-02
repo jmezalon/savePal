@@ -23,6 +23,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import PaymentHistory from './pages/PaymentHistory';
 import AdminDashboard from './pages/AdminDashboard';
+import Help from './pages/Help';
 
 function AppContent() {
   const location = useLocation();
@@ -56,6 +57,7 @@ function AppContent() {
           <Route path="/payments" element={<PaymentHistory />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/help" element={<Help />} />
         </Routes>
       </main>
       {showFooter && <Footer />}

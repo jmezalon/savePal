@@ -210,6 +210,16 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
+              <Link
+                to="/help"
+                className={`px-3 py-2 text-sm font-medium ${
+                  isActive('/help')
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Help
+              </Link>
             </div>
           </div>
 
@@ -317,6 +327,17 @@ export default function Navbar() {
                 Admin
               </Link>
             )}
+            <Link
+              to="/help"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/help')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Help
+            </Link>
             <div className="px-3 py-2 text-sm text-gray-500">
               {user?.firstName} {user?.lastName}
             </div>

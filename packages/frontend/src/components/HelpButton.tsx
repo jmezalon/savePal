@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function HelpButton() {
   const [open, setOpen] = useState(false);
@@ -79,6 +80,45 @@ export default function HelpButton() {
               />
             </svg>
           </a>
+
+          {/* Help Center link */}
+          <Link
+            to="/help"
+            className="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+              <svg
+                className="w-5 h-5 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Help Center</p>
+              <p className="text-xs text-gray-500">FAQs &amp; troubleshooting</p>
+            </div>
+            <svg
+              className="w-4 h-4 text-gray-400 ml-auto"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+              />
+            </svg>
+          </Link>
 
           {/* FAQ / common tip */}
           <div className="px-3 py-2">
