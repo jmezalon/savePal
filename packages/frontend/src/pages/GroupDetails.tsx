@@ -15,6 +15,8 @@ interface GroupMember {
     lastName: string;
     email: string;
     trustScore: number;
+    emailVerified: boolean;
+    phoneVerified: boolean;
   };
 }
 
@@ -90,6 +92,7 @@ export default function GroupDetails() {
   const [readiness, setReadiness] = useState<{
     ready: boolean;
     membersWithoutPaymentMethod: { firstName: string; lastName: string }[];
+    membersWithoutVerification: { firstName: string; lastName: string }[];
   } | null>(null);
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
@@ -477,6 +480,11 @@ export default function GroupDetails() {
                                 )}
                               </p>
                               <p className="text-sm text-gray-500">{membership.user.email}</p>
+                              {!membership.user.emailVerified && !membership.user.phoneVerified && (
+                                <p className="text-xs text-orange-600 font-medium mt-0.5">
+                                  No email or phone verification
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -544,6 +552,19 @@ export default function GroupDetails() {
                     </>
                   ) : (
                     <>
+                      {readiness && readiness.membersWithoutVerification && readiness.membersWithoutVerification.length > 0 && (
+                        <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                          <p className="text-sm font-semibold text-orange-900 mb-1">Verification Warning</p>
+                          <p className="text-sm text-orange-800 mb-2">
+                            The following members do not have email verification or phone number verification. Proceed with caution:
+                          </p>
+                          <ul className="text-sm text-orange-800 list-disc list-inside">
+                            {readiness.membersWithoutVerification.map((m, i) => (
+                              <li key={i}>{m.firstName} {m.lastName}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       <p className="text-sm text-green-800 mb-3">
                         All member spots are filled. You can now start the group to begin payment cycles.
                       </p>
