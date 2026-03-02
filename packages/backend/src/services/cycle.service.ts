@@ -345,7 +345,7 @@ class CycleService {
       // Lock the cycle row to prevent concurrent completions
       const [lockedCycle] = await tx.$queryRaw<any[]>`
         SELECT id, "isCompleted", "totalAmount", "recipientId", "groupId", "cycleNumber"
-        FROM "Cycle" WHERE id = ${cycleId} FOR UPDATE
+        FROM "cycles" WHERE id = ${cycleId} FOR UPDATE
       `;
 
       if (!lockedCycle) {
