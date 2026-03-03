@@ -10,7 +10,7 @@ const faqs: FaqItem[] = [
   {
     question: 'Why do I need to verify my identity?',
     answer:
-      'SavePal uses Stripe to securely handle payments and payouts. Stripe requires identity verification to comply with federal Know Your Customer (KYC) and Anti-Money Laundering (AML) regulations. This protects you and every member in your savings group from fraud. The verification process is handled entirely by Stripe — SavePal never stores your government-issued ID or sensitive personal documents.',
+      'SavePal uses Stripe to securely handle payments and payouts. Stripe requires identity verification to comply with federal Know Your Customer (KYC) and Anti-Money Laundering (AML) regulations. This protects you and every member in your savings group from fraud. The verification process is handled entirely by Stripe — SavePal never stores your sensitive and personal data.',
   },
   {
     question: 'How long does a payout take to process?',
@@ -80,14 +80,7 @@ const commonErrors: ErrorItem[] = [
     description:
       'Stripe was unable to verify your identity during onboarding.',
     resolution:
-      'Make sure the photo of your ID is clear, well-lit, and matches the name on your account. Accepted documents include a driver\'s license, passport, or state ID. Try the verification process again from Profile > Payout Settings. If you continue to have trouble, contact support.',
-  },
-  {
-    title: 'Stripe Onboarding Incomplete',
-    description:
-      'You started the Stripe Connect setup but did not finish all required steps.',
-    resolution:
-      'Return to Profile > Payout Settings and click "Set Up Payouts" to resume. You\'ll need to complete identity verification and link a bank account before you can receive payouts.',
+      'Make sure the information entered are correct and accurate. Try the verification process again from Profile > Payout Settings. If you continue to have trouble, contact support.',
   },
   {
     title: 'Unable to Join Group',
