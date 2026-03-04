@@ -50,19 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load user on mount if token exists
-    if (token) {
+    // Only fetch user on mount when we have a stored token but no user yet
+    // (e.g. page refresh). Skip if user is already set from login/register.
+    if (token && !user) {
       fetchUser();
     } else {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchUser = async () => {
     try {
+      const currentToken = token || localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentToken}`,
         },
       });
 
