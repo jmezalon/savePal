@@ -24,6 +24,7 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import PaymentHistory from './pages/PaymentHistory';
 import AdminDashboard from './pages/AdminDashboard';
 import Help from './pages/Help';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
   const location = useLocation();
@@ -49,15 +50,15 @@ function AppContent() {
           <Route path="/sms-consent" element={<SmsConsent />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/groups/create" element={<CreateGroup />} />
-          <Route path="/groups/join" element={<JoinGroup />} />
-          <Route path="/groups/:id" element={<GroupDetails />} />
-          <Route path="/payments" element={<PaymentHistory />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/help" element={<Help />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+          <Route path="/groups/create" element={<ProtectedRoute><CreateGroup /></ProtectedRoute>} />
+          <Route path="/groups/join" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
+          <Route path="/groups/:id" element={<ProtectedRoute><GroupDetails /></ProtectedRoute>} />
+          <Route path="/payments" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
         </Routes>
       </main>
       {showFooter && <Footer />}

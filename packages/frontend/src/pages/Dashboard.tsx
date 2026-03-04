@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -13,18 +13,13 @@ interface Group {
 }
 
 export default function Dashboard() {
-  const { user, isLoading, isAuthenticated, token } = useAuth();
-  const navigate = useNavigate();
+  const { user, token } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login');
-    } else if (isAuthenticated) {
-      fetchGroups();
-    }
-  }, [isLoading, isAuthenticated, navigate]);
+    fetchGroups();
+  }, []);
 
   const fetchGroups = async () => {
     try {

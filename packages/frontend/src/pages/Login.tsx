@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +9,8 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const { login, googleLogin, isAuthenticated, isLoading, error } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   useEffect(() => {
     // Load saved email if remembered
@@ -22,7 +24,7 @@ export default function Login() {
   useEffect(() => {
     // Redirect if already authenticated
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
   }, [isAuthenticated, navigate]);
 
@@ -38,7 +40,7 @@ export default function Login() {
         localStorage.removeItem('rememberedEmail');
       }
 
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err) {
       // Error is handled by AuthContext and displayed in the UI
       console.error('Login failed:', err);
@@ -49,7 +51,7 @@ export default function Login() {
     if (!response.credential) return;
     try {
       await googleLogin(response.credential);
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err) {
       console.error('Google login failed:', err);
     }
@@ -64,7 +66,7 @@ export default function Login() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to={`/register${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="font-medium text-blue-600 hover:text-blue-500">
               create a new account
             </Link>
           </p>
