@@ -14,4 +14,9 @@ router.delete('/users/:id', adminController.deleteUser.bind(adminController));
 router.get('/groups', adminController.getGroups.bind(adminController));
 router.delete('/groups/:id', adminController.deleteGroup.bind(adminController));
 
+// Waiver code management
+router.post('/waiver-codes', adminController.createWaiverCode.bind(adminController));
+router.get('/waiver-codes', adminController.getWaiverCodes.bind(adminController));
+router.patch('/waiver-codes/:id', adminController.toggleWaiverCode.bind(adminController));
+
 export default router;

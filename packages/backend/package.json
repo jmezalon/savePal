@@ -17,7 +17,7 @@
     "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.14.0",
+    "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.58.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
@@ -33,7 +33,6 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.6",
-    "prisma": "^5.14.0",
     "stripe": "^19.3.0",
     "twilio": "^5.10.2",
     "typescript": "^5.5.3",
@@ -41,6 +40,7 @@
   },
   "devDependencies": {
     "@types/node-cron": "^3.0.11",
+    "prisma": "^5.22.0",
     "tsx": "^4.11.0"
   }
 }

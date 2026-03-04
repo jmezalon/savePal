@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import groupService from '../services/group.service.js';
+import feeWaiverService from '../services/feeWaiver.service.js';
 import { Frequency, PayoutMethod } from '@prisma/client';
 
 class GroupController {
@@ -19,6 +20,8 @@ class GroupController {
         payoutMethod,
         maxMembers,
         startDate,
+        feeWaiverCode,
+        paymentMethodId,
       } = req.body;
 
       // Validation
@@ -89,6 +92,8 @@ class GroupController {
         maxMembers: parseInt(maxMembers),
         startDate: startDate ? new Date(startDate) : undefined,
         createdById: userId,
+        feeWaiverCode: feeWaiverCode || undefined,
+        paymentMethodId: paymentMethodId || undefined,
       });
 
       return res.status(201).json({
@@ -106,6 +111,66 @@ class GroupController {
         });
       }
 
+      if (errorMessage.includes('waiver code') || errorMessage.includes('creation fee')) {
+        return res.status(400).json({
+          success: false,
+          error: errorMessage,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * POST /api/groups/validate-waiver-code
+   * Validate a fee waiver code
+   */
+  async validateWaiverCode(req: Request, res: Response) {
+    try {
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Waiver code is required',
+        });
+      }
+
+      const result = await feeWaiverService.validateCode(code);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to validate code';
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
+   * GET /api/groups/creation-fee-status
+   * Check if the current user needs to pay the group creation fee
+   */
+  async getCreationFeeStatus(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+
+      const eligibility = await feeWaiverService.checkFeeWaiverEligibility(userId);
+
+      return res.status(200).json({
+        success: true,
+        data: eligibility,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check fee status';
       return res.status(500).json({
         success: false,
         error: errorMessage,
