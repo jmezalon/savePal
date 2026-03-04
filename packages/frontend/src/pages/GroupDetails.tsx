@@ -234,6 +234,34 @@ export default function GroupDetails() {
     }
   };
 
+  const getShareMessage = () => {
+    if (!group) return '';
+    return `You've been invited to join "${group.name}" on SavePal!\n\nHere's your access code: ${group.inviteCode}\n\nTo join, enter the code at: https://save-pals.com/groups/join\n\nPlease do not share this code with anyone else. Before joining, make sure to add your payment method via your profile: https://save-pals.com/profile`;
+  };
+
+  const shareInviteCode = async () => {
+    if (!group) return;
+    const message = getShareMessage();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join ${group.name} on SavePal`,
+          text: message,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          await navigator.clipboard.writeText(message);
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        }
+      }
+    } else {
+      await navigator.clipboard.writeText(message);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
   const handleDeleteGroup = async () => {
     if (!id) return;
     setShowDeleteConfirm(false);
@@ -450,6 +478,12 @@ export default function GroupDetails() {
                       className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
                     >
                       {copySuccess ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={shareInviteCode}
+                      className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+                    >
+                      Share
                     </button>
                   </div>
                 </div>
