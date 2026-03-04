@@ -24,6 +24,7 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import PaymentHistory from './pages/PaymentHistory';
 import AdminDashboard from './pages/AdminDashboard';
 import Help from './pages/Help';
+import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
@@ -59,6 +60,7 @@ function AppContent() {
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       {showFooter && <Footer />}
