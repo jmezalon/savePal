@@ -100,6 +100,10 @@ model Membership {
   autoPaymentConsented   Boolean  @default(false)
   autoPaymentConsentedAt DateTime?
 
+  // Debt tracking for fallback payment enforcement
+  outstandingDebt   Float    @default(0)
+  debtPaymentIds    String[] @default([])
+
   // Relations
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -147,6 +151,10 @@ model Payment {
   paidAt                 DateTime?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
+
+  // Fallback payment tracking
+  fallbackMethod         String?       // 'payout_withholding' | null
+  fallbackAt             DateTime?
 
   // Relations
   cycle Cycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
@@ -273,4 +281,7 @@ enum NotificationType {
   REMINDER
   AUTO_PAYMENT_SCHEDULED
   AUTO_PAYMENT_PROCESSED
+  DEBT_RECORDED
+  DEBT_DEDUCTED_FROM_PAYOUT
+  PAYMENT_DISPUTED
 }

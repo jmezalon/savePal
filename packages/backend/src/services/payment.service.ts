@@ -3,6 +3,10 @@ import cycleService from './cycle.service.js';
 import stripeService from './stripe.service.js';
 import notificationService from './notification.service.js';
 
+const MAX_CARD_RETRIES = 3;
+const TRUST_SCORE_PENALTY = -10;
+const TRUST_SCORE_REWARD = 5;
+
 interface ProcessPaymentData {
   paymentId: string;
   userId: string;
@@ -123,7 +127,10 @@ class PaymentService {
       },
     });
 
-    // Check if all payments for the cycle are completed
+    // Reward trust score for successful payment
+    await this.rewardTrustScore(userId);
+
+    // Check if all payments for the cycle are completed (or resolved via debt)
     const isFullyPaid = await cycleService.isCycleFullyPaid(payment.cycleId);
 
     // If all payments are complete, complete the cycle
@@ -340,7 +347,7 @@ class PaymentService {
     } catch (error: any) {
       if (error.type === 'StripeCardError') {
         // Card was declined
-        await prisma.payment.update({
+        const updatedFailedPayment = await prisma.payment.update({
           where: { id: paymentId },
           data: {
             status: 'FAILED',
@@ -367,6 +374,11 @@ class PaymentService {
           error.message
         );
 
+        // After max retries exhausted, record as outstanding debt
+        if (updatedFailedPayment.retryCount >= MAX_CARD_RETRIES) {
+          await this.recordOutstandingDebt(paymentId, userId, payment.cycle.groupId);
+        }
+
         throw error;
       }
 
@@ -381,6 +393,77 @@ class PaymentService {
 
       throw error;
     }
+  }
+  /**
+   * Record a failed payment as outstanding debt on the user's membership.
+   * Called after card retries are exhausted (retryCount >= MAX_CARD_RETRIES).
+   * This allows the cycle to eventually complete via shortfall resolution,
+   * with the debt withheld from the user's future payout.
+   */
+  async recordOutstandingDebt(paymentId: string, userId: string, groupId: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { cycle: { include: { group: true } } },
+    });
+
+    if (!payment) return;
+
+    // Add debt to the user's membership
+    const membership = await prisma.membership.findFirst({
+      where: { groupId, userId, isActive: true },
+    });
+
+    if (!membership) return;
+
+    // Avoid double-recording: check if this payment is already in debtPaymentIds
+    if (membership.debtPaymentIds.includes(paymentId)) return;
+
+    await prisma.membership.update({
+      where: { id: membership.id },
+      data: {
+        outstandingDebt: { increment: payment.amount },
+        debtPaymentIds: { push: paymentId },
+      },
+    });
+
+    // Penalize trust score
+    await this.adjustTrustScore(userId, TRUST_SCORE_PENALTY);
+
+    // Notify the user that debt has been recorded
+    await notificationService.createNotification({
+      userId,
+      groupId,
+      type: 'DEBT_RECORDED',
+      title: 'Payment Recorded as Debt',
+      message: `Your payment of $${payment.amount.toFixed(2)} for "${payment.cycle.group.name}" has failed after ${MAX_CARD_RETRIES} attempts. This amount will be deducted from your payout.`,
+    });
+
+    console.log(`[Payment] Recorded $${payment.amount} debt for user ${userId} in group ${groupId} (payment ${paymentId})`);
+  }
+
+  /**
+   * Adjust a user's trust score (clamped to 0 minimum)
+   */
+  async adjustTrustScore(userId: string, delta: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { trustScore: true },
+    });
+
+    if (!user) return;
+
+    const newScore = Math.max(0, user.trustScore + delta);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { trustScore: newScore },
+    });
+  }
+
+  /**
+   * Reward trust score when a payment completes successfully
+   */
+  async rewardTrustScore(userId: string) {
+    await this.adjustTrustScore(userId, TRUST_SCORE_REWARD);
   }
 }
 

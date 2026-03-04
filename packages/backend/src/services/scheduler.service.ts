@@ -38,7 +38,12 @@ class SchedulerService {
       this.completeStaleCycles().catch(console.error);
     });
 
-    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), 48h reminders (daily 9AM), payouts (30min), stale cycles (15min)');
+    // Every 2 hours: record debt for any exhausted payments not yet tracked
+    cron.schedule('0 */2 * * *', () => {
+      this.recordUntrackedDebts().catch(console.error);
+    });
+
+    console.log('Scheduler initialized: due-date auto-charge (daily 8AM), overdue payments (hourly), reminders (daily 9AM), 48h reminders (daily 9AM), payouts (30min), stale cycles (15min), debt tracking (2h)');
   }
 
   async processDueDateAutoPayments() {
@@ -287,13 +292,19 @@ class SchedulerService {
   }
 
   async completeStaleCycles() {
-    // Find cycles where isCompleted=false but ALL payments are COMPLETED
+    // Find cycles where isCompleted=false but ALL payments are resolved
+    // (COMPLETED, or FAILED with retries exhausted — recorded as debt)
     const staleCycles = await prisma.cycle.findMany({
       where: {
         isCompleted: false,
         group: { status: 'ACTIVE' },
         payments: {
-          every: { status: 'COMPLETED' },
+          every: {
+            OR: [
+              { status: 'COMPLETED' },
+              { status: 'FAILED', retryCount: { gte: 3 } },
+            ],
+          },
           some: {},  // ensure at least one payment exists
         },
       },
@@ -404,6 +415,57 @@ class SchedulerService {
         console.log(`[Scheduler] Payout ${payout.id} marked as FAILED after ${payout.retryCount} retries`);
       } catch (error: any) {
         console.error(`[Scheduler] Failed to mark payout ${payout.id} as failed:`, error.message);
+      }
+    }
+  }
+
+  /**
+   * Safety net: find FAILED payments with exhausted retries that haven't been
+   * recorded as debt yet (e.g. if recordOutstandingDebt failed earlier).
+   */
+  async recordUntrackedDebts() {
+    const exhaustedPayments = await prisma.payment.findMany({
+      where: {
+        status: 'FAILED',
+        retryCount: { gte: 3 },
+        fallbackMethod: null, // not yet resolved
+        cycle: {
+          isCompleted: false,
+          group: { status: 'ACTIVE' },
+        },
+      },
+      include: {
+        cycle: true,
+      },
+    });
+
+    if (exhaustedPayments.length === 0) return;
+
+    console.log(`[Scheduler] Found ${exhaustedPayments.length} untracked debt payment(s)`);
+
+    for (const payment of exhaustedPayments) {
+      // Check if already tracked in membership debt
+      const membership = await prisma.membership.findFirst({
+        where: {
+          groupId: payment.cycle.groupId,
+          userId: payment.userId,
+          isActive: true,
+        },
+      });
+
+      if (!membership) continue;
+
+      if (membership.debtPaymentIds.includes(payment.id)) continue;
+
+      try {
+        await paymentService.recordOutstandingDebt(
+          payment.id,
+          payment.userId,
+          payment.cycle.groupId
+        );
+        console.log(`[Scheduler] Recorded untracked debt for payment ${payment.id}`);
+      } catch (error: any) {
+        console.error(`[Scheduler] Failed to record debt for payment ${payment.id}:`, error.message);
       }
     }
   }

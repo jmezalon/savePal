@@ -44,6 +44,9 @@ class WebhookController {
         case 'account.updated':
           await this.handleAccountUpdated(event.data.object as Stripe.Account);
           break;
+        case 'charge.dispute.created':
+          await this.handleChargeDisputeCreated(event.data.object as Stripe.Dispute);
+          break;
         default:
           break;
       }
@@ -154,6 +157,75 @@ class WebhookController {
     });
 
     console.log(`Webhook: Connect account ${account.id} transfers=${transfersStatus} onboarded=${isOnboarded}`);
+  }
+
+  /**
+   * Handle charge disputes (chargebacks).
+   * When a user disputes a charge, we record the disputed amount as outstanding
+   * debt on their membership so it can be withheld from their payout.
+   */
+  private async handleChargeDisputeCreated(dispute: Stripe.Dispute) {
+    // Find the payment associated with this dispute's payment intent
+    const paymentIntentId = typeof dispute.payment_intent === 'string'
+      ? dispute.payment_intent
+      : dispute.payment_intent?.id;
+
+    if (!paymentIntentId) {
+      console.log('Webhook: Dispute has no payment_intent, skipping');
+      return;
+    }
+
+    const payment = await prisma.payment.findFirst({
+      where: { stripePaymentIntentId: paymentIntentId },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+        cycle: { include: { group: true } },
+      },
+    });
+
+    if (!payment) {
+      console.log(`Webhook: No payment found for disputed payment_intent ${paymentIntentId}`);
+      return;
+    }
+
+    // Mark the payment as failed due to dispute
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'FAILED',
+        failureReason: `Payment disputed (chargeback). Reason: ${dispute.reason || 'unknown'}`,
+        retryCount: 3, // Ensure it's treated as exhausted
+      },
+    });
+
+    // Record as outstanding debt
+    await paymentService.recordOutstandingDebt(
+      payment.id,
+      payment.userId,
+      payment.cycle.groupId
+    );
+
+    // Notify user
+    await notificationService.createNotification({
+      userId: payment.userId,
+      groupId: payment.cycle.group.id,
+      type: 'PAYMENT_DISPUTED',
+      title: 'Payment Dispute Received',
+      message: `A dispute was filed for your $${payment.amount.toFixed(2)} payment to "${payment.cycle.group.name}". This amount has been added to your outstanding debt and will be deducted from your payout.`,
+    });
+
+    // Notify group owner
+    const memberName = `${payment.user.firstName} ${payment.user.lastName}`;
+    await notificationService.notifyGroupOwnerOfPaymentFailure(
+      payment.cycle.group.id,
+      payment.cycle.group.name,
+      payment.userId,
+      memberName,
+      payment.amount,
+      `Payment disputed (chargeback). Reason: ${dispute.reason || 'unknown'}`
+    );
+
+    console.log(`Webhook: Dispute recorded for payment ${payment.id} ($${payment.amount}) by user ${payment.userId}`);
   }
 }
 

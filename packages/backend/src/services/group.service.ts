@@ -139,6 +139,20 @@ class GroupService {
       throw new Error('You must add a payment method before joining a group');
     }
 
+    // Block users with outstanding debt from joining new groups
+    const debtMemberships = await prisma.membership.findMany({
+      where: {
+        userId,
+        outstandingDebt: { gt: 0 },
+      },
+      select: { outstandingDebt: true },
+    });
+
+    if (debtMemberships.length > 0) {
+      const totalDebt = debtMemberships.reduce((sum, m) => sum + m.outstandingDebt, 0);
+      throw new Error(`You cannot join a new group while you have $${totalDebt.toFixed(2)} in outstanding debt from missed payments. Please resolve your existing obligations first.`);
+    }
+
     // Get user details for the new member
     const newMember = await prisma.user.findUnique({
       where: { id: userId },

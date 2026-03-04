@@ -306,14 +306,17 @@ class CycleService {
   }
 
   /**
-   * Check if a cycle is fully paid
+   * Check if a cycle is fully resolved (all payments either completed or recorded as debt)
    */
   async isCycleFullyPaid(cycleId: string): Promise<boolean> {
     const payments = await prisma.payment.findMany({
       where: { cycleId },
     });
 
-    return payments.every(payment => payment.status === 'COMPLETED');
+    return payments.every(payment =>
+      payment.status === 'COMPLETED' ||
+      (payment.status === 'FAILED' && payment.retryCount >= 3)
+    );
   }
 
   /**
@@ -356,13 +359,21 @@ class CycleService {
         throw new Error('Cycle is already completed');
       }
 
-      // Check if all payments are completed
+      // Check if all payments are resolved (completed or recorded as debt after max retries)
       const payments = await tx.payment.findMany({ where: { cycleId } });
-      const allCompleted = payments.every(p => p.status === 'COMPLETED');
+      const allResolved = payments.every(p =>
+        p.status === 'COMPLETED' ||
+        (p.status === 'FAILED' && p.retryCount >= 3)
+      );
 
-      if (!allCompleted) {
-        throw new Error('Not all payments have been completed');
+      if (!allResolved) {
+        throw new Error('Not all payments have been completed or resolved');
       }
+
+      // Calculate shortfall from failed payments (these are recorded as debt on memberships)
+      const failedPayments = payments.filter(p => p.status === 'FAILED' && p.retryCount >= 3);
+      const shortfallAmount = failedPayments.reduce((sum, p) => sum + p.amount, 0);
+      const collectedAmount = lockedCycle.totalAmount - shortfallAmount;
 
       // Mark cycle as completed
       const updated = await tx.cycle.update({
@@ -373,20 +384,24 @@ class CycleService {
         },
       });
 
-      // Create payout record
-      const feeAmount = lockedCycle.totalAmount * 0.03; // 3% platform fee
-      const netAmount = lockedCycle.totalAmount - feeAmount;
+      // Create payout record based on actually collected amount
+      const feeAmount = collectedAmount * 0.03; // 3% platform fee on collected amount only
+      const netAmount = collectedAmount - feeAmount;
 
       const payout = await tx.payout.create({
         data: {
           cycleId: lockedCycle.id,
           recipientId: lockedCycle.recipientId,
-          amount: lockedCycle.totalAmount,
+          amount: collectedAmount,
           feeAmount,
           netAmount,
           status: 'PENDING',
         },
       });
+
+      if (shortfallAmount > 0) {
+        console.log(`[Cycle] Cycle ${cycleId} completed with $${shortfallAmount.toFixed(2)} shortfall from ${failedPayments.length} failed payment(s)`);
+      }
 
       // Check for next cycle
       const nextCycle = await tx.cycle.findFirst({
