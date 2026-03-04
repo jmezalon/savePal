@@ -2,6 +2,8 @@ import prisma from '../utils/prisma.js';
 import { Frequency, PayoutMethod } from '@prisma/client';
 import cycleService from './cycle.service.js';
 import emailService from './email.service.js';
+import feeWaiverService, { GROUP_CREATION_FEE_AMOUNT } from './feeWaiver.service.js';
+import stripeService from './stripe.service.js';
 
 interface CreateGroupData {
   name: string;
@@ -13,6 +15,8 @@ interface CreateGroupData {
   maxMembers: number;
   startDate?: Date;
   createdById: string;
+  feeWaiverCode?: string;
+  paymentMethodId?: string;
 }
 
 interface JoinGroupData {
@@ -36,6 +40,8 @@ class GroupService {
       maxMembers,
       startDate,
       createdById,
+      feeWaiverCode,
+      paymentMethodId,
     } = data;
 
     // Check if creator has both email and phone unverified
@@ -46,6 +52,38 @@ class GroupService {
 
     if (creator && !creator.emailVerified && !creator.phoneVerified) {
       throw new Error('You must verify your email or phone number before creating a group');
+    }
+
+    // Determine fee waiver eligibility
+    const eligibility = await feeWaiverService.checkFeeWaiverEligibility(createdById);
+
+    let feeWaived = !eligibility.feeRequired;
+    let waiverReason: string | null = feeWaived ? 'COMPLETED_GROUPS' : null;
+    let stripePaymentIntentId: string | null = null;
+
+    // Check waiver code if fee is required and code is provided
+    if (eligibility.feeRequired && feeWaiverCode) {
+      const codeValidation = await feeWaiverService.validateCode(feeWaiverCode);
+      if (!codeValidation.valid) {
+        throw new Error(codeValidation.message);
+      }
+      feeWaived = true;
+      waiverReason = `WAIVER_CODE:${feeWaiverCode.toUpperCase().trim()}`;
+    }
+
+    // Charge the fee via Stripe if not waived
+    if (!feeWaived) {
+      try {
+        const chargeResult = await stripeService.chargePayment(
+          createdById,
+          GROUP_CREATION_FEE_AMOUNT,
+          `group-creation-fee-${Date.now()}`,
+          paymentMethodId
+        );
+        stripePaymentIntentId = chargeResult.paymentIntentId;
+      } catch (error: any) {
+        throw new Error(`Failed to charge group creation fee: ${error.message}`);
+      }
     }
 
     // Create group and add creator as owner in a transaction
@@ -80,8 +118,29 @@ class GroupService {
         },
       });
 
+      // Record the creation fee
+      await tx.groupCreationFee.create({
+        data: {
+          groupId: group.id,
+          userId: createdById,
+          amount: feeWaived ? 0 : GROUP_CREATION_FEE_AMOUNT,
+          status: feeWaived ? 'WAIVED' : 'COMPLETED',
+          waiverReason,
+          stripePaymentIntentId,
+        },
+      });
+
       return group;
     });
+
+    // Redeem waiver code after successful group creation (outside transaction to avoid blocking)
+    if (feeWaiverCode && waiverReason?.startsWith('WAIVER_CODE:')) {
+      try {
+        await feeWaiverService.redeemCode(feeWaiverCode, createdById, result.id);
+      } catch (error) {
+        console.error('Failed to record waiver code usage:', error);
+      }
+    }
 
     return result;
   }

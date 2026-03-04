@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+interface FeeStatus {
+  feeRequired: boolean;
+  amount: number;
+  reason: string;
+  completedGroups: number;
+}
 
 export default function CreateGroup() {
   const [formData, setFormData] = useState({
@@ -19,6 +26,44 @@ export default function CreateGroup() {
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
+  // Fee-related state
+  const [feeStatus, setFeeStatus] = useState<FeeStatus | null>(null);
+  const [feeLoading, setFeeLoading] = useState(true);
+  const [waiverCode, setWaiverCode] = useState('');
+  const [waiverCodeValid, setWaiverCodeValid] = useState<boolean | null>(null);
+  const [waiverCodeMessage, setWaiverCodeMessage] = useState('');
+  const [validatingCode, setValidatingCode] = useState(false);
+
+  // Fetch fee status on mount
+  useEffect(() => {
+    const fetchFeeStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/groups/creation-fee-status`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.status === 401) {
+          logout();
+          navigate('/login');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setFeeStatus(data.data);
+        }
+      } catch {
+        // Non-critical — user can still try to create
+      } finally {
+        setFeeLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchFeeStatus();
+    }
+  }, [token, logout, navigate]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const updated = { ...formData, [name]: value };
@@ -33,6 +78,40 @@ export default function CreateGroup() {
 
     setFormData(updated);
     setError(null);
+  };
+
+  const handleValidateCode = async () => {
+    if (!waiverCode.trim()) return;
+
+    setValidatingCode(true);
+    setWaiverCodeValid(null);
+    setWaiverCodeMessage('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/groups/validate-waiver-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code: waiverCode.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setWaiverCodeValid(data.data.valid);
+        setWaiverCodeMessage(data.data.message);
+      } else {
+        setWaiverCodeValid(false);
+        setWaiverCodeMessage(data.error || 'Failed to validate code');
+      }
+    } catch {
+      setWaiverCodeValid(false);
+      setWaiverCodeMessage('Failed to validate code');
+    } finally {
+      setValidatingCode(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,18 +138,25 @@ export default function CreateGroup() {
     setIsLoading(true);
 
     try {
+      const body: Record<string, any> = {
+        ...formData,
+        contributionAmount: parseFloat(formData.contributionAmount),
+        maxMembers: maxMembers,
+        payoutFrequency: formData.payoutFrequency || undefined,
+      };
+
+      // Include waiver code if validated
+      if (waiverCodeValid && waiverCode.trim()) {
+        body.feeWaiverCode = waiverCode.trim();
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/groups`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          contributionAmount: parseFloat(formData.contributionAmount),
-          maxMembers: maxMembers,
-          payoutFrequency: formData.payoutFrequency || undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.status === 401) {
@@ -94,13 +180,15 @@ export default function CreateGroup() {
     }
   };
 
+  const isFeeWaived = !feeStatus?.feeRequired || waiverCodeValid === true;
+
   return (
     <div className="bg-gray-50">
       <main className="max-w-3xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
             <Link to="/groups" className="text-blue-600 hover:text-blue-700 text-sm">
-              ← Back to Groups
+              &larr; Back to Groups
             </Link>
           </div>
 
@@ -114,6 +202,85 @@ export default function CreateGroup() {
                   You must verify your email address or phone number before creating a group.
                   Please visit your <Link to="/profile" className="text-red-900 underline font-medium">Profile</Link> to complete verification.
                 </p>
+              </div>
+            )}
+
+            {/* Group Creation Fee Notice */}
+            {!feeLoading && feeStatus && (
+              <div className={`mb-4 rounded-lg p-4 border ${
+                isFeeWaived
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-yellow-50 border-yellow-200'
+              }`}>
+                <h3 className={`text-sm font-semibold mb-1 ${
+                  isFeeWaived ? 'text-green-900' : 'text-yellow-900'
+                }`}>
+                  {isFeeWaived ? 'Creation Fee Waived' : 'Group Creation Fee'}
+                </h3>
+                <p className={`text-sm ${isFeeWaived ? 'text-green-800' : 'text-yellow-800'}`}>
+                  {isFeeWaived
+                    ? waiverCodeValid
+                      ? 'Fee waived with waiver code'
+                      : feeStatus.reason
+                    : feeStatus.reason}
+                </p>
+
+                {/* Waiver code input — only show if fee is required and not already code-waived */}
+                {feeStatus.feeRequired && !waiverCodeValid && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-yellow-900 mb-1">
+                      Have a waiver code?
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={waiverCode}
+                        onChange={(e) => {
+                          setWaiverCode(e.target.value.toUpperCase());
+                          setWaiverCodeValid(null);
+                          setWaiverCodeMessage('');
+                        }}
+                        placeholder="Enter code"
+                        className="flex-1 px-3 py-1.5 text-sm border border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleValidateCode}
+                        disabled={validatingCode || !waiverCode.trim()}
+                        className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {validatingCode ? 'Checking...' : 'Apply'}
+                      </button>
+                    </div>
+                    {waiverCodeMessage && (
+                      <p className={`mt-1 text-xs ${
+                        waiverCodeValid ? 'text-green-700' : 'text-red-600'
+                      }`}>
+                        {waiverCodeMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Show validated code with option to remove */}
+                {waiverCodeValid && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                      Code: {waiverCode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWaiverCode('');
+                        setWaiverCodeValid(null);
+                        setWaiverCodeMessage('');
+                      }}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -299,7 +466,11 @@ export default function CreateGroup() {
                   disabled={isLoading || (user !== null && !user.emailVerified && !user.phoneVerified)}
                   className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Creating...' : 'Create Group'}
+                  {isLoading
+                    ? 'Creating...'
+                    : isFeeWaived
+                      ? 'Create Group'
+                      : `Create Group — $${feeStatus?.amount?.toFixed(2) || '10.00'} Fee`}
                 </button>
                 <Link
                   to="/groups"

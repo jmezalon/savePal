@@ -9,6 +9,12 @@ const router = Router();
 // All group routes require authentication
 router.use(authenticate);
 
+// Check creation fee status for current user
+router.get('/creation-fee-status', groupController.getCreationFeeStatus.bind(groupController));
+
+// Validate a fee waiver code
+router.post('/validate-waiver-code', groupController.validateWaiverCode.bind(groupController));
+
 // Create a new group
 router.post('/', groupController.createGroup.bind(groupController));
 

@@ -50,12 +50,14 @@ model User {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  memberships     Membership[]
-  payments        Payment[]
-  createdGroups   Group[]        @relation("GroupCreator")
-  receivedPayouts Payout[]
-  notifications   Notification[]
-  paymentMethods  PaymentMethod[]
+  memberships         Membership[]
+  payments            Payment[]
+  createdGroups       Group[]              @relation("GroupCreator")
+  receivedPayouts     Payout[]
+  notifications       Notification[]
+  paymentMethods      PaymentMethod[]
+  groupCreationFees   GroupCreationFee[]
+  feeWaiverCodeUsages FeeWaiverCodeUsage[]
 
   @@map("users")
 }
@@ -84,6 +86,8 @@ model Group {
   memberships  Membership[]
   cycles       Cycle[]
   notifications Notification[]
+  creationFee  GroupCreationFee?
+  feeWaiverCodeUsage FeeWaiverCodeUsage?
 
   @@map("groups")
 }
@@ -273,4 +277,61 @@ enum NotificationType {
   REMINDER
   AUTO_PAYMENT_SCHEDULED
   AUTO_PAYMENT_PROCESSED
+}
+
+enum CreationFeeStatus {
+  COMPLETED
+  WAIVED
+}
+
+// Fee Waiver Code Model
+model FeeWaiverCode {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String?
+  maxUses     Int?     // null = unlimited
+  currentUses Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  usages FeeWaiverCodeUsage[]
+
+  @@map("fee_waiver_codes")
+}
+
+// Fee Waiver Code Usage Model
+model FeeWaiverCodeUsage {
+  id     String   @id @default(uuid())
+  codeId String
+  userId String
+  groupId String  @unique
+  usedAt DateTime @default(now())
+
+  // Relations
+  code  FeeWaiverCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([codeId, userId, groupId])
+  @@map("fee_waiver_code_usages")
+}
+
+// Group Creation Fee Model
+model GroupCreationFee {
+  id                    String            @id @default(uuid())
+  groupId               String            @unique
+  userId                String
+  amount                Float
+  status                CreationFeeStatus
+  waiverReason          String?
+  stripePaymentIntentId String?           @unique
+  createdAt             DateTime          @default(now())
+
+  // Relations
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("group_creation_fees")
 }
