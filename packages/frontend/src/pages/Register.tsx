@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -15,11 +15,13 @@ export default function Register() {
   const [passwordError, setPasswordError] = useState('');
   const { register, googleLogin, isAuthenticated, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   useEffect(() => {
     // Redirect if already authenticated
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
   }, [isAuthenticated, navigate]);
 
@@ -57,7 +59,7 @@ export default function Register() {
     try {
       const { confirmPassword, ...registerData } = formData;
       await register(registerData);
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err) {
       // Error is handled by AuthContext
     }
@@ -67,7 +69,7 @@ export default function Register() {
     if (!response.credential) return;
     try {
       await googleLogin(response.credential);
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err) {
       console.error('Google sign-up failed:', err);
     }
@@ -82,7 +84,7 @@ export default function Register() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to={`/login${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="font-medium text-blue-600 hover:text-blue-500">
               sign in to your existing account
             </Link>
           </p>
