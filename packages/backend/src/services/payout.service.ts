@@ -105,7 +105,9 @@ class PayoutService {
   }
 
   /**
-   * Process a payout via Stripe Connect transfer
+   * Process a payout via Stripe Connect transfer.
+   * If the recipient has outstanding debt in this group, the debt is
+   * deducted from the payout amount before transferring.
    */
   async processPayout(payoutId: string) {
     const payout = await this.getPayoutById(payoutId);
@@ -173,6 +175,25 @@ class PayoutService {
       throw new Error(reason);
     }
 
+    // Check if recipient has outstanding debt in this group
+    const membership = await prisma.membership.findFirst({
+      where: {
+        groupId: payout.cycle.group.id,
+        userId: payout.recipientId,
+        isActive: true,
+      },
+    });
+
+    let debtDeducted = 0;
+    let adjustedNetAmount = payout.netAmount;
+
+    if (membership && membership.outstandingDebt > 0) {
+      debtDeducted = Math.min(membership.outstandingDebt, payout.netAmount);
+      adjustedNetAmount = Math.round((payout.netAmount - debtDeducted) * 100) / 100;
+
+      console.log(`[Payout] Withholding $${debtDeducted.toFixed(2)} from payout ${payoutId} for outstanding debt`);
+    }
+
     // Set status to PROCESSING
     await prisma.payout.update({
       where: { id: payoutId },
@@ -180,11 +201,15 @@ class PayoutService {
     });
 
     try {
-      const transferId = await stripeService.createTransfer(
-        payoutId,
-        recipient.stripeConnectAccountId,
-        payout.netAmount
-      );
+      let transferId: string | null = null;
+
+      if (adjustedNetAmount > 0) {
+        transferId = await stripeService.createTransfer(
+          payoutId,
+          recipient.stripeConnectAccountId,
+          adjustedNetAmount
+        );
+      }
 
       const updatedPayout = await prisma.payout.update({
         where: { id: payoutId },
@@ -192,18 +217,63 @@ class PayoutService {
           status: 'COMPLETED',
           stripeTransferId: transferId,
           transferredAt: new Date(),
+          netAmount: adjustedNetAmount,
           failureReason: null,
           retryCount: 0,
           lastRetryAt: null,
         },
       });
 
+      // Clear the debt that was deducted
+      if (membership && debtDeducted > 0) {
+        const remainingDebt = Math.round((membership.outstandingDebt - debtDeducted) * 100) / 100;
+
+        // Mark the debt payments as resolved via withholding
+        if (remainingDebt === 0) {
+          // All debt cleared — mark all debt payments as resolved
+          for (const debtPaymentId of membership.debtPaymentIds) {
+            await prisma.payment.update({
+              where: { id: debtPaymentId },
+              data: {
+                fallbackMethod: 'payout_withholding',
+                fallbackAt: new Date(),
+              },
+            });
+          }
+
+          await prisma.membership.update({
+            where: { id: membership.id },
+            data: {
+              outstandingDebt: 0,
+              debtPaymentIds: [],
+            },
+          });
+        } else {
+          // Partial debt cleared — we deducted the full payout but debt remains
+          await prisma.membership.update({
+            where: { id: membership.id },
+            data: {
+              outstandingDebt: remainingDebt,
+            },
+          });
+        }
+
+        // Notify user about debt deduction
+        await notificationService.createNotification({
+          userId: payout.recipientId,
+          groupId: payout.cycle.group.id,
+          type: 'DEBT_DEDUCTED_FROM_PAYOUT',
+          title: 'Debt Deducted from Payout',
+          message: `$${debtDeducted.toFixed(2)} was deducted from your payout for "${payout.cycle.group.name}" to cover missed contributions.${remainingDebt > 0 ? ` Remaining debt: $${remainingDebt.toFixed(2)}.` : ' Your debt has been fully resolved.'}`,
+        });
+      }
+
       // Notify recipient
       await notificationService.sendPayoutCompletedNotification(
         payout.recipientId,
         payout.cycle.group.id,
         payout.cycle.group.name,
-        payout.netAmount
+        adjustedNetAmount
       );
 
       return updatedPayout;
