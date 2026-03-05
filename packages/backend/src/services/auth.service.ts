@@ -561,6 +561,30 @@ class AuthService {
   }
 
   /**
+   * Delete user account
+   * Only allowed if user has no active/pending groups
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const memberships = await prisma.membership.findMany({
+      where: { userId },
+      include: { group: true },
+    });
+
+    const activeGroups = memberships.filter(
+      (m) => m.group.status === 'PENDING' || m.group.status === 'ACTIVE'
+    );
+
+    if (activeGroups.length > 0) {
+      const groupNames = activeGroups.map((m) => m.group.name).join(', ');
+      throw new Error(
+        `Cannot delete account while you are in active groups: ${groupNames}. Please wait for them to complete or leave first.`
+      );
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
+  }
+
+  /**
    * Verify phone with code
    */
   async verifyPhone(userId: string, code: string): Promise<void> {

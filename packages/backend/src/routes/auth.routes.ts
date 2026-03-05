@@ -21,5 +21,6 @@ router.patch('/notifications', authenticate, authController.updateNotificationPr
 router.post('/change-password', authenticate, authController.changePassword.bind(authController));
 router.post('/send-phone-verification', authenticate, authController.sendPhoneVerification.bind(authController));
 router.post('/verify-phone', authenticate, authController.verifyPhone.bind(authController));
+router.delete('/delete-account', authenticate, authController.deleteAccount.bind(authController));
 
 export default router;

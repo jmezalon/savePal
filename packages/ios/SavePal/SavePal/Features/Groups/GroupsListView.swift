@@ -12,6 +12,15 @@ struct GroupsListView: View {
             Group {
                 if isLoading {
                     LoadingView(message: "Loading groups...")
+                } else if let error = errorMessage {
+                    EmptyStateView(
+                        icon: "exclamationmark.triangle",
+                        title: "Error Loading Groups",
+                        message: error,
+                        buttonTitle: "Retry"
+                    ) {
+                        Task { await loadGroups() }
+                    }
                 } else if groups.isEmpty {
                     EmptyStateView(
                         icon: "person.3",
@@ -83,9 +92,11 @@ struct GroupsListView: View {
     private func loadGroups() async {
         defer { isLoading = false }
         do {
+            errorMessage = nil
             groups = try await APIClient.shared.request(url: APIEndpoints.Groups.base)
         } catch {
             errorMessage = error.localizedDescription
+            print("Groups load error: \(error)")
         }
     }
 }

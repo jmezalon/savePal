@@ -90,6 +90,17 @@ final class AuthManager {
         error = nil
     }
 
+    // MARK: - Delete Account
+
+    @MainActor
+    func deleteAccount() async throws {
+        _ = try await APIClient.shared.requestMessage(
+            url: APIEndpoints.Auth.deleteAccount,
+            method: "DELETE"
+        )
+        logout()
+    }
+
     // MARK: - Unauthorized Handler
 
     @MainActor

@@ -19,6 +19,7 @@ enum APIEndpoints {
         static let changePassword = "\(baseURL)/auth/change-password"
         static let sendPhoneVerification = "\(baseURL)/auth/send-phone-verification"
         static let verifyPhone = "\(baseURL)/auth/verify-phone"
+        static let deleteAccount = "\(baseURL)/auth/delete-account"
     }
 
     // MARK: - Groups

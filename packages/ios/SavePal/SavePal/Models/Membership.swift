@@ -22,10 +22,10 @@ struct Membership: Codable, Identifiable {
     let payoutPosition: Int
     let joinedAt: String
     let isActive: Bool
-    var autoPaymentConsented: Bool
+    var autoPaymentConsented: Bool?
     var autoPaymentConsentedAt: String?
-    var outstandingDebt: Double
-    var debtPaymentIds: [String]
+    var outstandingDebt: Double?
+    var debtPaymentIds: [String]?
     var user: MemberUser?
 }
 
@@ -33,10 +33,10 @@ struct MemberUser: Codable {
     let id: String
     let firstName: String
     let lastName: String
-    let email: String
-    var trustScore: Double
-    var emailVerified: Bool
-    var phoneVerified: Bool
+    var email: String?
+    var trustScore: Double?
+    var emailVerified: Bool?
+    var phoneVerified: Bool?
 
     var fullName: String {
         "\(firstName) \(lastName)"

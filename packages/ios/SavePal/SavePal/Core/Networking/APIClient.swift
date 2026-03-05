@@ -59,7 +59,8 @@ actor APIClient {
         }
 
         // Try to decode as API response envelope
-        if let apiResponse = try? decoder.decode(APIResponse<T>.self, from: data) {
+        do {
+            let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
             if apiResponse.success, let responseData = apiResponse.data {
                 return responseData
             } else if let error = apiResponse.error {
@@ -67,13 +68,26 @@ actor APIClient {
             } else if !apiResponse.success {
                 throw APIError.serverError(apiResponse.message ?? "Request failed")
             }
+        } catch let decodingError as DecodingError {
+            #if DEBUG
+            print("API decode error for \(urlString): \(decodingError)")
+            if let raw = String(data: data, encoding: .utf8) {
+                print("Raw response (first 500 chars): \(String(raw.prefix(500)))")
+            }
+            #endif
+            // Check if it's a success response with no data field
+            if let basic = try? decoder.decode(APIResponse<EmptyData>.self, from: data),
+               basic.success,
+               let empty = EmptyData() as? T {
+                return empty
+            }
+            throw APIError.decodingError(decodingError)
         }
 
         // Fallback: try to decode as raw T
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
-            // If T is EmptyData and the response was successful, return empty
             if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300,
                let empty = EmptyData() as? T {
                 return empty

@@ -463,6 +463,36 @@ class AuthController {
   }
 
   /**
+   * DELETE /api/auth/delete-account
+   * Delete user account
+   */
+  async deleteAccount(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      await authService.deleteAccount(userId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Account deleted successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete account';
+      const statusCode = errorMessage.includes('active groups') ? 400 : 500;
+      return res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
    * POST /api/auth/verify-phone
    * Verify phone with code
    */

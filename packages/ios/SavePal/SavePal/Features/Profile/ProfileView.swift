@@ -5,6 +5,9 @@ struct ProfileView: View {
     @State private var showChangePassword = false
     @State private var showEditProfile = false
     @State private var showLogoutConfirm = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeletingAccount = false
+    @State private var deleteError: String?
 
     var body: some View {
         NavigationStack {
@@ -123,6 +126,24 @@ struct ProfileView: View {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
+
+                // Delete Account
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        if isDeletingAccount {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Label("Delete Account", systemImage: "trash")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    .disabled(isDeletingAccount)
+                } footer: {
+                    Text("Permanently delete your account and all associated data. This cannot be undone.")
+                }
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $showEditProfile) {
@@ -139,6 +160,34 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .alert("Delete Account", isPresented: $showDeleteConfirm) {
+                Button("Delete", role: .destructive) {
+                    Task { await performDeleteAccount() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your account and all your data. This action cannot be undone.")
+            }
+            .alert("Cannot Delete Account", isPresented: .init(
+                get: { deleteError != nil },
+                set: { if !$0 { deleteError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteError ?? "")
+            }
+        }
+    }
+
+    private func performDeleteAccount() async {
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+        do {
+            try await authManager.deleteAccount()
+        } catch let error as APIError {
+            deleteError = error.errorDescription
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 

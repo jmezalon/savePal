@@ -223,12 +223,12 @@ struct GroupDetailView: View {
 
             if let user = membership.user {
                 HStack(spacing: 4) {
-                    if user.emailVerified {
+                    if user.emailVerified == true {
                         Image(systemName: "envelope.fill")
                             .font(.caption2)
                             .foregroundStyle(.green)
                     }
-                    if user.phoneVerified {
+                    if user.phoneVerified == true {
                         Image(systemName: "phone.fill")
                             .font(.caption2)
                             .foregroundStyle(.green)
