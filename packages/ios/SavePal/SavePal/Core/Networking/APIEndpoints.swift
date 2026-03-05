@@ -1,7 +1,7 @@
 import Foundation
 
 enum APIEndpoints {
-    static let baseURL = "https://savepal-backend.onrender.com/api"
+    static let baseURL = "https://savepal.onrender.com/api"
 
     // MARK: - Auth
     enum Auth {
