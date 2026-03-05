@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
               <strong>Effective Date:</strong> February 15, 2026
             </p>
             <p className="mt-2">
-              SavePal ("we," "us," or "our") operates the SavePal application and website
+              SavePals ("we," "us," or "our") operates the SavePals application and website
               at <a href="https://save-pals.com" className="text-blue-600 hover:underline">save-pals.com</a>.
               This Privacy Policy explains how we collect, use, disclose, and protect your
               personal information when you use our services.
@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">2. How We Use Your Information</h2>
             <p>We use the information we collect to:</p>
             <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-              <li>Create and manage your SavePal account</li>
+              <li>Create and manage your SavePals account</li>
               <li>Facilitate group savings (ROSCA) contributions and payouts</li>
               <li>Process payments through Stripe</li>
               <li>Send verification codes via SMS (Twilio) and email</li>
@@ -107,7 +107,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">7. Cookies and Tracking</h2>
             <p>
-              SavePal uses local storage and session tokens for authentication purposes.
+              SavePals uses local storage and session tokens for authentication purposes.
               We do not use third-party tracking cookies or advertising trackers.
             </p>
           </section>
@@ -115,7 +115,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">8. Children's Privacy</h2>
             <p>
-              SavePal is not intended for use by individuals under the age of 18. We do not
+              SavePals is not intended for use by individuals under the age of 18. We do not
               knowingly collect personal information from children.
             </p>
           </section>

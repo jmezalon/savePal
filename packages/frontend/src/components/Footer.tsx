@@ -9,7 +9,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <h3 className="text-xl font-bold text-white mb-3">SavePal</h3>
+            <h3 className="text-xl font-bold text-white mb-3">SavePals</h3>
             <p className="text-sm leading-relaxed">
               Community-powered savings made simple. Join a ROSCA group and start building your financial future together.
             </p>
@@ -64,7 +64,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 mt-10 pt-6 text-center">
           <p className="text-sm">
-            &copy; {currentYear} SavePal. Built on the foundation of trust and community.
+            &copy; {currentYear} SavePals. Built on the foundation of trust and community.
           </p>
         </div>
       </div>

@@ -163,7 +163,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link to="/dashboard" className="text-2xl font-bold text-blue-600">
-              SavePal
+              SavePals
             </Link>
 
             {/* Desktop Navigation Links */}
