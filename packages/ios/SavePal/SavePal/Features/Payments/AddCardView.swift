@@ -1,0 +1,144 @@
+import SwiftUI
+import StripePaymentSheet
+
+struct AddCardView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var isLoading = true
+    @State private var paymentSheet: PaymentSheet?
+    @State private var errorMessage: String?
+    @State private var showSuccess = false
+
+    var onCardAdded: (() -> Void)?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                if isLoading {
+                    LoadingView(message: "Preparing card setup...")
+                } else if showSuccess {
+                    successView
+                } else if let error = errorMessage {
+                    errorView(error)
+                } else if let sheet = paymentSheet {
+                    readyView(sheet)
+                }
+            }
+            .padding()
+            .navigationTitle("Add Card")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .task { await createSetupIntent() }
+        }
+    }
+
+    private func readyView(_ sheet: PaymentSheet) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "creditcard.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.savePalBlue)
+
+            Text("Add a Payment Card")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("Your card will be securely saved for future payments.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            PaymentSheet.PaymentButton(paymentSheet: sheet, onCompletion: { result in
+                handlePaymentSheetResult(result)
+            }) {
+                Text("Add Card")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.savePalBlue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    private var successView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.green)
+            Text("Card Added!")
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text("Your card has been saved successfully.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Button("Done") {
+                onCardAdded?()
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.savePalBlue)
+        }
+    }
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+            Text("Setup Failed")
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Try Again") {
+                errorMessage = nil
+                isLoading = true
+                Task { await createSetupIntent() }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.savePalBlue)
+        }
+    }
+
+    private func createSetupIntent() async {
+        do {
+            let response: SetupIntentResponse = try await APIClient.shared.request(
+                url: APIEndpoints.PaymentMethods.setupIntent,
+                method: "POST"
+            )
+            guard let secret = response.secret else {
+                errorMessage = "Invalid setup response from server."
+                isLoading = false
+                return
+            }
+            let sheet = StripeManager.shared.makeSetupPaymentSheet(clientSecret: secret)
+            await MainActor.run {
+                self.paymentSheet = sheet
+                self.isLoading = false
+            }
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
+        }
+    }
+
+    private func handlePaymentSheetResult(_ result: PaymentSheetResult) {
+        switch result {
+        case .completed:
+            showSuccess = true
+        case .canceled:
+            break
+        case .failed(let error):
+            errorMessage = error.localizedDescription
+        }
+    }
+}

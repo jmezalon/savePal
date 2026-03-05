@@ -45,6 +45,11 @@
 		A10036 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10036; };
 		A10037 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10037; };
 		A10038 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10038; };
+		A10039 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10039; };
+		A10040 /* StripeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10041; };
+		A10041 /* AddCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042; };
+		A10042 /* MakePaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043; };
+		A10043 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = P10001; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -87,6 +92,11 @@
 		B10036 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
 		B10037 /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
 		B10038 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B10039 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B10040 /* SavePal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SavePal.entitlements; sourceTree = "<group>"; };
+		B10041 /* StripeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeManager.swift; sourceTree = "<group>"; };
+		B10042 /* AddCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCardView.swift; sourceTree = "<group>"; };
+		B10043 /* MakePaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakePaymentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +104,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10043 /* StripePaymentSheet in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,6 +130,7 @@
 		E10001 /* SavePal */ = {
 			isa = PBXGroup;
 			children = (
+				B10040 /* SavePal.entitlements */,
 				E10002 /* App */,
 				E10003 /* Core */,
 				E10006 /* Models */,
@@ -144,8 +156,17 @@
 			children = (
 				E10004 /* Networking */,
 				E10005 /* Auth */,
+				E10020 /* Payments */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		E10020 /* Payments */ = {
+			isa = PBXGroup;
+			children = (
+				B10041 /* StripeManager.swift */,
+			);
+			path = Payments;
 			sourceTree = "<group>";
 		};
 		E10004 /* Networking */ = {
@@ -240,6 +261,8 @@
 			isa = PBXGroup;
 			children = (
 				B10028 /* PaymentHistoryView.swift */,
+				B10042 /* AddCardView.swift */,
+				B10043 /* MakePaymentView.swift */,
 			);
 			path = Payments;
 			sourceTree = "<group>";
@@ -301,6 +324,7 @@
 			isa = PBXGroup;
 			children = (
 				B10038 /* Assets.xcassets */,
+				B10039 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -321,6 +345,9 @@
 			dependencies = (
 			);
 			name = SavePal;
+			packageProductDependencies = (
+				P10001 /* StripePaymentSheet */,
+			);
 			productName = SavePal;
 			productReference = C10000 /* SavePal.app */;
 			productType = "com.apple.product-type.application";
@@ -349,6 +376,9 @@
 				Base,
 			);
 			mainGroup = E10000;
+			packageReferences = (
+				R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */,
+			);
 			productRefGroup = E10099 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -364,6 +394,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10038 /* Assets.xcassets in Resources */,
+				A10039 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,6 +442,9 @@
 				A10035 /* ErrorBanner.swift in Sources */,
 				A10036 /* Color+Brand.swift in Sources */,
 				A10037 /* Date+Formatting.swift in Sources */,
+				A10040 /* StripeManager.swift in Sources */,
+				A10041 /* AddCardView.swift in Sources */,
+				A10042 /* MakePaymentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -539,9 +573,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SavePal/SavePal.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9S7UVPFSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = SavePals;
@@ -550,7 +585,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -569,9 +604,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SavePal/SavePal.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9S7UVPFSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = SavePals;
@@ -580,7 +616,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -616,6 +652,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 24.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		P10001 /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */;
+			productName = StripePaymentSheet;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = F10000 /* Project object */;

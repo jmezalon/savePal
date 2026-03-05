@@ -10,6 +10,8 @@ struct GroupDetailView: View {
     @State private var errorMessage: String?
     @State private var showDeleteConfirm = false
     @State private var isStarting = false
+    @State private var showPaymentSheet = false
+    @State private var selectedPaymentId: String?
 
     @Environment(AuthManager.self) private var authManager
 
@@ -38,6 +40,13 @@ struct GroupDetailView: View {
         }
         .task {
             await loadAll()
+        }
+        .sheet(isPresented: $showPaymentSheet) {
+            if let paymentId = selectedPaymentId {
+                MakePaymentView(paymentId: paymentId) {
+                    Task { await loadAll() }
+                }
+            }
         }
         .alert("Delete Group", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -315,7 +324,18 @@ struct GroupDetailView: View {
                         Text(payment.user?.fullName ?? "Member")
                             .font(.subheadline)
                         Spacer()
-                        StatusBadge(paymentStatus: payment.status)
+                        if payment.userId == authManager.currentUser?.id && payment.status == .PENDING {
+                            Button("Pay Now") {
+                                selectedPaymentId = payment.id
+                                showPaymentSheet = true
+                            }
+                            .font(.subheadline)
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.savePalBlue)
+                            .controlSize(.small)
+                        } else {
+                            StatusBadge(paymentStatus: payment.status)
+                        }
                     }
                 }
             }

@@ -3,8 +3,11 @@ import SwiftUI
 struct DashboardView: View {
     @Environment(AuthManager.self) private var authManager
     @State private var groups: [SavingsGroup] = []
+    @State private var pendingPayments: [Payment] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var showPaymentSheet = false
+    @State private var selectedPaymentId: String?
 
     var body: some View {
         NavigationStack {
@@ -20,6 +23,11 @@ struct DashboardView: View {
                         verificationCard(user: user)
                     }
 
+                    // Pending Payments
+                    if !pendingPayments.isEmpty {
+                        pendingPaymentsSection
+                    }
+
                     // Stats
                     if let stats = authManager.userStats {
                         statsSection(stats: stats)
@@ -33,6 +41,13 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .refreshable {
                 await refresh()
+            }
+            .sheet(isPresented: $showPaymentSheet) {
+                if let paymentId = selectedPaymentId {
+                    MakePaymentView(paymentId: paymentId) {
+                        Task { await loadData() }
+                    }
+                }
             }
             .task {
                 await loadData()
@@ -160,6 +175,57 @@ struct DashboardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    // MARK: - Pending Payments
+
+    private var pendingPaymentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.orange)
+                Text("Pending Payments")
+                    .font(.headline)
+                Spacer()
+                Text("\(pendingPayments.count)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.orange)
+            }
+
+            ForEach(pendingPayments) { payment in
+                Button {
+                    selectedPaymentId = payment.id
+                    showPaymentSheet = true
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(payment.cycle?.group?.name ?? "Group Payment")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                            if let dueDate = payment.dueDate {
+                                Text("Due: \(dueDate.prefix(10))")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Text(payment.formattedAmount)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.savePalBlue)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .padding()
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
     // MARK: - Group Previews
 
     private var groupPreviewsSection: some View {
@@ -225,9 +291,17 @@ struct DashboardView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            groups = try await APIClient.shared.request(url: APIEndpoints.Groups.base)
+            async let groupsReq: [SavingsGroup] = APIClient.shared.request(url: APIEndpoints.Groups.base)
+            async let pendingReq: [Payment] = APIClient.shared.request(url: APIEndpoints.Payments.pending)
+            let (g, p) = try await (groupsReq, pendingReq)
+            groups = g
+            pendingPayments = p
         } catch {
             errorMessage = error.localizedDescription
+            // Still try to load groups if pending fails
+            if groups.isEmpty {
+                groups = (try? await APIClient.shared.request(url: APIEndpoints.Groups.base)) ?? []
+            }
         }
     }
 

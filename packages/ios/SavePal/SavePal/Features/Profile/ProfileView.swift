@@ -421,6 +421,7 @@ struct ChangePasswordView: View {
 struct PaymentMethodsView: View {
     @State private var methods: [PaymentMethod] = []
     @State private var isLoading = true
+    @State private var showAddCard = false
 
     var body: some View {
         Group {
@@ -466,6 +467,20 @@ struct PaymentMethodsView: View {
             }
         }
         .navigationTitle("Payment Methods")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showAddCard = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddCard) {
+            AddCardView {
+                Task { await loadMethods() }
+            }
+        }
         .task { await loadMethods() }
         .refreshable { await loadMethods() }
     }
@@ -501,6 +516,23 @@ struct PaymentMethodsView: View {
 struct BankAccountView: View {
     @State private var connectStatus: ConnectStatus?
     @State private var isLoading = true
+    @State private var showSetupForm = false
+
+    // Setup form fields
+    @State private var routingNumber = ""
+    @State private var accountNumber = ""
+    @State private var accountHolderName = ""
+    @State private var dobMonth = ""
+    @State private var dobDay = ""
+    @State private var dobYear = ""
+    @State private var addressLine1 = ""
+    @State private var city = ""
+    @State private var state = ""
+    @State private var postalCode = ""
+    @State private var ssnLast4 = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @State private var successMessage: String?
 
     var body: some View {
         Group {
@@ -508,16 +540,26 @@ struct BankAccountView: View {
                 LoadingView()
             } else if let status = connectStatus, status.accountId != nil {
                 bankStatusView(status)
+            } else if showSetupForm {
+                setupFormView
             } else {
-                EmptyStateView(
-                    icon: "building.columns",
-                    title: "No Bank Account",
-                    message: "Set up a bank account to receive payouts."
-                )
+                VStack(spacing: 16) {
+                    EmptyStateView(
+                        icon: "building.columns",
+                        title: "No Bank Account",
+                        message: "Set up a bank account to receive payouts."
+                    )
+                    Button("Set Up Bank Account") {
+                        showSetupForm = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.savePalBlue)
+                }
             }
         }
         .navigationTitle("Bank Account")
         .task { await loadStatus() }
+        .refreshable { await loadStatus() }
     }
 
     private func bankStatusView(_ status: ConnectStatus) -> some View {
@@ -554,6 +596,118 @@ struct BankAccountView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var setupFormView: some View {
+        Form {
+            Section("Bank Details") {
+                TextField("Routing Number (9 digits)", text: $routingNumber)
+                    .keyboardType(.numberPad)
+                TextField("Account Number", text: $accountNumber)
+                    .keyboardType(.numberPad)
+                TextField("Account Holder Name", text: $accountHolderName)
+            }
+
+            Section("Identity Verification") {
+                HStack {
+                    TextField("MM", text: $dobMonth)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 50)
+                    Text("/")
+                    TextField("DD", text: $dobDay)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 50)
+                    Text("/")
+                    TextField("YYYY", text: $dobYear)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 70)
+                }
+                TextField("SSN Last 4", text: $ssnLast4)
+                    .keyboardType(.numberPad)
+            }
+
+            Section("Address") {
+                TextField("Street Address", text: $addressLine1)
+                TextField("City", text: $city)
+                TextField("State (e.g. CA)", text: $state)
+                    .textInputAutocapitalization(.characters)
+                TextField("ZIP Code", text: $postalCode)
+                    .keyboardType(.numberPad)
+            }
+
+            if let error = errorMessage {
+                Section {
+                    Text(error).foregroundStyle(.red).font(.subheadline)
+                }
+            }
+
+            if let success = successMessage {
+                Section {
+                    Text(success).foregroundStyle(.green).font(.subheadline)
+                }
+            }
+
+            Section {
+                Button {
+                    Task { await submitSetup() }
+                } label: {
+                    if isSubmitting {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Text("Submit").frame(maxWidth: .infinity)
+                    }
+                }
+                .disabled(isSubmitting || !isFormValid)
+            }
+        }
+    }
+
+    private var isFormValid: Bool {
+        routingNumber.count == 9 &&
+        !accountNumber.isEmpty &&
+        !accountHolderName.isEmpty
+    }
+
+    private func submitSetup() async {
+        isSubmitting = true
+        errorMessage = nil
+        successMessage = nil
+        defer { isSubmitting = false }
+
+        var body: [String: Any] = [
+            "routingNumber": routingNumber,
+            "accountNumber": accountNumber,
+            "accountHolderName": accountHolderName,
+        ]
+
+        if !ssnLast4.isEmpty { body["ssnLast4"] = ssnLast4 }
+        if !dobMonth.isEmpty && !dobDay.isEmpty && !dobYear.isEmpty {
+            body["dob"] = ["month": Int(dobMonth) ?? 0, "day": Int(dobDay) ?? 0, "year": Int(dobYear) ?? 0]
+        }
+        if !addressLine1.isEmpty {
+            body["address"] = [
+                "line1": addressLine1,
+                "city": city,
+                "state": state,
+                "postal_code": postalCode,
+                "country": "US",
+            ]
+        }
+
+        do {
+            let _: ConnectSetupResponse = try await APIClient.shared.request(
+                url: APIEndpoints.Connect.setup,
+                method: "POST",
+                body: body
+            )
+            successMessage = "Bank account set up successfully!"
+            showSetupForm = false
+            await loadStatus()
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

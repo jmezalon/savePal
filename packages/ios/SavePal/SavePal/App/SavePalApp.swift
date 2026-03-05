@@ -8,6 +8,9 @@ struct SavePalApp: App {
         WindowGroup {
             ContentView()
                 .environment(authManager)
+                .task {
+                    await StripeManager.shared.configure()
+                }
         }
     }
 }

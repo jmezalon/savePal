@@ -78,7 +78,7 @@ struct CreateGroupView: View {
 
                 if let feeStatus = feeStatus, feeStatus.feeRequired {
                     Section("Creation Fee") {
-                        Text("A $2.99 creation fee applies.")
+                        Text("A $10.00 creation fee applies.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
