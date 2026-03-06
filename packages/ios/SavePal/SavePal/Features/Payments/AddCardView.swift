@@ -121,6 +121,9 @@ struct AddCardView: View {
     }
 
     private func createSetupIntent() async {
+        // Ensure Stripe is configured before creating setup intent
+        await StripeManager.shared.configure()
+
         do {
             let response: SetupIntentResponse = try await APIClient.shared.request(
                 url: APIEndpoints.PaymentMethods.setupIntent,

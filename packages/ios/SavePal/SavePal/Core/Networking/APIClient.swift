@@ -69,11 +69,10 @@ actor APIClient {
                 throw APIError.serverError(apiResponse.message ?? "Request failed")
             }
         } catch let decodingError as DecodingError {
+            let rawSnippet = String(data: data.prefix(300), encoding: .utf8) ?? "non-utf8"
             #if DEBUG
             print("API decode error for \(urlString): \(decodingError)")
-            if let raw = String(data: data, encoding: .utf8) {
-                print("Raw response (first 500 chars): \(String(raw.prefix(500)))")
-            }
+            print("Raw response: \(rawSnippet)")
             #endif
             // Check if it's a success response with no data field
             if let basic = try? decoder.decode(APIResponse<EmptyData>.self, from: data),
@@ -81,7 +80,12 @@ actor APIClient {
                let empty = EmptyData() as? T {
                 return empty
             }
-            throw APIError.decodingError(decodingError)
+            // Check if server returned a plain error (no 'success' field)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMsg = json["error"] as? String ?? json["message"] as? String {
+                throw APIError.serverError(errorMsg)
+            }
+            throw APIError.serverError("Server returned unexpected response (HTTP \(httpResponse.statusCode)): \(String(rawSnippet.prefix(150)))")
         }
 
         // Fallback: try to decode as raw T
