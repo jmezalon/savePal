@@ -534,6 +534,21 @@ struct BankAccountView: View {
     @State private var errorMessage: String?
     @State private var successMessage: String?
 
+    // Update verification form
+    @State private var showUpdateVerification = false
+    @State private var showReplaceBankConfirm = false
+    @State private var verifyDobMonth = ""
+    @State private var verifyDobDay = ""
+    @State private var verifyDobYear = ""
+    @State private var verifyAddressLine1 = ""
+    @State private var verifyCity = ""
+    @State private var verifyState = ""
+    @State private var verifyPostalCode = ""
+    @State private var verifySsnLast4 = ""
+    @State private var isVerifySubmitting = false
+    @State private var verifyError: String?
+    @State private var verifySuccess: String?
+
     var body: some View {
         Group {
             if isLoading {
@@ -565,6 +580,39 @@ struct BankAccountView: View {
 
     private func bankStatusView(_ status: ConnectStatus) -> some View {
         List {
+            // Verification warning
+            if status.requiresVerification == true || status.transfersStatus != "active" {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Verification Required")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        Text(verificationMessage(for: status))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Button {
+                        prefillIdentityForm(from: status)
+                        showUpdateVerification = true
+                    } label: {
+                        Label("Update Verification Info", systemImage: "person.text.rectangle")
+                    }
+
+                    Button {
+                        showReplaceBankConfirm = true
+                    } label: {
+                        Label("Replace Bank Account", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+            }
+
             Section("Status") {
                 HStack {
                     Text("Transfers")
@@ -580,23 +628,187 @@ struct BankAccountView: View {
                 }
             }
 
-            if let banks = status.bankAccounts, !banks.isEmpty {
-                Section("Bank Accounts") {
-                    ForEach(banks, id: \.id) { bank in
-                        HStack {
-                            Image(systemName: "building.columns.fill")
+            if status.bankLast4 != nil || status.bankName != nil {
+                Section("Bank Account") {
+                    HStack {
+                        Image(systemName: "building.columns.fill")
+                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading) {
+                            Text(status.bankName ?? "Bank")
+                                .font(.subheadline)
+                            Text("····\(status.bankLast4 ?? "****")")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                            VStack(alignment: .leading) {
-                                Text(bank.bankName ?? "Bank")
-                                    .font(.subheadline)
-                                Text("····\(bank.last4 ?? "****")")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
                         }
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showUpdateVerification) {
+            NavigationStack {
+                updateVerificationForm
+                    .navigationTitle("Update Verification")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { showUpdateVerification = false }
+                        }
+                    }
+            }
+        }
+        .alert("Replace Bank Account", isPresented: $showReplaceBankConfirm) {
+            Button("Replace", role: .destructive) {
+                Task { await replaceBankAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove your current bank account so you can set up a new one.")
+        }
+    }
+
+    private func verificationMessage(for status: ConnectStatus) -> String {
+        if let due = status.currentlyDue, !due.isEmpty {
+            let readable = due.map { requirement in
+                switch requirement {
+                case "individual.dob.day", "individual.dob.month", "individual.dob.year":
+                    return "date of birth"
+                case "individual.address.line1", "individual.address.city", "individual.address.state", "individual.address.postal_code":
+                    return "address"
+                case "individual.id_number":
+                    return "SSN"
+                case "individual.ssn_last_4":
+                    return "SSN last 4"
+                case "individual.phone":
+                    return "phone number"
+                case "external_account":
+                    return "bank account"
+                default:
+                    return requirement.replacingOccurrences(of: "individual.", with: "").replacingOccurrences(of: ".", with: " ")
+                }
+            }
+            let unique = Array(Set(readable)).sorted()
+            return "Stripe needs updated information: \(unique.joined(separator: ", "))."
+        }
+        return "Your identity verification is pending or was not successful. Please update your information."
+    }
+
+    private func prefillIdentityForm(from status: ConnectStatus) {
+        // Clear form for fresh entry
+        verifyDobMonth = ""
+        verifyDobDay = ""
+        verifyDobYear = ""
+        verifyAddressLine1 = ""
+        verifyCity = ""
+        verifyState = ""
+        verifyPostalCode = ""
+        verifySsnLast4 = ""
+        verifyError = nil
+        verifySuccess = nil
+    }
+
+    private var updateVerificationForm: some View {
+        Form {
+            Section("Date of Birth") {
+                HStack {
+                    TextField("MM", text: $verifyDobMonth)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 50)
+                    Text("/")
+                    TextField("DD", text: $verifyDobDay)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 50)
+                    Text("/")
+                    TextField("YYYY", text: $verifyDobYear)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 70)
+                }
+                TextField("SSN Last 4", text: $verifySsnLast4)
+                    .keyboardType(.numberPad)
+            }
+
+            Section("Address") {
+                TextField("Street Address", text: $verifyAddressLine1)
+                TextField("City", text: $verifyCity)
+                TextField("State (e.g. CA)", text: $verifyState)
+                    .textInputAutocapitalization(.characters)
+                TextField("ZIP Code", text: $verifyPostalCode)
+                    .keyboardType(.numberPad)
+            }
+
+            if let error = verifyError {
+                Section { Text(error).foregroundStyle(.red).font(.subheadline) }
+            }
+
+            if let success = verifySuccess {
+                Section { Text(success).foregroundStyle(.green).font(.subheadline) }
+            }
+
+            Section {
+                Button {
+                    Task { await submitVerificationUpdate() }
+                } label: {
+                    if isVerifySubmitting {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Text("Submit").frame(maxWidth: .infinity)
+                    }
+                }
+                .disabled(isVerifySubmitting || !isVerifyFormValid)
+            }
+        }
+    }
+
+    private var isVerifyFormValid: Bool {
+        !verifyDobMonth.isEmpty && !verifyDobDay.isEmpty && !verifyDobYear.isEmpty &&
+        verifySsnLast4.count == 4 &&
+        !verifyAddressLine1.isEmpty && !verifyCity.isEmpty &&
+        !verifyState.isEmpty && !verifyPostalCode.isEmpty
+    }
+
+    private func submitVerificationUpdate() async {
+        isVerifySubmitting = true
+        verifyError = nil
+        verifySuccess = nil
+        defer { isVerifySubmitting = false }
+
+        let body: [String: Any] = [
+            "dobMonth": verifyDobMonth,
+            "dobDay": verifyDobDay,
+            "dobYear": verifyDobYear,
+            "ssnLast4": verifySsnLast4,
+            "addressLine1": verifyAddressLine1,
+            "addressCity": verifyCity,
+            "addressState": verifyState,
+            "addressPostalCode": verifyPostalCode,
+        ]
+
+        do {
+            let message = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Connect.verifyIdentity,
+                method: "POST",
+                body: body
+            )
+            verifySuccess = message
+            await loadStatus()
+        } catch let error as APIError {
+            verifyError = error.errorDescription
+        } catch {
+            verifyError = error.localizedDescription
+        }
+    }
+
+    private func replaceBankAccount() async {
+        isLoading = true
+        do {
+            _ = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Connect.bankAccount,
+                method: "DELETE"
+            )
+            connectStatus = nil
+            showSetupForm = true
+            isLoading = false
+        } catch {
+            isLoading = false
         }
     }
 
@@ -684,16 +896,15 @@ struct BankAccountView: View {
 
         if !ssnLast4.isEmpty { body["ssnLast4"] = ssnLast4 }
         if !dobMonth.isEmpty && !dobDay.isEmpty && !dobYear.isEmpty {
-            body["dob"] = ["month": Int(dobMonth) ?? 0, "day": Int(dobDay) ?? 0, "year": Int(dobYear) ?? 0]
+            body["dobMonth"] = dobMonth
+            body["dobDay"] = dobDay
+            body["dobYear"] = dobYear
         }
         if !addressLine1.isEmpty {
-            body["address"] = [
-                "line1": addressLine1,
-                "city": city,
-                "state": state,
-                "postal_code": postalCode,
-                "country": "US",
-            ]
+            body["addressLine1"] = addressLine1
+            body["addressCity"] = city
+            body["addressState"] = state
+            body["addressPostalCode"] = postalCode
         }
 
         do {
