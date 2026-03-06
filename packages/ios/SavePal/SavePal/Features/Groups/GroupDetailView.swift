@@ -1,5 +1,11 @@
 import SwiftUI
 
+struct IdentifiableString: Identifiable {
+    let id: String
+    var value: String { id }
+    init(_ value: String) { self.id = value }
+}
+
 struct GroupDetailView: View {
     let groupId: String
     @State private var group: SavingsGroup?
@@ -10,8 +16,7 @@ struct GroupDetailView: View {
     @State private var errorMessage: String?
     @State private var showDeleteConfirm = false
     @State private var isStarting = false
-    @State private var showPaymentSheet = false
-    @State private var selectedPaymentId: String?
+    @State private var selectedPaymentId: IdentifiableString?
 
     @Environment(AuthManager.self) private var authManager
 
@@ -41,11 +46,9 @@ struct GroupDetailView: View {
         .task {
             await loadAll()
         }
-        .sheet(isPresented: $showPaymentSheet) {
-            if let paymentId = selectedPaymentId {
-                MakePaymentView(paymentId: paymentId) {
-                    Task { await loadAll() }
-                }
+        .sheet(item: $selectedPaymentId) { item in
+            MakePaymentView(paymentId: item.value) {
+                Task { await loadAll() }
             }
         }
         .alert("Delete Group", isPresented: $showDeleteConfirm) {
@@ -164,9 +167,9 @@ struct GroupDetailView: View {
                 Spacer()
 
                 ShareLink(
-                    item: "Join my SavePals savings group \"\(group.name)\"! Use invite code: \(group.inviteCode)",
-                    subject: Text("Join my SavePals group"),
-                    message: Text("Join \(group.name) on SavePals")
+                    item: "You've been invited to join \"\(group.name)\" on SavePal!\n\nHere's your access code: \(group.inviteCode)\n\nTo join, enter the code at: https://save-pals.com/groups/join\n\nPlease do not share this code with anyone else. Before joining, make sure to add your payment method via your profile: https://save-pals.com/profile",
+                    subject: Text("Join my SavePal group"),
+                    message: Text("Join \(group.name) on SavePal")
                 ) {
                     Label("Share", systemImage: "square.and.arrow.up")
                         .font(.subheadline)
@@ -326,8 +329,7 @@ struct GroupDetailView: View {
                         Spacer()
                         if payment.userId == authManager.currentUser?.id && payment.status == .PENDING {
                             Button("Pay Now") {
-                                selectedPaymentId = payment.id
-                                showPaymentSheet = true
+                                selectedPaymentId = IdentifiableString(payment.id)
                             }
                             .font(.subheadline)
                             .buttonStyle(.borderedProminent)
