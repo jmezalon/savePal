@@ -86,9 +86,11 @@ export default function Dashboard() {
                 </svg>
               </button>
               <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">SP</span>
-                </div>
+                <img
+                  src="/images/app-icon.png"
+                  alt="SavePal"
+                  className="flex-shrink-0 w-12 h-12 rounded-xl"
+                />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-white font-semibold text-sm sm:text-base">Get the SavePal iOS App</h3>
                   <p className="text-gray-300 text-xs sm:text-sm mt-0.5">
