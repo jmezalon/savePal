@@ -24,6 +24,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Apple Push Notification keys
+*.p8
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

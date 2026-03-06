@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AuthenticationServices
 
 @Observable
 final class AuthManager {
@@ -28,6 +29,7 @@ final class AuthManager {
             self.currentUser = userWithStats.user
             self.userStats = userWithStats.stats
             self.isAuthenticated = true
+            await requestPushPermission()
         } catch {
             // Token invalid or expired
             KeychainHelper.deleteToken()
@@ -59,6 +61,7 @@ final class AuthManager {
         KeychainHelper.saveToken(authResponse.token)
         self.currentUser = authResponse.user
         self.isAuthenticated = true
+        await requestPushPermission()
     }
 
     // MARK: - Login
@@ -77,12 +80,61 @@ final class AuthManager {
 
         // Fetch stats in background
         await fetchUserStats()
+        await requestPushPermission()
+    }
+
+    // MARK: - Apple Login
+
+    @MainActor
+    func appleLogin(identityToken: String, fullName: PersonNameComponents?) async throws {
+        var body: [String: Any] = ["identityToken": identityToken]
+        if let name = fullName {
+            var nameDict: [String: String] = [:]
+            if let first = name.givenName { nameDict["firstName"] = first }
+            if let last = name.familyName { nameDict["lastName"] = last }
+            if !nameDict.isEmpty { body["fullName"] = nameDict }
+        }
+
+        let authResponse: AuthResponse = try await APIClient.shared.request(
+            url: APIEndpoints.Auth.apple,
+            method: "POST",
+            body: body,
+            authenticated: false
+        )
+        KeychainHelper.saveToken(authResponse.token)
+        self.currentUser = authResponse.user
+        self.isAuthenticated = true
+
+        await fetchUserStats()
+        await requestPushPermission()
+    }
+
+    // MARK: - Google Login
+
+    @MainActor
+    func googleLogin(idToken: String) async throws {
+        let authResponse: AuthResponse = try await APIClient.shared.request(
+            url: APIEndpoints.Auth.google,
+            method: "POST",
+            body: ["credential": idToken],
+            authenticated: false
+        )
+        KeychainHelper.saveToken(authResponse.token)
+        self.currentUser = authResponse.user
+        self.isAuthenticated = true
+
+        await fetchUserStats()
+        await requestPushPermission()
     }
 
     // MARK: - Logout
 
     @MainActor
     func logout() {
+        // Unregister device token before clearing auth
+        Task {
+            await PushNotificationManager.shared.unregisterToken()
+        }
         KeychainHelper.deleteToken()
         currentUser = nil
         userStats = nil
@@ -123,6 +175,8 @@ final class AuthManager {
         }
     }
 
+    // MARK: - Private
+
     @MainActor
     private func fetchUserStats() async {
         do {
@@ -133,6 +187,11 @@ final class AuthManager {
         } catch {
             // Stats are non-critical
         }
+    }
+
+    private func requestPushPermission() async {
+        await PushNotificationManager.shared.requestPermission()
+        await PushNotificationManager.shared.registerExistingTokenIfNeeded()
     }
 }
 

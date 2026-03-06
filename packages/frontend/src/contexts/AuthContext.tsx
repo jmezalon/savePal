@@ -24,6 +24,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   googleLogin: (credential: string) => Promise<void>;
+  appleLogin: (identityToken: string, fullName?: { firstName?: string; lastName?: string }) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   error: string | null;
@@ -157,6 +158,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const appleLogin = async (identityToken: string, fullName?: { firstName?: string; lastName?: string }) => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/apple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identityToken, fullName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error || 'Apple authentication failed';
+        setIsLoading(false);
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      localStorage.setItem('token', data.data.token);
+      setToken(data.data.token);
+      setUser(data.data.user);
+      setIsLoading(false);
+    } catch (err) {
+      setIsLoading(false);
+      const errorMessage = err instanceof Error ? err.message : 'Apple authentication failed';
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
   const register = async (data: RegisterData) => {
     try {
       setError(null);
@@ -206,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     googleLogin,
+    appleLogin,
     register,
     logout,
     error,

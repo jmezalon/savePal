@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
+import AppleSignInButton from '../components/AppleSignInButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, googleLogin, isAuthenticated, isLoading, error } = useAuth();
+  const { login, googleLogin, appleLogin, isAuthenticated, isLoading, error } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
@@ -157,12 +158,26 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => console.error('Google Login Failed')}
-              width="100%"
-              text="signin_with"
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.error('Google Login Failed')}
+                width="100%"
+                text="signin_with"
+              />
+            </div>
+            <AppleSignInButton
+              mode="signin"
+              onSuccess={async (identityToken, fullName) => {
+                try {
+                  await appleLogin(identityToken, fullName);
+                  navigate(redirectTo);
+                } catch (err) {
+                  console.error('Apple login failed:', err);
+                }
+              }}
+              onError={(err) => console.error('Apple login failed:', err)}
             />
           </div>
         </form>

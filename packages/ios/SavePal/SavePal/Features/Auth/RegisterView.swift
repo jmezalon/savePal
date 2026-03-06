@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct RegisterView: View {
     @Environment(AuthManager.self) private var authManager
@@ -109,6 +110,49 @@ struct RegisterView: View {
                 .tint(Color.savePalBlue)
                 .disabled(isLoading || !isFormValid)
                 .padding(.horizontal)
+
+                // Divider
+                HStack {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.3))
+                        .frame(height: 1)
+                    Text("or")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.3))
+                        .frame(height: 1)
+                }
+                .padding(.horizontal)
+
+                // Sign in with Apple
+                SignInWithAppleButton(.signUp) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    Task { await handleAppleSignIn(result) }
+                }
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal)
+
+                // Sign up with Google
+                Button {
+                    Task { await handleGoogleSignIn() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "g.circle.fill")
+                            .font(.title2)
+                        Text("Sign up with Google")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -130,6 +174,54 @@ struct RegisterView: View {
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleGoogleSignIn() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let idToken = try await GoogleSignInHelper.signIn()
+            try await authManager.googleLogin(idToken: idToken)
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain == "com.google.GIDSignIn" && nsError.code == -5 { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let identityTokenData = credential.identityToken,
+                  let identityToken = String(data: identityTokenData, encoding: .utf8) else {
+                errorMessage = "Failed to get Apple credential"
+                return
+            }
+
+            errorMessage = nil
+            isLoading = true
+            defer { isLoading = false }
+
+            do {
+                try await authManager.appleLogin(
+                    identityToken: identityToken,
+                    fullName: credential.fullName
+                )
+            } catch let error as APIError {
+                errorMessage = error.errorDescription
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+
+        case .failure(let error):
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
             errorMessage = error.localizedDescription
         }
     }

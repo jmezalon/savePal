@@ -19,6 +19,7 @@ model User {
   firstName     String
   lastName      String
   googleId      String?  @unique
+  appleId       String?  @unique
   phoneNumber   String?
   emailVerified Boolean  @default(false)
   phoneVerified Boolean  @default(false)
@@ -58,6 +59,7 @@ model User {
   paymentMethods      PaymentMethod[]
   groupCreationFees   GroupCreationFee[]
   feeWaiverCodeUsages FeeWaiverCodeUsage[]
+  deviceTokens        DeviceToken[]
 
   @@map("users")
 }
@@ -230,6 +232,21 @@ model Notification {
   group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+// Device Token Model (for push notifications)
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String   // 'ios' | 'android' | 'web'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("device_tokens")
 }
 
 // Enums

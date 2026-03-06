@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
+import AppleSignInButton from '../components/AppleSignInButton';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -13,7 +14,7 @@ export default function Register() {
     phoneNumber: '',
   });
   const [passwordError, setPasswordError] = useState('');
-  const { register, googleLogin, isAuthenticated, isLoading, error, clearError } = useAuth();
+  const { register, googleLogin, appleLogin, isAuthenticated, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
@@ -234,12 +235,26 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => console.error('Google Sign-up Failed')}
-              width="100%"
-              text="signup_with"
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.error('Google Sign-up Failed')}
+                width="100%"
+                text="signup_with"
+              />
+            </div>
+            <AppleSignInButton
+              mode="signup"
+              onSuccess={async (identityToken, fullName) => {
+                try {
+                  await appleLogin(identityToken, fullName);
+                  navigate(redirectTo);
+                } catch (err) {
+                  console.error('Apple sign-up failed:', err);
+                }
+              }}
+              onError={(err) => console.error('Apple sign-up failed:', err)}
             />
           </div>
         </form>

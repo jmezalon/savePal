@@ -145,6 +145,45 @@ class AuthController {
   }
 
   /**
+   * POST /api/auth/apple
+   * Authenticate with Apple
+   */
+  async appleAuth(req: Request, res: Response) {
+    try {
+      const { identityToken, fullName } = req.body;
+
+      if (!identityToken) {
+        return res.status(400).json({
+          success: false,
+          error: 'Apple identity token is required',
+        });
+      }
+
+      const result = await authService.appleAuth(identityToken, fullName);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Apple authentication successful',
+        data: result,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Apple authentication failed';
+
+      if (errorMessage.includes('Invalid') || errorMessage.includes('Unable')) {
+        return res.status(400).json({
+          success: false,
+          error: errorMessage,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
    * GET /api/auth/me
    * Get current user profile
    */

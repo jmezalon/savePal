@@ -5,6 +5,8 @@ import emailService from './email.service.js';
 import { smsService } from './smsService.js';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
+import jwksClient from 'jwks-rsa';
+import jwt from 'jsonwebtoken';
 
 export interface RegisterInput {
   email: string;
@@ -140,6 +142,8 @@ class AuthService {
       throw new Error('Google authentication is not configured');
     }
 
+    // Accept both web and iOS client IDs
+    const audiences = [clientId, process.env.GOOGLE_IOS_CLIENT_ID].filter(Boolean) as string[];
     const client = new OAuth2Client(clientId);
 
     // Verify the Google ID token
@@ -147,7 +151,7 @@ class AuthService {
     try {
       const ticket = await client.verifyIdToken({
         idToken: credential,
-        audience: clientId,
+        audience: audiences,
       });
       payload = ticket.getPayload();
     } catch {
@@ -204,6 +208,103 @@ class AuthService {
     });
 
     // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword,
+      token,
+    };
+  }
+
+  /**
+   * Authenticate with Apple
+   * Verifies the Apple identity token and either logs in an existing user or creates a new one.
+   */
+  async appleAuth(identityToken: string, fullName?: { firstName?: string; lastName?: string }): Promise<AuthResponse> {
+    // Verify Apple identity token using JWKS
+    const appleJwksClient = jwksClient({
+      jwksUri: 'https://appleid.apple.com/auth/keys',
+      cache: true,
+      cacheMaxAge: 86400000, // 24 hours
+    });
+
+    let decoded: any;
+    try {
+      // Decode header to get kid
+      const header = JSON.parse(Buffer.from(identityToken.split('.')[0], 'base64').toString());
+      const key = await appleJwksClient.getSigningKey(header.kid);
+      const publicKey = key.getPublicKey();
+
+      // Build valid audience list: iOS bundle ID + web Services ID
+      const validAudiences = [
+        process.env.APNS_BUNDLE_ID || 'com.savepal.app',
+        process.env.APPLE_WEB_SERVICE_ID,
+      ].filter(Boolean) as string[];
+
+      decoded = jwt.verify(identityToken, publicKey, {
+        algorithms: ['RS256'],
+        issuer: 'https://appleid.apple.com',
+        audience: validAudiences as [string, ...string[]],
+      });
+    } catch {
+      throw new Error('Invalid Apple credential');
+    }
+
+    const appleId = decoded.sub as string;
+    const email = decoded.email as string | undefined;
+    const emailVerified = decoded.email_verified === 'true' || decoded.email_verified === true;
+
+    if (!appleId) {
+      throw new Error('Invalid Apple credential');
+    }
+
+    // Check if a user with this Apple ID already exists
+    let user = await prisma.user.findUnique({
+      where: { appleId },
+    });
+
+    if (!user && email) {
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check if a user with this email already exists
+      user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (user) {
+        // Link Apple account to existing user
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            appleId,
+            emailVerified: user.emailVerified || emailVerified,
+          },
+        });
+      } else {
+        // Create a new user from Apple data
+        // Apple only sends the name on the very first authorization
+        user = await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            appleId,
+            firstName: fullName?.firstName || 'User',
+            lastName: fullName?.lastName || '',
+            emailVerified,
+            trustScore: emailVerified ? 20 : 0,
+          },
+        });
+      }
+    } else if (!user) {
+      // No email from Apple and no existing user — cannot create account
+      throw new Error('Unable to create account. No email provided by Apple.');
+    }
+
+    // Generate JWT token
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+    });
+
     const { password: _, ...userWithoutPassword } = user;
 
     return {

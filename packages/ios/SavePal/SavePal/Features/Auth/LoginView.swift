@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @Environment(AuthManager.self) private var authManager
@@ -86,6 +87,49 @@ struct LoginView: View {
                     .disabled(isLoading || email.isEmpty || password.isEmpty)
                     .padding(.horizontal)
 
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.3))
+                            .frame(height: 1)
+                        Text("or")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.3))
+                            .frame(height: 1)
+                    }
+                    .padding(.horizontal)
+
+                    // Sign in with Apple
+                    SignInWithAppleButton(.signIn) { request in
+                        request.requestedScopes = [.fullName, .email]
+                    } onCompletion: { result in
+                        Task { await handleAppleSignIn(result) }
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+
+                    // Sign in with Google
+                    Button {
+                        Task { await handleGoogleSignIn() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "g.circle.fill")
+                                .font(.title2)
+                            Text("Sign in with Google")
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+
                     // Register link
                     HStack {
                         Text("Don't have an account?")
@@ -118,6 +162,56 @@ struct LoginView: View {
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleGoogleSignIn() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let idToken = try await GoogleSignInHelper.signIn()
+            try await authManager.googleLogin(idToken: idToken)
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            // Don't show error if user cancelled
+            let nsError = error as NSError
+            if nsError.domain == "com.google.GIDSignIn" && nsError.code == -5 { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let identityTokenData = credential.identityToken,
+                  let identityToken = String(data: identityTokenData, encoding: .utf8) else {
+                errorMessage = "Failed to get Apple credential"
+                return
+            }
+
+            errorMessage = nil
+            isLoading = true
+            defer { isLoading = false }
+
+            do {
+                try await authManager.appleLogin(
+                    identityToken: identityToken,
+                    fullName: credential.fullName
+                )
+            } catch let error as APIError {
+                errorMessage = error.errorDescription
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+
+        case .failure(let error):
+            // User cancelled — don't show error
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
             errorMessage = error.localizedDescription
         }
     }

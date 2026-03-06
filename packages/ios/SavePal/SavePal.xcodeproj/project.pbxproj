@@ -7,53 +7,54 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10001 /* SavePalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001; };
-		A10002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10002; };
-		A10003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10003; };
-		A10004 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10004; };
-		A10005 /* APIEndpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10005; };
-		A10006 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006; };
-		A10007 /* APIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007; };
-		A10008 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008; };
-		A10009 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009; };
-		A10010 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010; };
-		A10011 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011; };
-		A10012 /* Membership.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10012; };
-		A10013 /* Cycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10013; };
-		A10014 /* Payment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10014; };
-		A10015 /* Payout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10015; };
-		A10016 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10016; };
-		A10017 /* PaymentMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10017; };
-		A10018 /* ConnectAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10018; };
-		A10019 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10019; };
-		A10020 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10020; };
-		A10021 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10021; };
-		A10022 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10022; };
-		A10023 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10023; };
-		A10024 /* GroupsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10024; };
-		A10025 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10025; };
-		A10026 /* JoinGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10026; };
-		A10027 /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10027; };
-		A10028 /* PaymentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10028; };
-		A10029 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10029; };
-		A10030 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10030; };
-		A10031 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10031; };
-		A10032 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10032; };
-		A10033 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10033; };
-		A10034 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10034; };
-		A10035 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10035; };
-		A10036 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10036; };
-		A10037 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10037; };
-		A10038 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10038; };
-		A10039 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10039; };
-		A10040 /* StripeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10041; };
-		A10041 /* AddCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042; };
-		A10042 /* MakePaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043; };
-		A10043 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = P10001; };
+		677BE0EE2F5A680200C7B5B9 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 677BE0ED2F5A680200C7B5B9 /* GoogleSignIn */; };
+		A10001 /* SavePalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001 /* SavePalApp.swift */; };
+		A10002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10002 /* ContentView.swift */; };
+		A10003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10003 /* MainTabView.swift */; };
+		A10004 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10004 /* APIClient.swift */; };
+		A10005 /* APIEndpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10005 /* APIEndpoints.swift */; };
+		A10006 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006 /* APIError.swift */; };
+		A10007 /* APIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007 /* APIResponse.swift */; };
+		A10008 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008 /* AuthManager.swift */; };
+		A10009 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009 /* KeychainHelper.swift */; };
+		A10010 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010 /* User.swift */; };
+		A10011 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011 /* Group.swift */; };
+		A10012 /* Membership.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10012 /* Membership.swift */; };
+		A10013 /* Cycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10013 /* Cycle.swift */; };
+		A10014 /* Payment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10014 /* Payment.swift */; };
+		A10015 /* Payout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10015 /* Payout.swift */; };
+		A10016 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10016 /* Notification.swift */; };
+		A10017 /* PaymentMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10017 /* PaymentMethod.swift */; };
+		A10018 /* ConnectAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10018 /* ConnectAccount.swift */; };
+		A10019 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10019 /* OnboardingView.swift */; };
+		A10020 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10020 /* LoginView.swift */; };
+		A10021 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10021 /* RegisterView.swift */; };
+		A10022 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10022 /* ForgotPasswordView.swift */; };
+		A10023 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10023 /* DashboardView.swift */; };
+		A10024 /* GroupsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10024 /* GroupsListView.swift */; };
+		A10025 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10025 /* CreateGroupView.swift */; };
+		A10026 /* JoinGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10026 /* JoinGroupView.swift */; };
+		A10027 /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10027 /* GroupDetailView.swift */; };
+		A10028 /* PaymentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10028 /* PaymentHistoryView.swift */; };
+		A10029 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10029 /* ProfileView.swift */; };
+		A10030 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10030 /* NotificationsView.swift */; };
+		A10031 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10031 /* HelpView.swift */; };
+		A10032 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10032 /* LoadingView.swift */; };
+		A10033 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10033 /* StatusBadge.swift */; };
+		A10034 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10034 /* EmptyStateView.swift */; };
+		A10035 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10035 /* ErrorBanner.swift */; };
+		A10036 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10036 /* Color+Brand.swift */; };
+		A10037 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10037 /* Date+Formatting.swift */; };
+		A10038 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10038 /* Assets.xcassets */; };
+		A10039 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10039 /* PrivacyInfo.xcprivacy */; };
+		A10040 /* StripeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10041 /* StripeManager.swift */; };
+		A10041 /* AddCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042 /* AddCardView.swift */; };
+		A10042 /* MakePaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043 /* MakePaymentView.swift */; };
+		A10043 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = P10001 /* StripePaymentSheet */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		C10000 /* SavePal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SavePal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		677BE0EF2F5A68FA00C7B5B9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B10001 /* SavePalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavePalApp.swift; sourceTree = "<group>"; };
 		B10002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B10003 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -97,6 +98,7 @@
 		B10041 /* StripeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeManager.swift; sourceTree = "<group>"; };
 		B10042 /* AddCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCardView.swift; sourceTree = "<group>"; };
 		B10043 /* MakePaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakePaymentView.swift; sourceTree = "<group>"; };
+		C10000 /* SavePal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SavePal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +107,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10043 /* StripePaymentSheet in Frameworks */,
+				677BE0EE2F5A680200C7B5B9 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,17 +122,10 @@
 			);
 			sourceTree = "<group>";
 		};
-		E10099 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				C10000 /* SavePal.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 		E10001 /* SavePal */ = {
 			isa = PBXGroup;
 			children = (
+				677BE0EF2F5A68FA00C7B5B9 /* Info.plist */,
 				B10040 /* SavePal.entitlements */,
 				E10002 /* App */,
 				E10003 /* Core */,
@@ -159,14 +155,6 @@
 				E10020 /* Payments */,
 			);
 			path = Core;
-			sourceTree = "<group>";
-		};
-		E10020 /* Payments */ = {
-			isa = PBXGroup;
-			children = (
-				B10041 /* StripeManager.swift */,
-			);
-			path = Payments;
 			sourceTree = "<group>";
 		};
 		E10004 /* Networking */ = {
@@ -275,22 +263,6 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
-		E10018 /* Notifications */ = {
-			isa = PBXGroup;
-			children = (
-				B10030 /* NotificationsView.swift */,
-			);
-			path = Notifications;
-			sourceTree = "<group>";
-		};
-		E10019 /* Help */ = {
-			isa = PBXGroup;
-			children = (
-				B10031 /* HelpView.swift */,
-			);
-			path = Help;
-			sourceTree = "<group>";
-		};
 		E10014 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -329,6 +301,38 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		E10018 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				B10030 /* NotificationsView.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		E10019 /* Help */ = {
+			isa = PBXGroup;
+			children = (
+				B10031 /* HelpView.swift */,
+			);
+			path = Help;
+			sourceTree = "<group>";
+		};
+		E10020 /* Payments */ = {
+			isa = PBXGroup;
+			children = (
+				B10041 /* StripeManager.swift */,
+			);
+			path = Payments;
+			sourceTree = "<group>";
+		};
+		E10099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C10000 /* SavePal.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -347,6 +351,7 @@
 			name = SavePal;
 			packageProductDependencies = (
 				P10001 /* StripePaymentSheet */,
+				677BE0ED2F5A680200C7B5B9 /* GoogleSignIn */,
 			);
 			productName = SavePal;
 			productReference = C10000 /* SavePal.app */;
@@ -378,6 +383,7 @@
 			mainGroup = E10000;
 			packageReferences = (
 				R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */,
+				677BE0EC2F5A680200C7B5B9 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = E10099 /* Products */;
 			projectDirPath = "";
@@ -579,6 +585,7 @@
 				DEVELOPMENT_TEAM = 9S7UVPFSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SavePal/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SavePals;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -610,6 +617,7 @@
 				DEVELOPMENT_TEAM = 9S7UVPFSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SavePal/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SavePals;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -654,6 +662,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		677BE0EC2F5A680200C7B5B9 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 		R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/stripe/stripe-ios";
@@ -665,13 +681,17 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		677BE0ED2F5A680200C7B5B9 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 677BE0EC2F5A680200C7B5B9 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		P10001 /* StripePaymentSheet */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = R10001 /* XCRemoteSwiftPackageReference "stripe-ios" */;
 			productName = StripePaymentSheet;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = F10000 /* Project object */;
 }

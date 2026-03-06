@@ -25,4 +25,8 @@ router.patch('/:notificationId/read', notificationController.markAsRead);
 // Delete notification
 router.delete('/:notificationId', notificationController.deleteNotification);
 
+// Device token management
+router.post('/device-token', notificationController.registerDeviceToken);
+router.delete('/device-token', notificationController.unregisterDeviceToken);
+
 export default router;

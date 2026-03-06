@@ -2,6 +2,7 @@ import prisma from '../utils/prisma.js';
 import { NotificationType } from '@prisma/client';
 import emailService from './email.service.js';
 import { smsService } from './smsService.js';
+import apnsService from './apns.service.js';
 
 interface CreateNotificationData {
   userId: string;
@@ -57,6 +58,15 @@ class NotificationService {
         },
       },
     });
+
+    // Fire-and-forget push notification via APNs
+    apnsService
+      .sendPushNotification(data.userId, data.title, data.message, {
+        notificationId: notification.id,
+        type: data.type,
+        ...(data.groupId ? { groupId: data.groupId } : {}),
+      })
+      .catch((err) => console.error('APNs push failed:', err));
 
     return notification;
   }

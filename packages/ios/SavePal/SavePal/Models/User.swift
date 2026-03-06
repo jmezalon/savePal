@@ -15,6 +15,7 @@ struct User: Codable, Identifiable {
     let firstName: String
     let lastName: String
     var googleId: String?
+    var appleId: String?
     var phoneNumber: String?
     var emailVerified: Bool
     var phoneVerified: Bool
@@ -54,6 +55,7 @@ struct UserWithStats: Codable, Identifiable {
     let firstName: String
     let lastName: String
     var googleId: String?
+    var appleId: String?
     var phoneNumber: String?
     var emailVerified: Bool
     var phoneVerified: Bool
@@ -72,7 +74,7 @@ struct UserWithStats: Codable, Identifiable {
     var user: User {
         User(
             id: id, email: email, firstName: firstName, lastName: lastName,
-            googleId: googleId, phoneNumber: phoneNumber,
+            googleId: googleId, appleId: appleId, phoneNumber: phoneNumber,
             emailVerified: emailVerified, phoneVerified: phoneVerified,
             trustScore: trustScore, role: role,
             emailNotifications: emailNotifications,

@@ -20,6 +20,7 @@ enum APIEndpoints {
         static let sendPhoneVerification = "\(baseURL)/auth/send-phone-verification"
         static let verifyPhone = "\(baseURL)/auth/verify-phone"
         static let deleteAccount = "\(baseURL)/auth/delete-account"
+        static let apple = "\(baseURL)/auth/apple"
     }
 
     // MARK: - Groups
@@ -77,6 +78,7 @@ enum APIEndpoints {
         static let readAll = "\(base)/read-all"
         static func read(_ id: String) -> String { "\(base)/\(id)/read" }
         static func delete(_ id: String) -> String { "\(base)/\(id)" }
+        static let deviceToken = "\(base)/device-token"
     }
 
     // MARK: - Payment Methods

@@ -1,5 +1,6 @@
 import { Response, Request } from 'express';
 import notificationService from '../services/notification.service.js';
+import apnsService from '../services/apns.service.js';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -136,6 +137,66 @@ class NotificationController {
       });
     } catch (error: any) {
       res.status(error.message === 'Notification not found' ? 404 : 400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+  /**
+   * Register a device token for push notifications
+   * POST /api/notifications/device-token
+   */
+  async registerDeviceToken(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+      const { token, platform } = req.body;
+
+      if (!token) {
+        res.status(400).json({
+          success: false,
+          error: 'Device token is required',
+        });
+        return;
+      }
+
+      await apnsService.registerDeviceToken(userId, token, platform || 'ios');
+
+      res.json({
+        success: true,
+        message: 'Device token registered',
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Unregister a device token
+   * DELETE /api/notifications/device-token
+   */
+  async unregisterDeviceToken(req: AuthRequest, res: Response) {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        res.status(400).json({
+          success: false,
+          error: 'Device token is required',
+        });
+        return;
+      }
+
+      await apnsService.unregisterDeviceToken(token);
+
+      res.json({
+        success: true,
+        message: 'Device token unregistered',
+      });
+    } catch (error: any) {
+      res.status(400).json({
         success: false,
         error: error.message,
       });
