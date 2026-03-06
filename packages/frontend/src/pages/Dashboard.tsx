@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const APP_STORE_URL = 'https://apps.apple.com/app/savepal/id6744258498';
+
+function isAppleDevice(): boolean {
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod|Macintosh|MacIntel|Mac OS/i.test(ua);
+}
 
 interface Group {
   id: string;
@@ -16,6 +22,15 @@ export default function Dashboard() {
   const { user, token } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
+  const [appBannerDismissed, setAppBannerDismissed] = useState(() =>
+    localStorage.getItem('savepal_app_banner_dismissed') === 'true'
+  );
+  const showAppBanner = useMemo(() => isAppleDevice() && !appBannerDismissed, [appBannerDismissed]);
+
+  const dismissAppBanner = () => {
+    localStorage.setItem('savepal_app_banner_dismissed', 'true');
+    setAppBannerDismissed(true);
+  };
 
   useEffect(() => {
     fetchGroups();
@@ -59,6 +74,42 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {showAppBanner && (
+            <div className="mb-6 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg shadow-lg p-4 sm:p-5 relative">
+              <button
+                onClick={dismissAppBanner}
+                className="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors"
+                aria-label="Dismiss"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">SP</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Get the SavePal iOS App</h3>
+                  <p className="text-gray-300 text-xs sm:text-sm mt-0.5">
+                    Manage groups, pay instantly, and get push notifications on your iPhone.
+                  </p>
+                </div>
+                <a
+                  href={APP_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 inline-flex items-center px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                >
+                  <svg className="w-5 h-5 mr-1.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                  </svg>
+                  Download
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Welcome, {user.firstName}!
