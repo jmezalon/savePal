@@ -235,12 +235,12 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex justify-center">
+          <div className="flex flex-col gap-3 items-stretch">
+            <div className="flex justify-center [&>div]:!w-full">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.error('Google Sign-up Failed')}
-                width="100%"
+                width={400}
                 text="signup_with"
               />
             </div>

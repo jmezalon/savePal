@@ -158,12 +158,12 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex justify-center">
+          <div className="flex flex-col gap-3 items-stretch">
+            <div className="flex justify-center [&>div]:!w-full">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.error('Google Login Failed')}
-                width="100%"
+                width={400}
                 text="signin_with"
               />
             </div>
