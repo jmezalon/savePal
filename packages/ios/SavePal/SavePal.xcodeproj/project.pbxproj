@@ -51,6 +51,8 @@
 		A10041 /* AddCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042 /* AddCardView.swift */; };
 		A10042 /* MakePaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043 /* MakePaymentView.swift */; };
 		A10043 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = P10001 /* StripePaymentSheet */; };
+		A10044 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10044 /* PushNotificationManager.swift */; };
+		A10045 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10045 /* GoogleSignInHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -98,6 +100,8 @@
 		B10041 /* StripeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeManager.swift; sourceTree = "<group>"; };
 		B10042 /* AddCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCardView.swift; sourceTree = "<group>"; };
 		B10043 /* MakePaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakePaymentView.swift; sourceTree = "<group>"; };
+		B10044 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		B10045 /* GoogleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInHelper.swift; sourceTree = "<group>"; };
 		C10000 /* SavePal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SavePal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -153,6 +157,7 @@
 				E10004 /* Networking */,
 				E10005 /* Auth */,
 				E10020 /* Payments */,
+				E10021 /* Notifications */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -173,6 +178,7 @@
 			children = (
 				B10008 /* AuthManager.swift */,
 				B10009 /* KeychainHelper.swift */,
+				B10045 /* GoogleSignInHelper.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -325,6 +331,14 @@
 			path = Payments;
 			sourceTree = "<group>";
 		};
+		E10021 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				B10044 /* PushNotificationManager.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
 		E10099 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -451,6 +465,8 @@
 				A10040 /* StripeManager.swift in Sources */,
 				A10041 /* AddCardView.swift in Sources */,
 				A10042 /* MakePaymentView.swift in Sources */,
+				A10044 /* PushNotificationManager.swift in Sources */,
+				A10045 /* GoogleSignInHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
