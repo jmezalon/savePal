@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct NotificationsView: View {
     @Binding var unreadCount: Int
@@ -171,6 +172,9 @@ struct NotificationsView: View {
             if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
                 notifications[index].isRead = true
                 unreadCount = max(0, unreadCount - 1)
+                if unreadCount == 0 {
+                    try? await UNUserNotificationCenter.current().setBadgeCount(0)
+                }
             }
         } catch {}
     }
@@ -185,6 +189,7 @@ struct NotificationsView: View {
                 notifications[i].isRead = true
             }
             unreadCount = 0
+            try? await UNUserNotificationCenter.current().setBadgeCount(0)
         } catch {}
     }
 

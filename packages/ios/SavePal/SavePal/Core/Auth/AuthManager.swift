@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AuthenticationServices
+import UserNotifications
 
 @Observable
 final class AuthManager {
@@ -134,6 +135,7 @@ final class AuthManager {
         // Unregister device token before clearing auth
         Task {
             await PushNotificationManager.shared.unregisterToken()
+            try? await UNUserNotificationCenter.current().setBadgeCount(0)
         }
         KeychainHelper.deleteToken()
         currentUser = nil
