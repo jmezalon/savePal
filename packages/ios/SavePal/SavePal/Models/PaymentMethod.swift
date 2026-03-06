@@ -24,7 +24,7 @@ struct StripeConfig: Codable {
 }
 
 struct SetupIntentResponse: Codable {
-    let id: String
+    let id: String?
     let clientSecret: String?
     let client_secret: String?
 
