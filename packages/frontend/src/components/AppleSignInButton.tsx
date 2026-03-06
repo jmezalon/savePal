@@ -10,7 +10,7 @@ declare global {
   interface Window {
     AppleID?: {
       auth: {
-        init: (config: Record<string, string>) => void;
+        init: (config: Record<string, string | boolean>) => void;
         signIn: () => Promise<{
           authorization: {
             id_token: string;
@@ -60,7 +60,7 @@ export default function AppleSignInButton({ onSuccess, onError, mode = 'signin' 
       clientId: serviceId,
       scope: 'name email',
       redirectURI: window.location.origin,
-      usePopup: 'true',
+      usePopup: true,
     });
   };
 

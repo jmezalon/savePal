@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Force Google Sign-In button to fill its container */
+.google-signin-wrapper {
+  width: 100%;
+}
+.google-signin-wrapper > div,
+.google-signin-wrapper > div > div,
+.google-signin-wrapper > div > div > div,
+.google-signin-wrapper iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+}

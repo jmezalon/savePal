@@ -158,8 +158,8 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 items-stretch">
-            <div className="flex justify-center [&>div]:!w-full">
+          <div className="flex flex-col gap-3 items-center">
+            <div className="google-signin-wrapper w-full max-w-[400px]">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.error('Google Login Failed')}
@@ -167,18 +167,20 @@ export default function Login() {
                 text="signin_with"
               />
             </div>
-            <AppleSignInButton
-              mode="signin"
-              onSuccess={async (identityToken, fullName) => {
-                try {
-                  await appleLogin(identityToken, fullName);
-                  navigate(redirectTo);
-                } catch (err) {
-                  console.error('Apple login failed:', err);
-                }
-              }}
-              onError={(err) => console.error('Apple login failed:', err)}
-            />
+            <div className="w-full max-w-[400px]">
+              <AppleSignInButton
+                mode="signin"
+                onSuccess={async (identityToken, fullName) => {
+                  try {
+                    await appleLogin(identityToken, fullName);
+                    navigate(redirectTo);
+                  } catch (err) {
+                    console.error('Apple login failed:', err);
+                  }
+                }}
+                onError={(err) => console.error('Apple login failed:', err)}
+              />
+            </div>
           </div>
         </form>
       </div>
