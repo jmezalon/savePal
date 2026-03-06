@@ -555,6 +555,7 @@ struct BankAccountView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Color.savePalBlue)
                 }
+                .padding(.bottom, 32)
             }
         }
         .navigationTitle("Bank Account")

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @Environment(AuthManager.self) private var authManager
+    @Binding var unreadCount: Int
     @State private var groups: [SavingsGroup] = []
     @State private var pendingPayments: [Payment] = []
     @State private var isLoading = true
@@ -39,6 +40,16 @@ struct DashboardView: View {
                 .padding()
             }
             .navigationTitle("Dashboard")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        NotificationsView(unreadCount: $unreadCount)
+                    } label: {
+                        Image(systemName: unreadCount > 0 ? "bell.badge.fill" : "bell")
+                            .foregroundStyle(unreadCount > 0 ? Color.savePalBlue : .secondary)
+                    }
+                }
+            }
             .refreshable {
                 await refresh()
             }
@@ -308,10 +319,20 @@ struct DashboardView: View {
     private func refresh() async {
         await authManager.refreshUser()
         await loadData()
+        await fetchUnreadCount()
+    }
+
+    private func fetchUnreadCount() async {
+        do {
+            let result: UnreadCount = try await APIClient.shared.request(
+                url: APIEndpoints.Notifications.unreadCount
+            )
+            unreadCount = result.count
+        } catch {}
     }
 }
 
 #Preview {
-    DashboardView()
+    DashboardView(unreadCount: .constant(2))
         .environment(AuthManager.shared)
 }

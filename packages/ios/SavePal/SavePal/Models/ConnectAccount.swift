@@ -7,12 +7,18 @@ struct ConnectSetupResponse: Codable {
 }
 
 struct ConnectStatus: Codable {
+    let hasAccount: Bool?
+    let isOnboarded: Bool?
     let accountId: String?
     let chargesEnabled: Bool?
     let payoutsEnabled: Bool?
     let detailsSubmitted: Bool?
     let transfersStatus: String?
+    let bankLast4: String?
+    let bankName: String?
     let bankAccounts: [BankAccount]?
+    let requiresVerification: Bool?
+    let currentlyDue: [String]?
     let requirements: ConnectRequirements?
 }
 

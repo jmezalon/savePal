@@ -19,8 +19,8 @@ struct AddCardView: View {
                     successView
                 } else if let error = errorMessage {
                     errorView(error)
-                } else if let sheet = paymentSheet {
-                    readyView(sheet)
+                } else if paymentSheet != nil {
+                    readyView
                 }
             }
             .padding()
@@ -35,7 +35,7 @@ struct AddCardView: View {
         }
     }
 
-    private func readyView(_ sheet: PaymentSheet) -> some View {
+    private var readyView: some View {
         VStack(spacing: 20) {
             Image(systemName: "creditcard.fill")
                 .font(.system(size: 48))
@@ -50,9 +50,9 @@ struct AddCardView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            PaymentSheet.PaymentButton(paymentSheet: sheet, onCompletion: { result in
-                handlePaymentSheetResult(result)
-            }) {
+            Button {
+                presentPaymentSheet()
+            } label: {
                 Text("Add Card")
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
@@ -61,6 +61,20 @@ struct AddCardView: View {
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+        }
+    }
+
+    private func presentPaymentSheet() {
+        guard let sheet = paymentSheet,
+              let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        // Find the topmost presented view controller
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+        sheet.present(from: topVC) { result in
+            handlePaymentSheetResult(result)
         }
     }
 

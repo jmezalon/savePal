@@ -604,6 +604,9 @@ class StripeService {
     bankLast4: string | null;
     bankName: string | null;
     transfersStatus: string | null;
+    payoutsEnabled: boolean;
+    chargesEnabled: boolean;
+    detailsSubmitted: boolean;
     requiresVerification: boolean;
     currentlyDue: string[];
   }> {
@@ -620,6 +623,9 @@ class StripeService {
         bankLast4: null,
         bankName: null,
         transfersStatus: null,
+        payoutsEnabled: false,
+        chargesEnabled: false,
+        detailsSubmitted: false,
         requiresVerification: false,
         currentlyDue: [],
       };
@@ -628,11 +634,17 @@ class StripeService {
     let bankLast4: string | null = null;
     let bankName: string | null = null;
     let transfersStatus: string | null = null;
+    let payoutsEnabled = false;
+    let chargesEnabled = false;
+    let detailsSubmitted = false;
     let currentlyDue: string[] = [];
 
     try {
       let account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
       transfersStatus = account.capabilities?.transfers || 'inactive';
+      payoutsEnabled = account.payouts_enabled ?? false;
+      chargesEnabled = account.charges_enabled ?? false;
+      detailsSubmitted = account.details_submitted ?? false;
       currentlyDue = (account.requirements?.currently_due as string[]) || [];
 
       // Auto-fill phone if Stripe requires it and we have it on the user's profile
@@ -643,6 +655,9 @@ class StripeService {
         // Re-fetch to get updated status
         account = await this.stripe.accounts.retrieve(user.stripeConnectAccountId);
         transfersStatus = account.capabilities?.transfers || 'inactive';
+        payoutsEnabled = account.payouts_enabled ?? false;
+        chargesEnabled = account.charges_enabled ?? false;
+        detailsSubmitted = account.details_submitted ?? false;
         currentlyDue = (account.requirements?.currently_due as string[]) || [];
         console.log(`Auto-filled phone for Connect account ${user.stripeConnectAccountId}, currently_due now: [${currentlyDue.join(', ')}]`);
       }
@@ -675,6 +690,9 @@ class StripeService {
           bankLast4: null,
           bankName: null,
           transfersStatus: null,
+          payoutsEnabled: false,
+          chargesEnabled: false,
+          detailsSubmitted: false,
           requiresVerification: false,
           currentlyDue: [],
         };
@@ -693,6 +711,9 @@ class StripeService {
       bankLast4,
       bankName,
       transfersStatus,
+      payoutsEnabled,
+      chargesEnabled,
+      detailsSubmitted,
       requiresVerification,
       currentlyDue,
     };

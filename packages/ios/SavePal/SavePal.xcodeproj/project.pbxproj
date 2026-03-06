@@ -43,6 +43,7 @@
 		A10033 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10033 /* StatusBadge.swift */; };
 		A10034 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10034 /* EmptyStateView.swift */; };
 		A10035 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10035 /* ErrorBanner.swift */; };
+		A10050 /* GoogleLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10050 /* GoogleLogo.swift */; };
 		A10036 /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10036 /* Color+Brand.swift */; };
 		A10037 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10037 /* Date+Formatting.swift */; };
 		A10038 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10038 /* Assets.xcassets */; };
@@ -92,6 +93,7 @@
 		B10033 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		B10034 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		B10035 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
+		B10050 /* GoogleLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleLogo.swift; sourceTree = "<group>"; };
 		B10036 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
 		B10037 /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
 		B10038 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -285,6 +287,7 @@
 				B10033 /* StatusBadge.swift */,
 				B10034 /* EmptyStateView.swift */,
 				B10035 /* ErrorBanner.swift */,
+				B10050 /* GoogleLogo.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -460,6 +463,7 @@
 				A10033 /* StatusBadge.swift in Sources */,
 				A10034 /* EmptyStateView.swift in Sources */,
 				A10035 /* ErrorBanner.swift in Sources */,
+				A10050 /* GoogleLogo.swift in Sources */,
 				A10036 /* Color+Brand.swift in Sources */,
 				A10037 /* Date+Formatting.swift in Sources */,
 				A10040 /* StripeManager.swift in Sources */,

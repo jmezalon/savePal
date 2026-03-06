@@ -140,18 +140,23 @@ struct RegisterView: View {
                 Button {
                     Task { await handleGoogleSignIn() }
                 } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "g.circle.fill")
-                            .font(.title2)
+                    HStack(spacing: 10) {
+                        GoogleLogo()
+                            .frame(width: 18, height: 18)
                         Text("Sign up with Google")
-                            .fontWeight(.medium)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.primary.opacity(0.85))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(height: 50)
+                    .background(.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
                 }
-                .buttonStyle(.bordered)
-                .tint(.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .buttonStyle(.plain)
                 .padding(.horizontal)
             }
         }

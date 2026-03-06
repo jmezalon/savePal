@@ -3,7 +3,7 @@ import SwiftUI
 struct JoinGroupView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var inviteCode = ""
-    @State private var autoPaymentConsent = false
+    @State private var autoPaymentConsent = true
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -40,17 +40,29 @@ struct JoinGroupView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .padding(.horizontal)
 
-                    Toggle(isOn: $autoPaymentConsent) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Enable Auto-Payment")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text("Automatically pay contributions when due using your default payment method.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    VStack(spacing: 12) {
+                        Toggle(isOn: $autoPaymentConsent) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Enable Auto-Payment")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Text("Automatically pay contributions when due using your default payment method.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tint(Color.savePalBlue)
+
+                        if !autoPaymentConsent {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                Text("Auto-payment is required to keep the group running smoothly. All members must have it enabled.")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.orange)
                         }
                     }
-                    .tint(Color.savePalBlue)
                     .padding(.horizontal)
 
                     Button {
@@ -69,7 +81,7 @@ struct JoinGroupView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.savePalBlue)
-                    .disabled(isLoading || inviteCode.isEmpty)
+                    .disabled(isLoading || inviteCode.isEmpty || !autoPaymentConsent)
                     .padding(.horizontal)
                 }
             }

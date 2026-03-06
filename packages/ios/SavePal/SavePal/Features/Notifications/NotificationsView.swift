@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotificationsView: View {
+    @Binding var unreadCount: Int
     @State private var notifications: [AppNotification] = []
     @State private var isLoading = true
 
@@ -169,6 +170,7 @@ struct NotificationsView: View {
             )
             if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
                 notifications[index].isRead = true
+                unreadCount = max(0, unreadCount - 1)
             }
         } catch {}
     }
@@ -182,6 +184,7 @@ struct NotificationsView: View {
             for i in notifications.indices {
                 notifications[i].isRead = true
             }
+            unreadCount = 0
         } catch {}
     }
 
@@ -202,5 +205,5 @@ struct NotificationsView: View {
 }
 
 #Preview {
-    NotificationsView()
+    NotificationsView(unreadCount: .constant(3))
 }

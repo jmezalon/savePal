@@ -6,11 +6,12 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            DashboardView()
+            DashboardView(unreadCount: $unreadCount)
                 .tabItem {
                     Label("Dashboard", systemImage: "house.fill")
                 }
                 .tag(0)
+                .badge(unreadCount > 0 ? "" : nil)
 
             GroupsListView()
                 .tabItem {
