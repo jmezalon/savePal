@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @Environment(AuthManager.self) private var authManager
     @Binding var unreadCount: Int
+    @Binding var selectedTab: Int
     @State private var groups: [SavingsGroup] = []
     @State private var pendingPayments: [Payment] = []
     @State private var isLoading = true
@@ -246,8 +247,8 @@ struct DashboardView: View {
                     .font(.headline)
                 Spacer()
                 if !groups.isEmpty {
-                    NavigationLink("See All") {
-                        // Will navigate to Groups tab
+                    Button("See All") {
+                        selectedTab = 1
                     }
                     .font(.subheadline)
                     .foregroundStyle(Color.savePalBlue)
@@ -333,6 +334,6 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView(unreadCount: .constant(2))
+    DashboardView(unreadCount: .constant(2), selectedTab: .constant(0))
         .environment(AuthManager.shared)
 }

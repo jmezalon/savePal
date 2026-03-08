@@ -6,7 +6,7 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            DashboardView(unreadCount: $unreadCount)
+            DashboardView(unreadCount: $unreadCount, selectedTab: $selectedTab)
                 .tabItem {
                     Label("Dashboard", systemImage: "house.fill")
                 }

@@ -71,10 +71,10 @@ struct HelpView: View {
             }
 
             Section {
-                Link(destination: URL(string: "https://savepal.app/privacy")!) {
+                Link(destination: URL(string: "https://save-pals.com/privacy")!) {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
-                Link(destination: URL(string: "https://savepal.app/terms")!) {
+                Link(destination: URL(string: "https://save-pals.com/terms")!) {
                     Label("Terms of Service", systemImage: "doc.text")
                 }
             }
