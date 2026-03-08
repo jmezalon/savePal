@@ -287,6 +287,25 @@ export default function GroupDetails() {
     }
   };
 
+  const getTrustScoreColor = (score: number) => {
+    if (score >= 80) return { bg: 'bg-green-100', text: 'text-green-700' };
+    if (score >= 60) return { bg: 'bg-yellow-100', text: 'text-yellow-700' };
+    if (score >= 40) return { bg: 'bg-orange-100', text: 'text-orange-700' };
+    return { bg: 'bg-red-100', text: 'text-red-700' };
+  };
+
+  const TrustScoreBadge = ({ score }: { score: number }) => {
+    const colors = getTrustScoreColor(score);
+    return (
+      <span className={`inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full ${colors.bg} ${colors.text}`}>
+        <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 1a.75.75 0 0 1 .65.376l1.703 2.93 3.206.582a.75.75 0 0 1 .4 1.232l-2.143 2.39.367 3.27a.75.75 0 0 1-1.037.744L10 11.168l-3.146 1.356a.75.75 0 0 1-1.037-.744l.367-3.27-2.143-2.39a.75.75 0 0 1 .4-1.232l3.206-.582L9.35 1.376A.75.75 0 0 1 10 1Z" clipRule="evenodd" />
+        </svg>
+        {Math.round(score)}
+      </span>
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
@@ -512,6 +531,7 @@ export default function GroupDetails() {
                                     Owner
                                   </span>
                                 )}
+                                <TrustScoreBadge score={membership.user.trustScore} />
                               </p>
                               <p className="text-sm text-gray-500">{membership.user.email}</p>
                               {!membership.user.emailVerified && !membership.user.phoneVerified && (

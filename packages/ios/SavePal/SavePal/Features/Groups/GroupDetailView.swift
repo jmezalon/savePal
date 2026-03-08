@@ -199,6 +199,13 @@ struct GroupDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private func trustScoreColor(_ score: Double) -> Color {
+        if score >= 80 { return .green }
+        if score >= 60 { return .yellow }
+        if score >= 40 { return .orange }
+        return .red
+    }
+
     private func memberRow(_ membership: Membership) -> some View {
         HStack {
             // Avatar
@@ -224,6 +231,20 @@ struct GroupDetailView: View {
                             .background(Color.savePalBlue.opacity(0.15))
                             .foregroundStyle(Color.savePalBlue)
                             .clipShape(Capsule())
+                    }
+                    if let score = membership.user?.trustScore {
+                        HStack(spacing: 2) {
+                            Image(systemName: "shield.fill")
+                                .font(.system(size: 8))
+                            Text("\(Int(score))")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(trustScoreColor(score).opacity(0.15))
+                        .foregroundStyle(trustScoreColor(score))
+                        .clipShape(Capsule())
                     }
                 }
                 Text("Position #\(membership.payoutPosition)")
