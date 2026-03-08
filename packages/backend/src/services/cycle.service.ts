@@ -385,7 +385,7 @@ class CycleService {
       });
 
       // Create payout record based on actually collected amount
-      const feeAmount = collectedAmount * 0.03; // 3% platform fee on collected amount only
+      const feeAmount = Math.min(collectedAmount * 0.03, 150); // 3% platform fee, capped at $150
       const netAmount = collectedAmount - feeAmount;
 
       const payout = await tx.payout.create({
