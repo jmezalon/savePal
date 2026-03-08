@@ -199,6 +199,13 @@ struct GroupDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private func trustScoreColor(_ score: Double) -> Color {
+        if score >= 80 { return .green }
+        if score >= 60 { return .yellow }
+        if score >= 40 { return .orange }
+        return .red
+    }
+
     private func memberRow(_ membership: Membership) -> some View {
         HStack {
             // Avatar
@@ -224,6 +231,20 @@ struct GroupDetailView: View {
                             .background(Color.savePalBlue.opacity(0.15))
                             .foregroundStyle(Color.savePalBlue)
                             .clipShape(Capsule())
+                    }
+                    if let score = membership.user?.trustScore {
+                        HStack(spacing: 2) {
+                            Image(systemName: "shield.fill")
+                                .font(.system(size: 8))
+                            Text("\(Int(score))")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(trustScoreColor(score).opacity(0.15))
+                        .foregroundStyle(trustScoreColor(score))
+                        .clipShape(Capsule())
                     }
                 }
                 Text("Position #\(membership.payoutPosition)")
@@ -306,45 +327,186 @@ struct GroupDetailView: View {
 
     // MARK: - Current Cycle
 
-    private func currentCycleSection(_ cycle: Cycle) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Current Cycle (#\(cycle.cycleNumber))")
-                .font(.headline)
+    /// Groups payments by member for the cycle summary
+    private func memberPaymentGroups(from payments: [Payment]) -> [(user: MemberUser, payments: [Payment])] {
+        var grouped: [String: (user: MemberUser, payments: [Payment])] = [:]
+        for payment in payments {
+            let key = payment.userId
+            if grouped[key] == nil {
+                grouped[key] = (user: payment.user ?? MemberUser(id: payment.userId, firstName: "Unknown", lastName: "Member"), payments: [])
+            }
+            grouped[key]?.payments.append(payment)
+        }
+        return grouped.values
+            .sorted { $0.payments.first?.contributionPeriod ?? 0 < $1.payments.first?.contributionPeriod ?? 0 }
+    }
 
-            HStack {
-                Text("Due: \(cycle.dueDate.formattedDate)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+    /// Returns the next upcoming contribution due date from pending payments
+    private func nextContributionDueDate(from payments: [Payment]) -> String? {
+        let now = Date()
+        let pendingWithDates = payments
+            .filter { $0.status == .PENDING && $0.dueDate != nil }
+            .sorted { ($0.dueDate ?? "") < ($1.dueDate ?? "") }
+
+        // Find the first pending payment whose due date is in the future (or closest)
+        if let next = pendingWithDates.first(where: { ($0.dueDate?.toDate ?? .distantPast) >= now }) {
+            return next.dueDate
+        }
+        // If all due dates are past, show the latest one
+        return pendingWithDates.last?.dueDate
+    }
+
+    private func currentCycleSection(_ cycle: Cycle) -> some View {
+        let payments = cycle.payments ?? []
+        let totalPayments = payments.count
+        let completedPayments = payments.filter { $0.status == .COMPLETED }.count
+        let progress = totalPayments > 0 ? Double(completedPayments) / Double(totalPayments) : 0
+        let memberGroups = memberPaymentGroups(from: payments)
+        let nextDue = nextContributionDueDate(from: payments)
+
+        return VStack(alignment: .leading, spacing: 16) {
+            // Header with cycle info and progress ring
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Cycle \(cycle.cycleNumber)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+
+                    if let nextDue = nextDue {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("Next due: \(nextDue.formattedDate)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Text("Payout: \(cycle.totalAmount.formattedCurrency)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Spacer()
-                Text("Total: \(cycle.totalAmount.formattedCurrency)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+
+                // Progress ring
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 5)
+                    Circle()
+                        .trim(from: 0, to: progress)
+                        .stroke(Color.savePalBlue, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.5), value: progress)
+                    VStack(spacing: 0) {
+                        Text("\(completedPayments)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                        Text("/\(totalPayments)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 50, height: 50)
             }
 
-            if let payments = cycle.payments {
-                ForEach(payments) { payment in
-                    HStack {
-                        Text(payment.user?.fullName ?? "Member")
-                            .font(.subheadline)
-                        Spacer()
-                        if payment.userId == authManager.currentUser?.id && payment.status == .PENDING {
-                            Button("Pay Now") {
-                                selectedPaymentId = IdentifiableString(payment.id)
+            // Contribution period progress bar
+            if let firstMemberPayments = memberGroups.first?.payments, firstMemberPayments.count > 1 {
+                let periods = firstMemberPayments.count
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Contribution Periods")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        ForEach(1...periods, id: \.self) { period in
+                            let periodPayments = payments.filter { $0.contributionPeriod == period }
+                            let periodCompleted = periodPayments.filter { $0.status == .COMPLETED }.count
+                            let periodTotal = periodPayments.count
+                            let allDone = periodCompleted == periodTotal
+
+                            VStack(spacing: 2) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(allDone ? Color.green : (periodPayments.contains { $0.status == .COMPLETED } ? Color.green.opacity(0.4) : Color.gray.opacity(0.2)))
+                                    .frame(height: 6)
+                                Text("Wk \(period)")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.secondary)
                             }
-                            .font(.subheadline)
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color.savePalBlue)
-                            .controlSize(.small)
-                        } else {
-                            StatusBadge(paymentStatus: payment.status)
                         }
                     }
                 }
+            }
+
+            Divider()
+
+            // Member summary rows
+            ForEach(Array(memberGroups.enumerated()), id: \.offset) { _, memberGroup in
+                memberCycleRow(memberGroup.user, payments: memberGroup.payments)
             }
         }
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func memberCycleRow(_ memberUser: MemberUser, payments: [Payment]) -> some View {
+        let completed = payments.filter { $0.status == .COMPLETED }.count
+        let total = payments.count
+        let isCurrentUser = memberUser.id == authManager.currentUser?.id
+        let nextPending = payments.first { $0.status == .PENDING }
+
+        return HStack(spacing: 10) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(isCurrentUser ? Color.savePalBlue.opacity(0.3) : Color.savePalBlue.opacity(0.15))
+                Text(memberUser.initials)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.savePalBlue)
+            }
+            .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isCurrentUser ? "You" : memberUser.fullName)
+                    .font(.subheadline)
+                    .fontWeight(isCurrentUser ? .semibold : .regular)
+
+                // Mini progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.gray.opacity(0.15))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(completed == total ? Color.green : Color.savePalBlue)
+                            .frame(width: geo.size.width * CGFloat(completed) / CGFloat(max(total, 1)), height: 4)
+                    }
+                }
+                .frame(height: 4)
+            }
+
+            Spacer()
+
+            // Status: show count or action button
+            if completed == total {
+                StatusBadge(text: "Done", color: .green)
+            } else if isCurrentUser, let pendingPayment = nextPending {
+                Button("Pay Now") {
+                    selectedPaymentId = IdentifiableString(pendingPayment.id)
+                }
+                .font(.caption)
+                .buttonStyle(.borderedProminent)
+                .tint(Color.savePalBlue)
+                .controlSize(.small)
+            } else {
+                Text("\(completed)/\(total)")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     // MARK: - All Cycles
