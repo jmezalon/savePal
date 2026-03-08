@@ -614,97 +614,168 @@ export default function GroupDetails() {
               )}
 
               {/* Current Cycle and Payment Section */}
-              {group.status === 'ACTIVE' && currentCycle && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Cycle</h2>
+              {group.status === 'ACTIVE' && currentCycle && (() => {
+                const allPayments = currentCycle.payments || [];
+                const totalPayments = allPayments.length;
+                const completedPayments = allPayments.filter(p => p.status === 'COMPLETED').length;
+                const progress = totalPayments > 0 ? completedPayments / totalPayments : 0;
 
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-4 border border-blue-200">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900">Cycle {currentCycle.cycleNumber}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Due: {new Date(currentCycle.dueDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span className={`px-3 py-1 text-sm font-semibold rounded ${
-                        currentCycle.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {currentCycle.isCompleted ? 'Completed' : 'Active'}
-                      </span>
-                    </div>
+                // Group payments by member
+                const memberGroups: { user: { id: string; firstName: string; lastName: string }; payments: Payment[] }[] = [];
+                const seen: Record<string, number> = {};
+                for (const p of allPayments) {
+                  if (seen[p.user.id] === undefined) {
+                    seen[p.user.id] = memberGroups.length;
+                    memberGroups.push({ user: p.user, payments: [] });
+                  }
+                  memberGroups[seen[p.user.id]].payments.push(p);
+                }
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600">Total Pot</p>
-                        <p className="text-2xl font-bold text-blue-600">${currentCycle.totalAmount}</p>
+                // Find next contribution due date
+                const now = new Date();
+                const pendingWithDates = allPayments
+                  .filter(p => p.status === 'PENDING' && p.dueDate)
+                  .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
+                const nextDue = pendingWithDates.find(p => new Date(p.dueDate!) >= now) || pendingWithDates[pendingWithDates.length - 1];
+
+                // Determine number of contribution periods
+                const periodsCount = memberGroups.length > 0 ? memberGroups[0].payments.length : 1;
+
+                return (
+                  <div className="mt-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Cycle</h2>
+
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-4 border border-blue-200">
+                      {/* Header with progress ring */}
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">Cycle {currentCycle.cycleNumber}</h3>
+                          {nextDue?.dueDate && (
+                            <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75" />
+                              </svg>
+                              Next due: {new Date(nextDue.dueDate).toLocaleDateString()}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Payout: ${currentCycle.totalAmount.toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* Progress ring */}
+                        <div className="relative w-14 h-14 flex-shrink-0">
+                          <svg className="w-14 h-14 -rotate-90" viewBox="0 0 44 44">
+                            <circle cx="22" cy="22" r="18" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                            <circle cx="22" cy="22" r="18" fill="none" stroke="#3b82f6" strokeWidth="4"
+                              strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 18}`}
+                              strokeDashoffset={`${2 * Math.PI * 18 * (1 - progress)}`}
+                              style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-xs font-bold text-gray-900">{completedPayments}</span>
+                            <span className="text-[9px] text-gray-500">/{totalPayments}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Recipient</p>
-                        <p className="text-lg font-semibold text-gray-900">
+
+                      {/* Contribution period timeline */}
+                      {periodsCount > 1 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-500 mb-2">Contribution Periods</p>
+                          <div className="flex gap-1">
+                            {Array.from({ length: periodsCount }, (_, i) => {
+                              const period = i + 1;
+                              const periodPayments = allPayments.filter(p => p.contributionPeriod === period);
+                              const periodCompleted = periodPayments.filter(p => p.status === 'COMPLETED').length;
+                              const periodTotal = periodPayments.length;
+                              const allDone = periodCompleted === periodTotal;
+                              const partial = !allDone && periodCompleted > 0;
+
+                              return (
+                                <div key={period} className="flex-1 text-center">
+                                  <div className={`h-1.5 rounded-full ${allDone ? 'bg-green-500' : partial ? 'bg-green-300' : 'bg-gray-200'}`} />
+                                  <span className="text-[9px] text-gray-400 mt-0.5 block">Wk {period}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="border-t border-blue-200 pt-4">
+                        <div className="space-y-3">
+                          {memberGroups.map((mg) => {
+                            const completed = mg.payments.filter(p => p.status === 'COMPLETED').length;
+                            const total = mg.payments.length;
+                            const isMe = mg.user.id === user?.id;
+                            const nextPending = mg.payments.find(p => p.status === 'PENDING');
+                            const memberProgress = total > 0 ? completed / total : 0;
+
+                            return (
+                              <div key={mg.user.id} className="flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                                  isMe ? 'bg-blue-200 text-blue-800' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {mg.user.firstName[0]}{mg.user.lastName[0]}
+                                </div>
+
+                                {/* Name + progress bar */}
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm truncate ${isMe ? 'font-semibold text-gray-900' : 'text-gray-800'}`}>
+                                    {isMe ? 'You' : `${mg.user.firstName} ${mg.user.lastName}`}
+                                  </p>
+                                  <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                    <div
+                                      className={`h-1 rounded-full transition-all duration-300 ${completed === total ? 'bg-green-500' : 'bg-blue-500'}`}
+                                      style={{ width: `${memberProgress * 100}%` }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Status */}
+                                {completed === total ? (
+                                  <span className="px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-800 flex-shrink-0">Done</span>
+                                ) : isMe && nextPending ? (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPayment(nextPending);
+                                      setShowPaymentModal(true);
+                                    }}
+                                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded flex-shrink-0"
+                                  >
+                                    {nextPending.dueDate && new Date(nextPending.dueDate) > new Date() ? 'Pay Early' : 'Pay Now'}
+                                  </button>
+                                ) : (
+                                  <span className="text-xs font-medium text-gray-500 flex-shrink-0">{completed}/{total}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Recipient info */}
+                      <div className="mt-4 pt-3 border-t border-blue-200 flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                        </svg>
+                        <span>Recipient: </span>
+                        <span className="font-semibold text-gray-900">
                           {currentCycle.recipientId === user?.id
                             ? 'You'
                             : isOwner
                               ? (group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown')
                               : 'Another member'}
-                        </p>
+                        </span>
                       </div>
                     </div>
-
-                    {/* User's Payment Status */}
-                    {myPayments.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-blue-200">
-                        <p className="text-sm font-medium text-gray-700 mb-3">
-                          Your Contributions ({myPayments.filter(p => p.status === 'COMPLETED').length}/{myPayments.length} paid)
-                        </p>
-                        <div className="space-y-2">
-                          {myPayments.map((payment) => (
-                            <div key={payment.id} className="flex justify-between items-center p-3 bg-white rounded-lg border">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {myPayments.length > 1 ? `Period ${payment.contributionPeriod}` : 'Contribution'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Due: {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : 'N/A'}
-                                </p>
-                                {payment.status === 'FAILED' && payment.failureReason && (
-                                  <p className="text-xs text-red-500 mt-0.5">{payment.failureReason}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <span className="text-sm font-bold">${payment.amount}</span>
-                                <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
-                                  payment.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                  payment.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
-                                  payment.status === 'FAILED' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {payment.status}
-                                </span>
-                                {(payment.status === 'PENDING' || payment.status === 'FAILED') && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPayment(payment);
-                                      setShowPaymentModal(true);
-                                    }}
-                                    className={`px-3 py-1 text-xs font-medium text-white rounded ${
-                                      payment.status === 'FAILED' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-                                    }`}
-                                  >
-                                    {payment.status === 'FAILED' ? 'Retry' : (payment.dueDate && new Date(payment.dueDate) > new Date() ? 'Pay Early' : 'Pay Now')}
-                                  </button>
-                                )}
-                                {payment.status === 'COMPLETED' && payment.paidAt && (
-                                  <span className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleDateString()}</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* All Cycles Section */}
               {group.status === 'ACTIVE' && cycles.length > 0 && (
