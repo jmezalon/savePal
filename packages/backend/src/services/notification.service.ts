@@ -419,6 +419,29 @@ class NotificationService {
       }
     }
   }
+  /**
+   * Send bank account change notification (security alert)
+   */
+  async sendBankAccountNotification(userId: string, action: 'added' | 'updated' | 'removed') {
+    const titles: Record<string, string> = {
+      added: 'Bank Account Added',
+      updated: 'Bank Account Updated',
+      removed: 'Bank Account Removed',
+    };
+    const messages: Record<string, string> = {
+      added: 'A bank account was added to your SavePal account. If you did not make this change, please secure your account immediately.',
+      updated: 'Your bank account verification details were updated. If you did not make this change, please secure your account immediately.',
+      removed: 'A bank account was removed from your SavePal account. If you did not make this change, please secure your account immediately.',
+    };
+
+    return this.createNotification({
+      userId,
+      type: 'BANK_ACCOUNT_UPDATED',
+      title: titles[action],
+      message: messages[action],
+      checkPreferences: false, // Always send security notifications
+    });
+  }
 }
 
 export default new NotificationService();

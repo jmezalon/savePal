@@ -305,6 +305,7 @@ enum NotificationType {
   DEBT_RECORDED
   DEBT_DEDUCTED_FROM_PAYOUT
   PAYMENT_DISPUTED
+  BANK_ACCOUNT_UPDATED
 }
 
 enum CreationFeeStatus {

@@ -1,6 +1,7 @@
 import { Response, Request } from 'express';
 import prisma from '../utils/prisma.js';
 import stripeService from '../services/stripe.service.js';
+import notificationService from '../services/notification.service.js';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -133,6 +134,11 @@ class ConnectController {
         identityDetails
       );
 
+      // Security notification: bank account added
+      notificationService.sendBankAccountNotification(userId, 'added').catch((err) =>
+        console.error('Failed to send bank account added notification:', err)
+      );
+
       res.json({
         success: true,
         message: result.transfersStatus === 'active'
@@ -260,6 +266,11 @@ class ConnectController {
         }
       );
 
+      // Security notification: bank verification details updated
+      notificationService.sendBankAccountNotification(userId, 'updated').catch((err) =>
+        console.error('Failed to send bank account updated notification:', err)
+      );
+
       res.json({
         success: true,
         message: result.transfersStatus === 'active'
@@ -284,6 +295,11 @@ class ConnectController {
       const userId = req.userId!;
 
       await stripeService.removeConnectBankAccount(userId);
+
+      // Security notification: bank account removed
+      notificationService.sendBankAccountNotification(userId, 'removed').catch((err) =>
+        console.error('Failed to send bank account removed notification:', err)
+      );
 
       res.json({
         success: true,
