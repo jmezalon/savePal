@@ -2,6 +2,7 @@ import { Router } from 'express';
 import cycleController from '../controllers/cycle.controller.js';
 import paymentController from '../controllers/payment.controller.js';
 import payoutController from '../controllers/payout.controller.js';
+import bidController from '../controllers/bid.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -25,5 +26,11 @@ router.get('/:cycleId/payout', payoutController.getPayoutForCycle);
 
 // Complete a cycle
 router.post('/:cycleId/complete', cycleController.completeCycle);
+
+// Bid routes
+router.post('/:cycleId/bids', bidController.placeBid.bind(bidController));
+router.get('/:cycleId/bids', bidController.getBids.bind(bidController));
+router.post('/:cycleId/bids/resolve', bidController.resolveBidding.bind(bidController));
+router.get('/:cycleId/bids/eligible', bidController.getEligibleBidders.bind(bidController));
 
 export default router;

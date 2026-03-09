@@ -33,6 +33,9 @@ router.put('/:id', groupController.updateGroup.bind(groupController));
 // Check group readiness (all members have payment methods)
 router.get('/:id/readiness', groupController.checkReadiness.bind(groupController));
 
+// Reorder payout positions (owner only, PENDING groups)
+router.put('/:id/reorder', groupController.reorderPositions.bind(groupController));
+
 // Start a group (owner only)
 router.post('/:id/start', groupController.startGroup.bind(groupController));
 
