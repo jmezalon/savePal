@@ -32,6 +32,7 @@ enum APIEndpoints {
         static func detail(_ id: String) -> String { "\(base)/\(id)" }
         static func readiness(_ id: String) -> String { "\(base)/\(id)/readiness" }
         static func start(_ id: String) -> String { "\(base)/\(id)/start" }
+        static func reorder(_ id: String) -> String { "\(base)/\(id)/reorder" }
         static func cycles(_ groupId: String) -> String { "\(base)/\(groupId)/cycles" }
         static func currentCycle(_ groupId: String) -> String { "\(base)/\(groupId)/cycles/current" }
         static func payouts(_ groupId: String) -> String { "\(base)/\(groupId)/payouts" }
@@ -46,6 +47,9 @@ enum APIEndpoints {
         static func payments(_ cycleId: String) -> String { "\(base)/\(cycleId)/payments" }
         static func payout(_ cycleId: String) -> String { "\(base)/\(cycleId)/payout" }
         static func complete(_ cycleId: String) -> String { "\(base)/\(cycleId)/complete" }
+        static func bids(_ cycleId: String) -> String { "\(base)/\(cycleId)/bids" }
+        static func resolveBids(_ cycleId: String) -> String { "\(base)/\(cycleId)/bids/resolve" }
+        static func eligibleBidders(_ cycleId: String) -> String { "\(base)/\(cycleId)/bids/eligible" }
     }
 
     // MARK: - Payments
