@@ -44,7 +44,8 @@ interface Cycle {
   completedDate?: string;
   totalAmount: number;
   isCompleted: boolean;
-  recipientId: string;
+  recipientId?: string;
+  biddingStatus?: 'OPEN' | 'CLOSED';
   payments?: Payment[];
 }
 
@@ -94,6 +95,16 @@ export default function GroupDetails() {
     membersWithoutPaymentMethod: { firstName: string; lastName: string }[];
     membersWithoutVerification: { firstName: string; lastName: string }[];
   } | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderLoading, setReorderLoading] = useState(false);
+  const [localMemberships, setLocalMemberships] = useState<GroupMember[]>([]);
+
+  // Bidding state
+  const [bids, setBids] = useState<{ id: string; userId: string; amount?: number; user: { id: string; firstName: string; lastName: string } }[]>([]);
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidLoading, setBidLoading] = useState(false);
+  const [bidError, setBidError] = useState<string | null>(null);
+
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -183,6 +194,21 @@ export default function GroupDetails() {
               const paymentData = await paymentResponse.json();
               const payments = Array.isArray(paymentData.data) ? paymentData.data : [paymentData.data];
               setMyPayments(payments);
+            }
+          }
+
+          // Fetch bids if this is a bidding cycle
+          if (currentData.data.biddingStatus) {
+            try {
+              const bidsResponse = await fetch(`${API_BASE_URL}/api/cycles/${currentData.data.id}/bids`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+              });
+              if (bidsResponse.ok) {
+                const bidsData = await bidsResponse.json();
+                setBids(bidsData.data || []);
+              }
+            } catch {
+              // Fail silently
             }
           }
         }
@@ -284,6 +310,130 @@ export default function GroupDetails() {
       setAlertModal({ title: 'Error', message: err instanceof Error ? err.message : 'Failed to delete group', variant: 'danger' });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Reorder helpers
+  const startReordering = () => {
+    if (group) {
+      setLocalMemberships([...group.memberships].sort((a, b) => a.payoutPosition - b.payoutPosition));
+      setIsReordering(true);
+    }
+  };
+
+  const moveMember = (index: number, direction: 'up' | 'down') => {
+    const newList = [...localMemberships];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newList.length) return;
+
+    // Swap positions
+    const tempPos = newList[index].payoutPosition;
+    newList[index] = { ...newList[index], payoutPosition: newList[swapIndex].payoutPosition };
+    newList[swapIndex] = { ...newList[swapIndex], payoutPosition: tempPos };
+    newList.sort((a, b) => a.payoutPosition - b.payoutPosition);
+    setLocalMemberships(newList);
+  };
+
+  const saveReorder = async () => {
+    if (!id || !group) return;
+    setReorderLoading(true);
+    try {
+      const positions = localMemberships.map(m => ({
+        userId: m.user.id,
+        payoutPosition: m.payoutPosition,
+      }));
+
+      const response = await fetch(`${API_BASE_URL}/api/groups/${id}/reorder`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ positions }),
+      });
+
+      if (response.ok) {
+        setIsReordering(false);
+        await fetchGroupDetails();
+        setAlertModal({ title: 'Positions Updated', message: 'Payout positions have been updated successfully.', variant: 'success' });
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to reorder positions');
+      }
+    } catch (err) {
+      setAlertModal({ title: 'Error', message: err instanceof Error ? err.message : 'Failed to reorder positions', variant: 'danger' });
+    } finally {
+      setReorderLoading(false);
+    }
+  };
+
+  // Bidding helpers
+  const fetchBids = async (cycleId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cycles/${cycleId}/bids`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBids(data.data || []);
+      }
+    } catch {
+      // Fail silently
+    }
+  };
+
+  const handlePlaceBid = async () => {
+    if (!currentCycle || !bidAmount) return;
+    setBidLoading(true);
+    setBidError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cycles/${currentCycle.id}/bids`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount: parseFloat(bidAmount) }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to place bid');
+
+      setBidAmount('');
+      await fetchBids(currentCycle.id);
+      setAlertModal({ title: 'Bid Placed', message: `Your bid of $${parseFloat(bidAmount).toFixed(2)} has been placed.`, variant: 'success' });
+    } catch (err) {
+      setBidError(err instanceof Error ? err.message : 'Failed to place bid');
+    } finally {
+      setBidLoading(false);
+    }
+  };
+
+  const handleResolveBidding = async () => {
+    if (!currentCycle) return;
+    setBidLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cycles/${currentCycle.id}/bids/resolve`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to resolve bidding');
+
+      if (id) {
+        await fetchCycles(id);
+      }
+      await fetchGroupDetails();
+      setAlertModal({
+        title: 'Bidding Resolved',
+        message: `Winner: ${data.data?.cycle?.bids?.[0]?.user?.firstName || 'Unknown'} with a bid of $${data.data?.bidFee?.toFixed(2) || '0.00'}`,
+        variant: 'success',
+      });
+    } catch (err) {
+      setAlertModal({ title: 'Error', message: err instanceof Error ? err.message : 'Failed to resolve bidding', variant: 'danger' });
+    } finally {
+      setBidLoading(false);
     }
   };
 
@@ -510,16 +660,64 @@ export default function GroupDetails() {
 
               {isOwner ? (
                 <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Members ({group.currentMembers})</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Members ({group.currentMembers})</h2>
+                    {group.status === 'PENDING' && group.currentMembers > 1 && !isReordering && (
+                      <button
+                        onClick={startReordering}
+                        className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                      >
+                        Reorder Positions
+                      </button>
+                    )}
+                    {isReordering && (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setIsReordering(false)}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveReorder}
+                          disabled={reorderLoading}
+                          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                        >
+                          {reorderLoading ? 'Saving...' : 'Save Order'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-3">
-                    {group.memberships
-                      .sort((a, b) => a.payoutPosition - b.payoutPosition)
-                      .map((membership) => (
+                    {(isReordering ? localMemberships : [...group.memberships].sort((a, b) => a.payoutPosition - b.payoutPosition))
+                      .map((membership, index) => (
                         <div
                           key={membership.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                          className={`flex items-center justify-between p-4 rounded-lg ${isReordering ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}
                         >
                           <div className="flex items-center space-x-4">
+                            {isReordering && (
+                              <div className="flex flex-col space-y-1">
+                                <button
+                                  onClick={() => moveMember(index, 'up')}
+                                  disabled={index === 0}
+                                  className="p-0.5 text-gray-500 hover:text-blue-600 disabled:text-gray-300"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => moveMember(index, 'down')}
+                                  disabled={index === (isReordering ? localMemberships : group.memberships).length - 1}
+                                  className="p-0.5 text-gray-500 hover:text-blue-600 disabled:text-gray-300"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium">
                               {membership.user.firstName[0]}{membership.user.lastName[0]}
                             </div>
@@ -785,14 +983,113 @@ export default function GroupDetails() {
                         </svg>
                         <span>Recipient: </span>
                         <span className="font-semibold text-gray-900">
-                          {currentCycle.recipientId === user?.id
-                            ? 'You'
-                            : isOwner
-                              ? (group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown')
-                              : 'Another member'}
+                          {currentCycle.biddingStatus === 'OPEN' && !currentCycle.recipientId
+                            ? 'Determined by bidding'
+                            : currentCycle.recipientId === user?.id
+                              ? 'You'
+                              : isOwner
+                                ? (group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown')
+                                : 'Another member'}
                         </span>
                       </div>
                     </div>
+
+                    {/* Bidding Section */}
+                    {group.payoutMethod === 'BIDDING' && currentCycle.biddingStatus && (
+                      <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                          </svg>
+                          <h3 className="text-lg font-semibold text-amber-900">
+                            {currentCycle.biddingStatus === 'OPEN' ? 'Bidding Open' : 'Bidding Closed'}
+                          </h3>
+                          {currentCycle.biddingStatus === 'OPEN' && (
+                            <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Live</span>
+                          )}
+                        </div>
+
+                        {currentCycle.biddingStatus === 'OPEN' && (
+                          <>
+                            <p className="text-sm text-amber-800 mb-4">
+                              Place your bid - the member willing to pay the highest fee wins this cycle's payout.
+                              The fee is deducted from your payout amount (${currentCycle.totalAmount.toFixed(2)}).
+                            </p>
+
+                            {/* Place bid form */}
+                            <div className="flex gap-2 mb-4">
+                              <div className="relative flex-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                <input
+                                  type="number"
+                                  value={bidAmount}
+                                  onChange={(e) => setBidAmount(e.target.value)}
+                                  placeholder="Enter bid amount"
+                                  min="0.01"
+                                  step="0.01"
+                                  className="w-full pl-7 pr-3 py-2 border border-amber-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                />
+                              </div>
+                              <button
+                                onClick={handlePlaceBid}
+                                disabled={bidLoading || !bidAmount}
+                                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:bg-gray-400"
+                              >
+                                {bidLoading ? 'Placing...' : 'Place Bid'}
+                              </button>
+                            </div>
+                            {bidError && (
+                              <p className="text-sm text-red-600 mb-3">{bidError}</p>
+                            )}
+                          </>
+                        )}
+
+                        {/* Bids list */}
+                        {bids.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-amber-900">{bids.length} bid{bids.length !== 1 ? 's' : ''} placed</p>
+                            {bids.map((bid) => (
+                              <div key={bid.id} className="flex items-center justify-between p-3 bg-white rounded-md border border-amber-100">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-xs font-semibold">
+                                    {bid.user.firstName[0]}{bid.user.lastName ? bid.user.lastName[0] : ''}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {bid.userId === user?.id ? 'You' : bid.user.firstName}
+                                  </span>
+                                </div>
+                                {bid.amount !== undefined && (
+                                  <span className="text-sm font-bold text-amber-700">${bid.amount.toFixed(2)}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Resolve button (owner only) */}
+                        {isOwner && currentCycle.biddingStatus === 'OPEN' && bids.length > 0 && (
+                          <button
+                            onClick={handleResolveBidding}
+                            disabled={bidLoading}
+                            className="mt-4 w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400"
+                          >
+                            {bidLoading ? 'Resolving...' : 'Resolve Bidding (Award to Highest Bidder)'}
+                          </button>
+                        )}
+
+                        {currentCycle.biddingStatus === 'CLOSED' && currentCycle.recipientId && (
+                          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm font-medium text-green-900">
+                              Winner: {currentCycle.recipientId === user?.id
+                                ? 'You'
+                                : isOwner
+                                  ? (group.memberships.find(m => m.user.id === currentCycle.recipientId)?.user.firstName || 'Unknown')
+                                  : 'Another member'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -841,11 +1138,13 @@ export default function GroupDetails() {
                           <div className="text-right">
                             <p className="text-sm font-medium text-gray-700">Recipient</p>
                             <p className="text-sm text-gray-900">
-                              {cycle.recipientId === user?.id
-                                ? 'You'
-                                : isOwner
-                                  ? (group.memberships.find(m => m.user.id === cycle.recipientId)?.user.firstName || 'Unknown')
-                                  : 'Another member'}
+                              {!cycle.recipientId
+                                ? (cycle.biddingStatus === 'OPEN' ? 'Bidding open' : 'TBD')
+                                : cycle.recipientId === user?.id
+                                  ? 'You'
+                                  : isOwner
+                                    ? (group.memberships.find(m => m.user.id === cycle.recipientId)?.user.firstName || 'Unknown')
+                                    : 'Another member'}
                             </p>
                           </div>
                         </div>

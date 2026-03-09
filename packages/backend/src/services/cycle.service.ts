@@ -56,8 +56,8 @@ class CycleService {
         .map(m => m.userId)
         .sort(() => Math.random() - 0.5);
     } else {
-      // BIDDING - for now use sequential, will implement bidding later
-      payoutOrder = group.memberships.map(m => m.userId);
+      // BIDDING - no pre-assigned recipients; recipients determined via bidding
+      payoutOrder = [];
     }
 
     // Calculate cycle dates
@@ -65,6 +65,7 @@ class CycleService {
     const startDate = group.startDate || new Date();
     const effectivePayoutFrequency = group.payoutFrequency || group.frequency;
     const contributionsPerPayout = getContributionsPerPayout(group.frequency, effectivePayoutFrequency);
+    const isBidding = group.payoutMethod === 'BIDDING';
 
     for (let i = 0; i < group.maxMembers; i++) {
       const dueDate = this.calculateDueDate(startDate, i, effectivePayoutFrequency);
@@ -72,10 +73,11 @@ class CycleService {
       cycles.push({
         groupId: group.id,
         cycleNumber: i + 1,
-        recipientId: payoutOrder[i],
+        recipientId: isBidding ? null : payoutOrder[i],
         dueDate,
         totalAmount: group.contributionAmount * contributionsPerPayout * group.maxMembers,
         isCompleted: false,
+        biddingStatus: isBidding ? (i === 0 ? 'OPEN' as const : null) : null,
       });
     }
 
@@ -359,6 +361,11 @@ class CycleService {
         throw new Error('Cycle is already completed');
       }
 
+      // For bidding groups, ensure bidding has been resolved
+      if (!lockedCycle.recipientId) {
+        throw new Error('Bidding must be resolved before completing this cycle');
+      }
+
       // Check if all payments are resolved (completed or recorded as debt after max retries)
       const payments = await tx.payment.findMany({ where: { cycleId } });
       const allResolved = payments.every(p =>
@@ -452,6 +459,14 @@ class CycleService {
           }
 
           await tx.payment.createMany({ data: newPayments });
+
+          // For bidding groups, open bidding on the next cycle
+          if (group.payoutMethod === 'BIDDING') {
+            await tx.cycle.update({
+              where: { id: nextCycle.id },
+              data: { biddingStatus: 'OPEN' },
+            });
+          }
         }
       } else {
         // This was the last cycle, mark group as completed

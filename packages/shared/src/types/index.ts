@@ -25,6 +25,11 @@ export enum PaymentStatus {
   REFUNDED = 'REFUNDED',
 }
 
+export enum BiddingStatus {
+  OPEN = 'OPEN',
+  CLOSED = 'CLOSED',
+}
+
 export enum MemberRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
@@ -86,11 +91,22 @@ export interface Cycle {
   id: string;
   groupId: string;
   cycleNumber: number;
-  recipientId: string;
+  recipientId?: string;
   dueDate: Date;
   completedDate?: Date;
   totalAmount: number;
   isCompleted: boolean;
+  biddingStatus?: BiddingStatus;
+}
+
+// Bid Types
+export interface Bid {
+  id: string;
+  cycleId: string;
+  userId: string;
+  amount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Payment Types

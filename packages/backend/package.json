@@ -14,7 +14,9 @@
     "script:send-verification": "tsx src/scripts/send-verification-to-existing-users.ts",
     "script:auto-verify": "tsx src/scripts/auto-verify-existing-users.ts",
     "script:test-join-notification": "tsx src/scripts/test-join-notification.ts",
-    "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts"
+    "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@parse/node-apn": "^7.1.0",
@@ -42,7 +44,9 @@
   },
   "devDependencies": {
     "@types/node-cron": "^3.0.11",
+    "@vitest/coverage-v8": "^4.0.18",
     "prisma": "^5.22.0",
-    "tsx": "^4.11.0"
+    "tsx": "^4.11.0",
+    "vitest": "^4.0.18"
   }
 }

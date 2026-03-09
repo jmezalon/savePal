@@ -435,6 +435,55 @@ class GroupController {
   }
 
   /**
+   * PUT /api/groups/:id/reorder
+   * Reorder member payout positions (owner only, PENDING groups)
+   */
+  async reorderPositions(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { id } = req.params;
+      const { positions } = req.body;
+
+      if (!Array.isArray(positions) || positions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Positions array is required',
+        });
+      }
+
+      // Validate each entry has userId and payoutPosition
+      for (const p of positions) {
+        if (!p.userId || typeof p.payoutPosition !== 'number') {
+          return res.status(400).json({
+            success: false,
+            error: 'Each position entry must have userId and payoutPosition (number)',
+          });
+        }
+      }
+
+      const memberships = await groupService.reorderPositions(id, userId, positions);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payout positions updated successfully',
+        data: memberships,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reorder positions';
+
+      if (errorMessage.includes('owner')) {
+        return res.status(403).json({ success: false, error: errorMessage });
+      }
+
+      if (errorMessage.includes('started') || errorMessage.includes('Must provide') || errorMessage.includes('Missing') || errorMessage.includes('sequential')) {
+        return res.status(400).json({ success: false, error: errorMessage });
+      }
+
+      return res.status(500).json({ success: false, error: errorMessage });
+    }
+  }
+
+  /**
    * DELETE /api/groups/:id
    * Delete/cancel a group (owner only, before it starts)
    */

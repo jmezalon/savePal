@@ -571,6 +571,88 @@ class GroupService {
   }
 
   /**
+   * Reorder member payout positions (owner only, PENDING groups only)
+   */
+  async reorderPositions(groupId: string, userId: string, positions: { userId: string; payoutPosition: number }[]) {
+    // Verify owner
+    const membership = await prisma.membership.findFirst({
+      where: { groupId, userId, role: 'OWNER' },
+    });
+
+    if (!membership) {
+      throw new Error('Only the group owner can reorder payout positions');
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        memberships: { where: { isActive: true } },
+      },
+    });
+
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    if (group.status !== 'PENDING') {
+      throw new Error('Cannot reorder positions after the group has started');
+    }
+
+    // Validate that all active members are included exactly once
+    const activeMemberIds = new Set(group.memberships.map(m => m.userId));
+    const providedIds = new Set(positions.map(p => p.userId));
+    const providedPositions = new Set(positions.map(p => p.payoutPosition));
+
+    if (providedIds.size !== activeMemberIds.size) {
+      throw new Error('Must provide positions for all active members');
+    }
+
+    for (const id of activeMemberIds) {
+      if (!providedIds.has(id)) {
+        throw new Error(`Missing position for member ${id}`);
+      }
+    }
+
+    // Validate positions are sequential 1..N
+    for (let i = 1; i <= activeMemberIds.size; i++) {
+      if (!providedPositions.has(i)) {
+        throw new Error(`Positions must be sequential from 1 to ${activeMemberIds.size}`);
+      }
+    }
+
+    // Update positions in a transaction
+    // Use a temp offset to avoid unique constraint violations during swap
+    const offset = 1000;
+    await prisma.$transaction([
+      // First set all to temp positions (offset to avoid unique conflicts)
+      ...positions.map(p =>
+        prisma.membership.updateMany({
+          where: { groupId, userId: p.userId },
+          data: { payoutPosition: p.payoutPosition + offset },
+        })
+      ),
+      // Then set to final positions
+      ...positions.map(p =>
+        prisma.membership.updateMany({
+          where: { groupId, userId: p.userId },
+          data: { payoutPosition: p.payoutPosition },
+        })
+      ),
+    ]);
+
+    // Return updated memberships
+    return prisma.membership.findMany({
+      where: { groupId, isActive: true },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+      orderBy: { payoutPosition: 'asc' },
+    });
+  }
+
+  /**
    * Delete/cancel a group (only owner can delete, and only before it starts)
    */
   async deleteGroup(groupId: string, userId: string) {
