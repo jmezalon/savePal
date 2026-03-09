@@ -55,10 +55,10 @@
 		A10044 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10044 /* PushNotificationManager.swift */; };
 		A10045 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10045 /* GoogleSignInHelper.swift */; };
 		A10046 /* Bid.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10046 /* Bid.swift */; };
-		T10001 /* BidModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T20001 /* BidModelTests.swift */; };
-		T10002 /* CycleModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T20002 /* CycleModelTests.swift */; };
-		T10003 /* MembershipModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T20003 /* MembershipModelTests.swift */; };
-		T10004 /* GroupModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T20004 /* GroupModelTests.swift */; };
+		AFE53AC59D14482EB345C52A /* BidModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5269B24B99A401F9757312F /* BidModelTests.swift */; };
+		3240AAFA63704F11A91E4DB4 /* CycleModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896EE158D0124701B78B9168 /* CycleModelTests.swift */; };
+		42F143785EB2448DBE43C27C /* MembershipModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBFDE6FEFBC54768A8CE40F8 /* MembershipModelTests.swift */; };
+		BCEF77FB12894AA1B595756B /* GroupModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE48ABCBFC774E53B5503218 /* GroupModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -111,11 +111,11 @@
 		B10045 /* GoogleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInHelper.swift; sourceTree = "<group>"; };
 		B10046 /* Bid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bid.swift; sourceTree = "<group>"; };
 		C10000 /* SavePal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SavePal.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C10001 /* SavePalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SavePalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		T20001 /* BidModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BidModelTests.swift; sourceTree = "<group>"; };
-		T20002 /* CycleModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleModelTests.swift; sourceTree = "<group>"; };
-		T20003 /* MembershipModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipModelTests.swift; sourceTree = "<group>"; };
-		T20004 /* GroupModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupModelTests.swift; sourceTree = "<group>"; };
+		4476DA132FCA400AB3BC4CB8 /* SavePalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SavePalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C5269B24B99A401F9757312F /* BidModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BidModelTests.swift; sourceTree = "<group>"; };
+		896EE158D0124701B78B9168 /* CycleModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleModelTests.swift; sourceTree = "<group>"; };
+		FBFDE6FEFBC54768A8CE40F8 /* MembershipModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipModelTests.swift; sourceTree = "<group>"; };
+		DE48ABCBFC774E53B5503218 /* GroupModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,7 +160,7 @@
 			isa = PBXGroup;
 			children = (
 				E10001 /* SavePal */,
-				T30000 /* SavePalTests */,
+				B508193643D64CFBA852BEAC /* SavePalTests */,
 				E10099 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -384,18 +384,18 @@
 			isa = PBXGroup;
 			children = (
 				C10000 /* SavePal.app */,
-				C10001 /* SavePalTests.xctest */,
+				4476DA132FCA400AB3BC4CB8 /* SavePalTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		T30000 /* SavePalTests */ = {
+		B508193643D64CFBA852BEAC /* SavePalTests */ = {
 			isa = PBXGroup;
 			children = (
-				T20001 /* BidModelTests.swift */,
-				T20002 /* CycleModelTests.swift */,
-				T20003 /* MembershipModelTests.swift */,
-				T20004 /* GroupModelTests.swift */,
+				C5269B24B99A401F9757312F /* BidModelTests.swift */,
+				896EE158D0124701B78B9168 /* CycleModelTests.swift */,
+				FBFDE6FEFBC54768A8CE40F8 /* MembershipModelTests.swift */,
+				DE48ABCBFC774E53B5503218 /* GroupModelTests.swift */,
 			);
 			path = SavePalTests;
 			sourceTree = "<group>";
@@ -424,11 +424,11 @@
 			productReference = C10000 /* SavePal.app */;
 			productType = "com.apple.product-type.application";
 		};
-		T60001 /* SavePalTests */ = {
+		759FD6BEE1B348EAA71F6176 /* SavePalTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = T70003 /* Build configuration list for PBXNativeTarget "SavePalTests" */;
+			buildConfigurationList = 296B4D614F414E48817472A0 /* Build configuration list for PBXNativeTarget "SavePalTests" */;
 			buildPhases = (
-				T60002 /* Sources */,
+				1A65DBA40CC244988018DBF2 /* Sources */,
 				T40001 /* Frameworks */,
 			);
 			buildRules = (
@@ -438,7 +438,7 @@
 			);
 			name = SavePalTests;
 			productName = SavePalTests;
-			productReference = C10001 /* SavePalTests.xctest */;
+			productReference = 4476DA132FCA400AB3BC4CB8 /* SavePalTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -474,7 +474,7 @@
 			projectRoot = "";
 			targets = (
 				F10001 /* SavePal */,
-				T60001 /* SavePalTests */,
+				759FD6BEE1B348EAA71F6176 /* SavePalTests */,
 			);
 		};
 /* End PBXProject section */
@@ -543,14 +543,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		T60002 /* Sources */ = {
+		1A65DBA40CC244988018DBF2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				T10001 /* BidModelTests.swift in Sources */,
-				T10002 /* CycleModelTests.swift in Sources */,
-				T10003 /* MembershipModelTests.swift in Sources */,
-				T10004 /* GroupModelTests.swift in Sources */,
+				AFE53AC59D14482EB345C52A /* BidModelTests.swift in Sources */,
+				3240AAFA63704F11A91E4DB4 /* CycleModelTests.swift in Sources */,
+				42F143785EB2448DBE43C27C /* MembershipModelTests.swift in Sources */,
+				BCEF77FB12894AA1B595756B /* GroupModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -740,7 +740,7 @@
 			};
 			name = Release;
 		};
-		T70001 /* Debug */ = {
+		2ED466C492124CEC8A353204 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -759,7 +759,7 @@
 			};
 			name = Debug;
 		};
-		T70002 /* Release */ = {
+		888FC1735FD64837B8C25AED /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -799,11 +799,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		T70003 /* Build configuration list for PBXNativeTarget "SavePalTests" */ = {
+		296B4D614F414E48817472A0 /* Build configuration list for PBXNativeTarget "SavePalTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				T70001 /* Debug */,
-				T70002 /* Release */,
+				2ED466C492124CEC8A353204 /* Debug */,
+				888FC1735FD64837B8C25AED /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

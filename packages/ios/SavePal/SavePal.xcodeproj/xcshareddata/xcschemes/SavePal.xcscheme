@@ -27,14 +27,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
          <TestableReference
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T60001"
+               BlueprintIdentifier = "759FD6BEE1B348EAA71F6176"
                BuildableName = "SavePalTests.xctest"
                BlueprintName = "SavePalTests"
                ReferencedContainer = "container:SavePal.xcodeproj">
