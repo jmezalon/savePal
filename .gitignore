@@ -39,7 +39,6 @@ dist-ssr
 *.sw?
 
 # Database
-packages/backend/prisma/migrations
 *.db
 *.db-journal
 
