@@ -99,6 +99,53 @@ class AdminService {
     };
   }
 
+  async getGroupDetails(groupId: string) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        createdBy: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+        memberships: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { payoutPosition: 'asc' },
+        },
+        cycles: {
+          include: {
+            payout: {
+              include: {
+                recipient: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { cycleNumber: 'asc' },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    return group;
+  }
+
   async deleteGroup(groupId: string) {
     const group = await prisma.group.findUnique({
       where: { id: groupId },
