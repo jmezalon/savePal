@@ -45,6 +45,62 @@ interface WaiverCode {
   _count: { usages: number };
 }
 
+interface GroupPayout {
+  id: string;
+  cycleId: string;
+  recipientId: string;
+  amount: number;
+  feeAmount: number;
+  netAmount: number;
+  status: string;
+  stripeTransferId: string | null;
+  transferredAt: string | null;
+  failureReason: string | null;
+  retryCount: number;
+  recipient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+interface GroupCycle {
+  id: string;
+  cycleNumber: number;
+  recipientId: string | null;
+  dueDate: string;
+  isCompleted: boolean;
+  totalAmount: number;
+  payout: GroupPayout | null;
+}
+
+interface GroupMembership {
+  id: string;
+  payoutPosition: number;
+  isActive: boolean;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+interface GroupDetails {
+  id: string;
+  name: string;
+  status: string;
+  contributionAmount: number;
+  frequency: string;
+  maxMembers: number;
+  currentMembers: number;
+  createdAt: string;
+  createdBy: { firstName: string; lastName: string; email: string };
+  memberships: GroupMembership[];
+  cycles: GroupCycle[];
+}
+
 interface Pagination {
   page: number;
   limit: number;
@@ -74,6 +130,9 @@ export default function AdminDashboard() {
   const [newCodeMaxUses, setNewCodeMaxUses] = useState('');
   const [creatingCode, setCreatingCode] = useState(false);
   const [togglingCodeId, setTogglingCodeId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupDetails | null>(null);
+  const [loadingGroupDetails, setLoadingGroupDetails] = useState(false);
+  const [reinitiatingPayoutId, setReinitiatingPayoutId] = useState<string | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -179,6 +238,49 @@ export default function AdminDashboard() {
       alert('Failed to update code');
     } finally {
       setTogglingCodeId(null);
+    }
+  };
+
+  const fetchGroupDetails = async (groupId: string) => {
+    setLoadingGroupDetails(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/groups/${groupId}`, { headers });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedGroup(data.data);
+      } else {
+        alert(data.error || 'Failed to fetch group details');
+      }
+    } catch {
+      alert('Failed to fetch group details');
+    } finally {
+      setLoadingGroupDetails(false);
+    }
+  };
+
+  const handleReinitiateTransfer = async (payoutId: string) => {
+    if (!confirm('Are you sure you want to reinitiate this transfer? This will create a new Stripe transfer to the recipient.')) {
+      return;
+    }
+    setReinitiatingPayoutId(payoutId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/payouts/${payoutId}/reinitiate`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Transfer reinitiated successfully');
+        if (selectedGroup) {
+          fetchGroupDetails(selectedGroup.id);
+        }
+      } else {
+        alert(data.error || 'Failed to reinitiate transfer');
+      }
+    } catch {
+      alert('Failed to reinitiate transfer');
+    } finally {
+      setReinitiatingPayoutId(null);
     }
   };
 
@@ -363,7 +465,14 @@ export default function AdminDashboard() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {groups.map((g) => (
                     <tr key={g.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{g.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => fetchGroupDetails(g.id)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {g.name}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {g.createdBy.firstName} {g.createdBy.lastName}
                       </td>
@@ -530,6 +639,115 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Group Detail Modal */}
+      {(selectedGroup || loadingGroupDetails) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {loadingGroupDetails && !selectedGroup ? (
+              <div className="p-8 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            ) : selectedGroup && (
+              <>
+                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{selectedGroup.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {selectedGroup.status} &middot; ${selectedGroup.contributionAmount.toFixed(2)} {selectedGroup.frequency} &middot; {selectedGroup.currentMembers}/{selectedGroup.maxMembers} members
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedGroup(null)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Member Payouts</h4>
+
+                  {selectedGroup.cycles.length === 0 ? (
+                    <p className="text-sm text-gray-500">No cycles found for this group.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cycle</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transferred</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {selectedGroup.cycles.map((cycle) => (
+                            <tr key={cycle.id}>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                #{cycle.cycleNumber}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                {cycle.payout
+                                  ? `${cycle.payout.recipient.firstName} ${cycle.payout.recipient.lastName}`
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {cycle.payout ? `$${cycle.payout.amount.toFixed(2)}` : '—'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {cycle.payout ? `$${cycle.payout.netAmount.toFixed(2)}` : '—'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                {cycle.payout ? (
+                                  <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                    cycle.payout.status === 'COMPLETED' ? 'bg-green-100 text-green-800'
+                                      : cycle.payout.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800'
+                                      : cycle.payout.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {cycle.payout.status}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">No payout</span>
+                                )}
+                                {cycle.payout?.failureReason && (
+                                  <p className="text-xs text-red-500 mt-1 max-w-xs truncate" title={cycle.payout.failureReason}>
+                                    {cycle.payout.failureReason}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {cycle.payout?.transferredAt
+                                  ? new Date(cycle.payout.transferredAt).toLocaleDateString()
+                                  : '—'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                                {cycle.payout && (cycle.payout.status === 'COMPLETED' || cycle.payout.status === 'FAILED') && (
+                                  <button
+                                    onClick={() => handleReinitiateTransfer(cycle.payout!.id)}
+                                    disabled={reinitiatingPayoutId === cycle.payout.id}
+                                    className="px-3 py-1.5 text-xs font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 disabled:opacity-50"
+                                  >
+                                    {reinitiatingPayoutId === cycle.payout.id ? 'Processing...' : 'Reinitiate Transfer'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteModal && (

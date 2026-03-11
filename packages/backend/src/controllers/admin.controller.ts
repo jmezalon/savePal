@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import adminService from '../services/admin.service.js';
 import feeWaiverService from '../services/feeWaiver.service.js';
+import payoutService from '../services/payout.service.js';
 
 class AdminController {
   async getStats(_req: Request, res: Response) {
@@ -55,6 +56,31 @@ class AdminController {
     } catch (error: any) {
       const status = error.message === 'Group not found' ? 404 : 500;
       res.status(status).json({ success: false, error: error.message });
+    }
+  }
+
+  async getGroupDetails(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const group = await adminService.getGroupDetails(id);
+      res.json({ success: true, data: group });
+    } catch (error: any) {
+      const status = error.message === 'Group not found' ? 404 : 500;
+      res.status(status).json({ success: false, error: error.message });
+    }
+  }
+
+  async reinitiateTransfer(req: Request, res: Response) {
+    try {
+      const { payoutId } = req.params;
+      const payout = await payoutService.reinitiateTransfer(payoutId);
+      res.json({
+        success: true,
+        message: 'Transfer reinitiated successfully',
+        data: payout,
+      });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
     }
   }
 

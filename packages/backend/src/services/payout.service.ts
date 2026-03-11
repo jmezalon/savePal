@@ -293,6 +293,34 @@ class PayoutService {
   }
 
   /**
+   * Reinitiate a payout that was previously completed but reversed on Stripe.
+   * Resets the payout status to PENDING, clears the old transfer ID, and reprocesses.
+   */
+  async reinitiateTransfer(payoutId: string) {
+    const payout = await this.getPayoutById(payoutId);
+
+    if (payout.status !== 'COMPLETED' && payout.status !== 'FAILED') {
+      throw new Error('Only completed or failed payouts can be reinitiated');
+    }
+
+    // Reset payout to PENDING so processPayout can pick it up
+    await prisma.payout.update({
+      where: { id: payoutId },
+      data: {
+        status: 'PENDING',
+        stripeTransferId: null,
+        transferredAt: null,
+        failureReason: null,
+        retryCount: 0,
+        lastRetryAt: null,
+      },
+    });
+
+    // Process the payout with fresh state
+    return this.processPayout(payoutId);
+  }
+
+  /**
    * Mark a payout as failed
    */
   async failPayout(payoutId: string, reason?: string) {

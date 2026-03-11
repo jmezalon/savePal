@@ -12,7 +12,9 @@ router.get('/stats', adminController.getStats.bind(adminController));
 router.get('/users', adminController.getUsers.bind(adminController));
 router.delete('/users/:id', adminController.deleteUser.bind(adminController));
 router.get('/groups', adminController.getGroups.bind(adminController));
+router.get('/groups/:id', adminController.getGroupDetails.bind(adminController));
 router.delete('/groups/:id', adminController.deleteGroup.bind(adminController));
+router.post('/payouts/:payoutId/reinitiate', adminController.reinitiateTransfer.bind(adminController));
 
 // Waiver code management
 router.post('/waiver-codes', adminController.createWaiverCode.bind(adminController));
