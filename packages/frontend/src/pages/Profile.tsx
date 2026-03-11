@@ -49,6 +49,7 @@ export default function Profile() {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const [smsConsentChecked, setSmsConsentChecked] = useState(false);
 
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -746,13 +747,27 @@ export default function Profile() {
               </div>
 
               {!showCodeInput ? (
-                <button
-                  onClick={handleSendPhoneVerification}
-                  disabled={isSendingCode}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 w-fit"
-                >
-                  {isSendingCode ? 'Sending...' : 'Send Verification Code'}
-                </button>
+                <div className="space-y-3">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={smsConsentChecked}
+                      onChange={(e) => setSmsConsentChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-blue-800">
+                      I agree to receive SMS verification codes from SavePal. Message and data rates may apply.
+                      View our <a href="/sms-consent" target="_blank" rel="noopener noreferrer" className="underline font-medium">SMS Consent Policy</a>.
+                    </span>
+                  </label>
+                  <button
+                    onClick={handleSendPhoneVerification}
+                    disabled={isSendingCode || !smsConsentChecked}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 w-fit"
+                  >
+                    {isSendingCode ? 'Sending...' : 'Send Verification Code'}
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center space-x-3">
                   <input

@@ -274,6 +274,15 @@ struct EditProfileView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+    // Phone verification state
+    @State private var smsConsentChecked = false
+    @State private var isSendingCode = false
+    @State private var isVerifyingPhone = false
+    @State private var showCodeInput = false
+    @State private var verificationCode = ""
+    @State private var verificationMessage: String?
+    @State private var verificationError: String?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -282,6 +291,73 @@ struct EditProfileView: View {
                     TextField("Last Name", text: $lastName)
                     TextField("Phone Number", text: $phoneNumber)
                         .keyboardType(.phonePad)
+                }
+
+                // Phone Verification Section
+                if let user = authManager.currentUser, !phoneNumber.isEmpty, !user.phoneVerified {
+                    Section {
+                        if !showCodeInput {
+                            Toggle(isOn: $smsConsentChecked) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("SMS Consent")
+                                        .font(.subheadline.weight(.medium))
+                                    Text("I agree to receive SMS verification codes from SavePal. Message and data rates may apply.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Button {
+                                Task { await sendVerificationCode() }
+                            } label: {
+                                if isSendingCode {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    Text("Send Verification Code")
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .disabled(!smsConsentChecked || isSendingCode)
+                        } else {
+                            TextField("Enter 6-digit code", text: $verificationCode)
+                                .keyboardType(.numberPad)
+                                .onChange(of: verificationCode) { _, newValue in
+                                    verificationCode = String(newValue.filter { $0.isNumber }.prefix(6))
+                                }
+
+                            Button {
+                                Task { await verifyPhone() }
+                            } label: {
+                                if isVerifyingPhone {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    Text("Verify")
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .disabled(isVerifyingPhone || verificationCode.count != 6)
+
+                            Button {
+                                Task { await sendVerificationCode() }
+                            } label: {
+                                Text(isSendingCode ? "Sending..." : "Resend Code")
+                            }
+                            .disabled(isSendingCode)
+                        }
+
+                        if let msg = verificationMessage {
+                            Text(msg).foregroundStyle(.green).font(.caption)
+                        }
+                        if let err = verificationError {
+                            Text(err).foregroundStyle(.red).font(.caption)
+                        }
+                    } header: {
+                        Text("Phone Verification")
+                    } footer: {
+                        Text("Verify your phone number to increase your trust score.")
+                    }
                 }
 
                 if let error = errorMessage {
@@ -310,6 +386,49 @@ struct EditProfileView: View {
                     phoneNumber = user.phoneNumber ?? ""
                 }
             }
+        }
+    }
+
+    private func sendVerificationCode() async {
+        isSendingCode = true
+        verificationError = nil
+        verificationMessage = nil
+        defer { isSendingCode = false }
+
+        do {
+            let message = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Auth.sendPhoneVerification,
+                method: "POST"
+            )
+            verificationMessage = message
+            showCodeInput = true
+        } catch let error as APIError {
+            verificationError = error.errorDescription
+        } catch {
+            verificationError = error.localizedDescription
+        }
+    }
+
+    private func verifyPhone() async {
+        isVerifyingPhone = true
+        verificationError = nil
+        verificationMessage = nil
+        defer { isVerifyingPhone = false }
+
+        do {
+            let message = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Auth.verifyPhone,
+                method: "POST",
+                body: ["code": verificationCode]
+            )
+            verificationMessage = message
+            verificationCode = ""
+            showCodeInput = false
+            await authManager.refreshUser()
+        } catch let error as APIError {
+            verificationError = error.errorDescription
+        } catch {
+            verificationError = error.localizedDescription
         }
     }
 
