@@ -19,7 +19,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.savepal.app.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.savepal.app.ui.components.*
@@ -57,19 +60,13 @@ fun LoginScreen(
         Spacer(Modifier.height(48.dp))
 
         // Logo
-        Box(
+        androidx.compose.foundation.Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "SavePal Logo",
             modifier = Modifier
-                .size(72.dp)
-                .background(SavePalBlueLight, shape = androidx.compose.foundation.shape.CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Savings,
-                contentDescription = null,
-                modifier = Modifier.size(36.dp),
-                tint = SavePalBlue
-            )
-        }
+                .size(100.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+        )
 
         Spacer(Modifier.height(24.dp))
         Text("Welcome Back", style = MaterialTheme.typography.headlineMedium)
@@ -157,23 +154,32 @@ fun LoginScreen(
         // Google Sign-In button
         OutlinedButton(
             onClick = { viewModel.signInWithGoogle(context) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+            ),
             enabled = !isLoading
         ) {
-            Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Continue with Google", fontWeight = FontWeight.Medium)
+            GoogleLogo(modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Sign in with Google", fontWeight = FontWeight.Medium)
         }
 
         Spacer(Modifier.weight(1f))
 
         Row(
             horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Don't have an account? ", color = SavePalTextSecondary)
-            TextButton(onClick = onNavigateToRegister, contentPadding = PaddingValues(0.dp)) {
+            Text("Don't have an account?", color = SavePalTextSecondary)
+            TextButton(onClick = onNavigateToRegister) {
                 Text("Sign Up", color = SavePalBlue, fontWeight = FontWeight.SemiBold)
             }
         }

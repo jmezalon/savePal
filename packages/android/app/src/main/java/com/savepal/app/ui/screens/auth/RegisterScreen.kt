@@ -198,12 +198,20 @@ fun RegisterScreen(
 
             OutlinedButton(
                 onClick = { viewModel.signInWithGoogle(context) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                ),
                 enabled = !isLoading
             ) {
-                Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
+                GoogleLogo(modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
                 Text("Sign up with Google", fontWeight = FontWeight.Medium)
             }
 
