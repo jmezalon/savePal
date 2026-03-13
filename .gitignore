@@ -60,6 +60,8 @@ packages/android/app/*.iml
 packages/android/.idea/
 packages/android/captures/
 packages/android/app/google-services.json
+packages/android/key.properties
+*.jks
 *.apk
 *.aab
 *.ap_
