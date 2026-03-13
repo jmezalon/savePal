@@ -2,9 +2,12 @@ package com.savepal.app.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
 import com.savepal.app.data.local.TokenManager
 import com.savepal.app.data.model.User
 import com.savepal.app.data.repository.AuthRepository
+import com.savepal.app.util.GoogleSignInHelper
+import com.savepal.app.util.PushNotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -13,7 +16,9 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    val googleSignInHelper: GoogleSignInHelper,
+    private val pushNotificationHelper: PushNotificationHelper
 ) : ViewModel() {
 
     sealed class AuthState {
@@ -49,6 +54,7 @@ class AuthViewModel @Inject constructor(
                     .onSuccess {
                         _user.value = it
                         _authState.value = AuthState.Authenticated
+                        pushNotificationHelper.registerCurrentToken()
                     }
                     .onFailure {
                         _authState.value = AuthState.Unauthenticated
@@ -101,8 +107,26 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun signInWithGoogle(activityContext: Context) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            googleSignInHelper.signIn(activityContext)
+                .onSuccess { idToken -> googleAuth(idToken) }
+                .onFailure { e ->
+                    _isLoading.value = false
+                    val msg = e.message ?: "Google sign-in failed"
+                    if (!msg.contains("canceled", ignoreCase = true) &&
+                        !msg.contains("cancelled", ignoreCase = true)) {
+                        _error.value = msg
+                    }
+                }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
+            pushNotificationHelper.unregisterCurrentToken()
             authRepository.logout()
             _user.value = null
             _authState.value = AuthState.Unauthenticated

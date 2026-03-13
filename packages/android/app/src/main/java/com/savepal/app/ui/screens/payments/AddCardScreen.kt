@@ -13,6 +13,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.savepal.app.ui.components.*
 import com.savepal.app.ui.theme.*
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.rememberPaymentSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,8 +25,23 @@ fun AddCardScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    val paymentSheet = rememberPaymentSheet { result ->
+        viewModel.onPaymentSheetResult(result)
+    }
+
     LaunchedEffect(state.success) {
         if (state.success) onCardAdded()
+    }
+
+    // Present PaymentSheet when setup intent is ready
+    LaunchedEffect(state.readyToPresent, state.clientSecret) {
+        if (state.readyToPresent && state.clientSecret != null) {
+            viewModel.onSetupIntentPresented()
+            paymentSheet.presentWithSetupIntent(
+                setupIntentClientSecret = state.clientSecret!!,
+                configuration = viewModel.getPaymentSheetConfig()
+            )
+        }
     }
 
     Scaffold(
@@ -72,11 +89,9 @@ fun AddCardScreen(
             )
             Spacer(Modifier.height(32.dp))
 
-            // In a real implementation, this would use Stripe's PaymentSheet
-            // For now, we show a button that initiates the Stripe flow
             SavePalButton(
-                text = if (state.isLoading) "Setting up..." else "Add Card with Stripe",
-                onClick = { viewModel.initiateSetup() },
+                text = "Add Card",
+                onClick = { viewModel.createSetupIntent() },
                 isLoading = state.isLoading
             )
 
