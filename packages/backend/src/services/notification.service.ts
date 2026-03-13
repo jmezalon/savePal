@@ -3,6 +3,7 @@ import { NotificationType } from '@prisma/client';
 import emailService from './email.service.js';
 import { smsService } from './smsService.js';
 import apnsService from './apns.service.js';
+import fcmService from './fcm.service.js';
 
 interface CreateNotificationData {
   userId: string;
@@ -59,14 +60,20 @@ class NotificationService {
       },
     });
 
-    // Fire-and-forget push notification via APNs
+    // Fire-and-forget push notifications via APNs (iOS) and FCM (Android)
+    const pushPayload = {
+      notificationId: notification.id,
+      type: data.type,
+      ...(data.groupId ? { groupId: data.groupId } : {}),
+    };
+
     apnsService
-      .sendPushNotification(data.userId, data.title, data.message, {
-        notificationId: notification.id,
-        type: data.type,
-        ...(data.groupId ? { groupId: data.groupId } : {}),
-      })
+      .sendPushNotification(data.userId, data.title, data.message, pushPayload)
       .catch((err) => console.error('APNs push failed:', err));
+
+    fcmService
+      .sendPushNotification(data.userId, data.title, data.message, pushPayload)
+      .catch((err) => console.error('FCM push failed:', err));
 
     return notification;
   }

@@ -50,6 +50,22 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
 
+# Android
+packages/android/.gradle/
+packages/android/build/
+packages/android/app/build/
+packages/android/local.properties
+packages/android/*.iml
+packages/android/app/*.iml
+packages/android/.idea/
+packages/android/captures/
+packages/android/app/google-services.json
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
 # OS
 .DS_Store
 Thumbs.db
