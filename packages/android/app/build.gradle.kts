@@ -22,7 +22,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"https://savepal.onrender.com/api\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"145360208718-pkfb3vc6h95c8olf63qa4ks0o673us59.apps.googleusercontent.com\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"145360208718-5s82vuffotrbet4j49tn8joakeigfo3d.apps.googleusercontent.com\"")
     }
 
     buildTypes {

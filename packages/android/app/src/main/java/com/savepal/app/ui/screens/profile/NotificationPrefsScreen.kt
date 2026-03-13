@@ -16,6 +16,7 @@ import com.savepal.app.ui.screens.auth.AuthViewModel
 import com.savepal.app.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
