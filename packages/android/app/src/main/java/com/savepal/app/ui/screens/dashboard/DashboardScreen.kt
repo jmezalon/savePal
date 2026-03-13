@@ -121,11 +121,16 @@ fun DashboardScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text("Trust Score", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "Complete verifications to improve",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SavePalTextSecondary
-                            )
+                            val allVerified = state.user?.emailVerified == true &&
+                                state.user?.phoneVerified == true &&
+                                state.user?.stripeConnectOnboarded == true
+                            if (!allVerified) {
+                                Text(
+                                    "Complete verifications to improve",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SavePalTextSecondary
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))

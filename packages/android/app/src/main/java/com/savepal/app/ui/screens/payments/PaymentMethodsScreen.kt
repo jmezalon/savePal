@@ -13,15 +13,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.savepal.app.data.model.SavedPaymentMethod
 import com.savepal.app.ui.components.*
 import com.savepal.app.ui.theme.*
+import com.stripe.android.paymentsheet.rememberPaymentSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentMethodsScreen(
     onBack: () -> Unit,
-    onAddCard: () -> Unit,
     viewModel: PaymentMethodsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    val paymentSheet = rememberPaymentSheet { result ->
+        viewModel.onPaymentSheetResult(result)
+    }
+
+    // Present PaymentSheet when setup intent is ready
+    LaunchedEffect(state.readyToPresent, state.clientSecret) {
+        if (state.readyToPresent && state.clientSecret != null) {
+            viewModel.onSetupIntentPresented()
+            paymentSheet.presentWithSetupIntent(
+                setupIntentClientSecret = state.clientSecret!!,
+                configuration = viewModel.getPaymentSheetConfig()
+            )
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -33,8 +48,15 @@ fun PaymentMethodsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onAddCard) {
-                        Icon(Icons.Default.Add, contentDescription = "Add card")
+                    if (state.addCardLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).then(Modifier.padding(end = 12.dp)),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(onClick = { viewModel.addCard() }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add card")
+                        }
                     }
                 }
             )
@@ -51,18 +73,24 @@ fun PaymentMethodsScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            state.addCardError?.let {
+                ErrorBanner(message = it, onDismiss = { viewModel.clearAddCardError() })
+                Spacer(Modifier.height(8.dp))
+            }
+
             if (state.methods.isEmpty()) {
                 EmptyStateView(
                     icon = Icons.Default.CreditCard,
                     title = "No Payment Methods",
                     message = "Add a card to make payments.",
                     buttonText = "Add Card",
-                    onButtonClick = onAddCard
+                    onButtonClick = { viewModel.addCard() }
                 )
             } else {
                 state.methods.forEach { method ->
                     PaymentMethodCard(
                         method = method,
+                        isLastCard = state.methods.size == 1,
                         onSetDefault = { viewModel.setDefault(method.id) },
                         onDelete = { viewModel.delete(method.id) }
                     )
@@ -76,6 +104,7 @@ fun PaymentMethodsScreen(
 @Composable
 private fun PaymentMethodCard(
     method: SavedPaymentMethod,
+    isLastCard: Boolean,
     onSetDefault: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -123,8 +152,15 @@ private fun PaymentMethodCard(
             if (!method.isDefault) {
                 TextButton(onClick = onSetDefault) { Text("Set Default", color = SavePalBlue) }
             }
-            IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = SavePalRed)
+            IconButton(
+                onClick = { showDeleteDialog = true },
+                enabled = !isLastCard
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = if (isLastCard) "Cannot delete last card" else "Delete",
+                    tint = if (isLastCard) SavePalTextTertiary else SavePalRed
+                )
             }
         }
     }

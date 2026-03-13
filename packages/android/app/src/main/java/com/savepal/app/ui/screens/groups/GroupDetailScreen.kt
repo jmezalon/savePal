@@ -237,66 +237,214 @@ fun GroupDetailScreen(
                     Text("Current Cycle", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
-                    SavePalCard {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Cycle #${cycle.cycleNumber}", style = MaterialTheme.typography.titleSmall)
-                            cycle.dueDate?.let {
-                                Text("Due: ${it.toFormattedDate()}", style = MaterialTheme.typography.bodySmall, color = SavePalTextSecondary)
+                    val payments = cycle.payments ?: emptyList()
+                    val completedCount = payments.count { it.status == PaymentStatus.COMPLETED }
+                    val totalCount = payments.size
+                    val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+
+                    // Group payments by member
+                    val memberGroups = payments
+                        .groupBy { it.userId }
+                        .map { (userId, memberPayments) ->
+                            val user = memberPayments.firstNotNullOfOrNull { it.user }
+                            Triple(userId, user, memberPayments)
+                        }
+                        .sortedBy { it.third.firstOrNull()?.contributionPeriod ?: 0 }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = SavePalBlueLight.copy(alpha = 0.3f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, SavePalBlue.copy(alpha = 0.15f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Header: cycle info + progress ring
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Cycle ${cycle.cycleNumber}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    cycle.dueDate?.let {
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.CalendarToday,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                                tint = SavePalTextSecondary
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                "Due: ${it.toFormattedDate()}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = SavePalTextSecondary
+                                            )
+                                        }
+                                    }
+                                    cycle.totalAmount?.let {
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            "Payout: ${it.toCurrency()}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = SavePalTextSecondary
+                                        )
+                                    }
+                                }
+
+                                // Circular progress ring
+                                if (totalCount > 0) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.size(56.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            progress = { 1f },
+                                            modifier = Modifier.fillMaxSize(),
+                                            color = SavePalBorder,
+                                            strokeWidth = 5.dp
+                                        )
+                                        CircularProgressIndicator(
+                                            progress = { progress },
+                                            modifier = Modifier.fillMaxSize(),
+                                            color = SavePalBlue,
+                                            strokeWidth = 5.dp,
+                                            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                        )
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                "$completedCount",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                "/$totalCount",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = SavePalTextSecondary
+                                            )
+                                        }
+                                    }
+                                }
                             }
-                        }
 
-                        cycle.totalAmount?.let {
-                            Spacer(Modifier.height(8.dp))
-                            Text("Pot: ${it.toCurrency()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SavePalGreen)
-                        }
-
-                        // Payment progress
-                        cycle.payments?.let { payments ->
-                            val completed = payments.count { it.status == PaymentStatus.COMPLETED }
-                            val total = payments.size
-                            if (total > 0) {
-                                Spacer(Modifier.height(12.dp))
+                            // Contribution period bars
+                            val periods = memberGroups.firstOrNull()?.third?.size ?: 0
+                            if (periods > 1) {
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    "Contribution Periods",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = SavePalTextSecondary
+                                )
+                                Spacer(Modifier.height(6.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text("Contributions", style = MaterialTheme.typography.bodySmall)
-                                    Text("$completed / $total", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                    for (period in 1..periods) {
+                                        val periodPayments = payments.filter { it.contributionPeriod == period }
+                                        val periodCompleted = periodPayments.count { it.status == PaymentStatus.COMPLETED }
+                                        val periodTotal = periodPayments.size
+                                        val allDone = periodCompleted == periodTotal && periodTotal > 0
+                                        val someStarted = periodCompleted > 0
+
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(6.dp)
+                                                    .clip(RoundedCornerShape(3.dp))
+                                                    .background(
+                                                        when {
+                                                            allDone -> SavePalGreen
+                                                            someStarted -> SavePalGreen.copy(alpha = 0.4f)
+                                                            else -> SavePalBorder
+                                                        }
+                                                    )
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                "Wk $period",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = androidx.compose.ui.unit.TextUnit(9f, androidx.compose.ui.unit.TextUnitType.Sp)
+                                                ),
+                                                color = SavePalTextSecondary
+                                            )
+                                        }
+                                    }
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                LinearProgressIndicator(
-                                    progress = { completed.toFloat() / total },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = SavePalGreen,
-                                    trackColor = SavePalBorder
-                                )
                             }
 
-                            // Per-member payment status
+                            // Divider
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider(color = SavePalBlue.copy(alpha = 0.12f))
                             Spacer(Modifier.height(12.dp))
-                            payments.forEach { payment ->
-                                val isCurrent = payment.userId == state.currentUserId
+
+                            // Member summary rows
+                            memberGroups.forEach { (userId, user, memberPayments) ->
+                                val isCurrentUser = userId == state.currentUserId
+                                val memberCompleted = memberPayments.count { it.status == PaymentStatus.COMPLETED }
+                                val memberTotal = memberPayments.size
+                                val memberProgress = if (memberTotal > 0) memberCompleted.toFloat() / memberTotal else 0f
+                                val nextPending = memberPayments.firstOrNull { it.status == PaymentStatus.PENDING }
+
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        if (isCurrent) "You" else payment.user?.fullName ?: "Member",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal
+                                    // Avatar
+                                    AvatarCircle(
+                                        initials = user?.initials ?: "?",
+                                        size = 32
                                     )
-                                    if (payment.status == PaymentStatus.COMPLETED) {
-                                        StatusBadge("Paid", SavePalGreen)
-                                    } else if (isCurrent && payment.status == PaymentStatus.PENDING) {
-                                        TextButton(onClick = { onNavigateToPayment(payment.id) }) {
-                                            Text("Pay Now", color = SavePalBlue)
+                                    Spacer(Modifier.width(10.dp))
+
+                                    // Name + mini progress bar
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            if (isCurrentUser) "You" else user?.fullName ?: "Member",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isCurrentUser) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        LinearProgressIndicator(
+                                            progress = { memberProgress },
+                                            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                                            color = if (memberCompleted == memberTotal) SavePalGreen else SavePalBlue,
+                                            trackColor = SavePalBorder.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+
+                                    // Status
+                                    if (memberCompleted == memberTotal) {
+                                        StatusBadge("Done", SavePalGreen)
+                                    } else if (isCurrentUser && nextPending != null) {
+                                        Button(
+                                            onClick = { onNavigateToPayment(nextPending.id) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = SavePalBlue),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.height(30.dp)
+                                        ) {
+                                            Text("Pay Now", style = MaterialTheme.typography.labelSmall)
                                         }
                                     } else {
-                                        PaymentStatusBadge(payment.status)
+                                        Text(
+                                            "$memberCompleted/$memberTotal",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = SavePalTextSecondary
+                                        )
                                     }
                                 }
                             }
@@ -395,8 +543,8 @@ fun GroupDetailScreen(
                     }
                 }
 
-                // Delete Group
-                if (state.isOwner) {
+                // Delete Group (only for non-active groups)
+                if (state.isOwner && group.status != GroupStatus.ACTIVE) {
                     Spacer(Modifier.height(32.dp))
                     OutlinedButton(
                         onClick = { showDeleteDialog = true },

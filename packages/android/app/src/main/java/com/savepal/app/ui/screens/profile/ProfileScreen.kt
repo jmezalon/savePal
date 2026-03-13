@@ -30,12 +30,14 @@ fun ProfileScreen(
     onNavigateToPaymentMethods: () -> Unit,
     onNavigateToBankAccount: () -> Unit,
     onNavigateToHelp: () -> Unit,
-    onLogout: () -> Unit,
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val user by authViewModel.user.collectAsStateWithLifecycle()
+    val hasActiveGroups by authViewModel.hasActiveGroups.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { authViewModel.checkActiveGroups() }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -46,7 +48,6 @@ fun ProfileScreen(
                 TextButton(onClick = {
                     showLogoutDialog = false
                     authViewModel.logout()
-                    onLogout()
                 }) { Text("Sign Out", color = SavePalRed) }
             },
             dismissButton = {
@@ -63,8 +64,7 @@ fun ProfileScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    // viewModel.deleteAccount()
-                    onLogout()
+                    authViewModel.deleteAccount()
                 }) { Text("Delete", color = SavePalRed) }
             },
             dismissButton = {
@@ -184,9 +184,13 @@ fun ProfileScreen(
 
         TextButton(
             onClick = { showDeleteDialog = true },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !hasActiveGroups
         ) {
-            Text("Delete Account", color = SavePalRed)
+            Text(
+                if (hasActiveGroups) "Cannot delete — active group(s)" else "Delete Account",
+                color = if (hasActiveGroups) SavePalTextTertiary else SavePalRed
+            )
         }
 
         Spacer(Modifier.height(24.dp))

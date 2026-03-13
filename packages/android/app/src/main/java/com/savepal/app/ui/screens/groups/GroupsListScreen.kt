@@ -65,15 +65,43 @@ fun GroupsListScreen(
             }
         }
 
+        // Action buttons
+        if (!state.isLoading) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onNavigateToJoinGroup,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SavePalBlue)
+                ) {
+                    Icon(Icons.Default.Login, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Join Group")
+                }
+                Button(
+                    onClick = onNavigateToCreateGroup,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = SavePalBlue)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Create Group")
+                }
+            }
+        }
+
         if (state.isLoading) {
             LoadingView()
         } else if (state.groups.isEmpty()) {
             EmptyStateView(
                 icon = Icons.Default.Groups,
                 title = "No Groups Yet",
-                message = "Create a new savings group or join an existing one to get started.",
-                buttonText = "Create Group",
-                onButtonClick = onNavigateToCreateGroup
+                message = "Create a new savings group or join an existing one to get started."
             )
         } else {
             PullToRefreshBox(

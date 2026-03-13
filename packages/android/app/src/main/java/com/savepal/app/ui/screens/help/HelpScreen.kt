@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.savepal.app.ui.components.SavePalCard
 import com.savepal.app.ui.theme.*
@@ -56,6 +57,7 @@ private val faqItems = listOf(
 @Composable
 fun HelpScreen(onBack: () -> Unit) {
     var expandedIndex by remember { mutableIntStateOf(-1) }
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(
         topBar = {
@@ -115,6 +117,37 @@ fun HelpScreen(onBack: () -> Unit) {
                             }
                         }
                     }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Text("Legal", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+
+            SavePalCard(modifier = Modifier.padding(vertical = 4.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { uriHandler.openUri("https://save-pals.com/privacy") },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.PrivacyTip, contentDescription = null, tint = SavePalBlue, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Privacy Policy", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.OpenInNew, contentDescription = null, tint = SavePalTextTertiary, modifier = Modifier.size(18.dp))
+                }
+            }
+            SavePalCard(modifier = Modifier.padding(vertical = 4.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { uriHandler.openUri("https://save-pals.com/terms") },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Description, contentDescription = null, tint = SavePalBlue, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Terms of Service", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.OpenInNew, contentDescription = null, tint = SavePalTextTertiary, modifier = Modifier.size(18.dp))
                 }
             }
 

@@ -17,7 +17,7 @@ data class CreateGroupState(
     val payoutMethod: PayoutMethod = PayoutMethod.SEQUENTIAL,
     val maxMembers: String = "5",
     val waiverCode: String = "",
-    val feeRequired: Boolean = false,
+    val feeRequired: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: Boolean = false
