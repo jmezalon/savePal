@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
 import com.savepal.app.data.local.TokenManager
+import com.savepal.app.data.model.GroupStatus
 import com.savepal.app.data.model.User
 import com.savepal.app.data.repository.AuthRepository
+import com.savepal.app.data.repository.GroupRepository
 import com.savepal.app.util.GoogleSignInHelper
 import com.savepal.app.util.PushNotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val groupRepository: GroupRepository,
     private val tokenManager: TokenManager,
     val googleSignInHelper: GoogleSignInHelper,
     private val pushNotificationHelper: PushNotificationHelper
@@ -39,11 +42,23 @@ class AuthViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _hasActiveGroups = MutableStateFlow(false)
+    val hasActiveGroups: StateFlow<Boolean> = _hasActiveGroups.asStateFlow()
+
     val hasOnboarded: StateFlow<Boolean> = tokenManager.hasOnboarded
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
         checkAuth()
+        // Observe token changes so all instances react to login/logout
+        viewModelScope.launch {
+            tokenManager.tokenFlow.collect { token ->
+                if (token == null && _authState.value == AuthState.Authenticated) {
+                    _user.value = null
+                    _authState.value = AuthState.Unauthenticated
+                }
+            }
+        }
     }
 
     private fun checkAuth() {
@@ -126,7 +141,7 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            pushNotificationHelper.unregisterCurrentToken()
+            try { pushNotificationHelper.unregisterCurrentToken() } catch (_: Exception) { }
             authRepository.logout()
             _user.value = null
             _authState.value = AuthState.Unauthenticated
@@ -136,6 +151,28 @@ class AuthViewModel @Inject constructor(
     fun refreshUser() {
         viewModelScope.launch {
             authRepository.getMe().onSuccess { _user.value = it }
+        }
+    }
+
+    fun checkActiveGroups() {
+        viewModelScope.launch {
+            groupRepository.getGroups()
+                .onSuccess { groups ->
+                    _hasActiveGroups.value = groups.any { it.status == GroupStatus.ACTIVE }
+                }
+        }
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            authRepository.deleteAccount()
+                .onSuccess {
+                    _user.value = null
+                    _authState.value = AuthState.Unauthenticated
+                }
+                .onFailure { _error.value = it.message ?: "Failed to delete account" }
+            _isLoading.value = false
         }
     }
 

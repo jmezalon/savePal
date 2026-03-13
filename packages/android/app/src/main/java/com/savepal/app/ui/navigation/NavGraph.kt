@@ -18,7 +18,8 @@ import com.savepal.app.ui.screens.profile.*
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    startDestination: String
+    startDestination: String,
+    authViewModel: AuthViewModel
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
 
@@ -34,11 +35,12 @@ fun AppNavGraph(
 
         composable(Routes.LOGIN) {
             LoginScreen(
+                viewModel = authViewModel,
                 onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
                 onNavigateToForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
                 onLoginSuccess = {
                     navController.navigate(Routes.MAIN) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
                     }
                 }
             )
@@ -46,10 +48,11 @@ fun AppNavGraph(
 
         composable(Routes.REGISTER) {
             RegisterScreen(
+                viewModel = authViewModel,
                 onNavigateToLogin = { navController.popBackStack() },
                 onRegisterSuccess = {
                     navController.navigate(Routes.MAIN) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
                     }
                 }
             )
@@ -60,7 +63,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.MAIN) {
-            MainScreen(navController = navController)
+            MainScreen(navController = navController, authViewModel = authViewModel)
         }
 
         composable(Routes.CREATE_GROUP) {
@@ -107,17 +110,9 @@ fun AppNavGraph(
             NotificationsScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(Routes.ADD_CARD) {
-            AddCardScreen(
-                onBack = { navController.popBackStack() },
-                onCardAdded = { navController.popBackStack() }
-            )
-        }
-
         composable(Routes.PAYMENT_METHODS) {
             PaymentMethodsScreen(
-                onBack = { navController.popBackStack() },
-                onAddCard = { navController.navigate(Routes.ADD_CARD) }
+                onBack = { navController.popBackStack() }
             )
         }
 

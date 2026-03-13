@@ -13,16 +13,38 @@ import com.savepal.app.ui.screens.auth.AuthViewModel
 fun SavePalRoot(authViewModel: AuthViewModel = hiltViewModel()) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val hasOnboarded by authViewModel.hasOnboarded.collectAsStateWithLifecycle()
-    val navController = rememberNavController()
 
     when (authState) {
         AuthViewModel.AuthState.Loading -> LoadingView()
-        AuthViewModel.AuthState.Authenticated -> {
-            AppNavGraph(navController = navController, startDestination = Routes.MAIN)
-        }
-        AuthViewModel.AuthState.Unauthenticated -> {
-            val start = if (hasOnboarded) Routes.LOGIN else Routes.ONBOARDING
-            AppNavGraph(navController = navController, startDestination = start)
+        else -> {
+            // Determine initial start destination only once
+            val initialAuth = authState == AuthViewModel.AuthState.Authenticated
+            val startDestination = remember {
+                if (initialAuth) Routes.MAIN
+                else if (hasOnboarded) Routes.LOGIN
+                else Routes.ONBOARDING
+            }
+            val navController = rememberNavController()
+
+            // React to auth state changes for logout/session expiry
+            LaunchedEffect(authState) {
+                if (authState == AuthViewModel.AuthState.Unauthenticated) {
+                    val currentRoute = navController.currentDestination?.route
+                    if (currentRoute != null &&
+                        currentRoute != Routes.LOGIN &&
+                        currentRoute != Routes.REGISTER &&
+                        currentRoute != Routes.ONBOARDING &&
+                        currentRoute != Routes.FORGOT_PASSWORD
+                    ) {
+                        val target = if (hasOnboarded) Routes.LOGIN else Routes.ONBOARDING
+                        navController.navigate(target) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    }
+                }
+            }
+
+            AppNavGraph(navController = navController, startDestination = startDestination, authViewModel = authViewModel)
         }
     }
 }

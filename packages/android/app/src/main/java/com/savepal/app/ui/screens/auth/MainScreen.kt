@@ -6,8 +6,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.savepal.app.ui.screens.dashboard.DashboardScreen
 import com.savepal.app.ui.screens.groups.GroupsListScreen
@@ -28,8 +31,9 @@ private enum class Tab(
 }
 
 @Composable
-fun MainScreen(navController: NavHostController) {
-    var selectedTab by remember { mutableStateOf(Tab.Dashboard) }
+fun MainScreen(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val selectedTab = Tab.entries[selectedTabIndex]
 
     Scaffold(
         bottomBar = {
@@ -37,7 +41,7 @@ fun MainScreen(navController: NavHostController) {
                 Tab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
+                        onClick = { selectedTabIndex = tab.ordinal },
                         icon = {
                             Icon(
                                 if (selectedTab == tab) tab.selectedIcon else tab.unselectedIcon,
@@ -61,7 +65,7 @@ fun MainScreen(navController: NavHostController) {
                 onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onNavigateToGroup = { navController.navigate(Routes.groupDetail(it)) },
                 onNavigateToPayment = { navController.navigate(Routes.makePayment(it)) },
-                onNavigateToGroups = { selectedTab = Tab.Groups },
+                onNavigateToGroups = { selectedTabIndex = Tab.Groups.ordinal },
                 onNavigateToCreateGroup = { navController.navigate(Routes.CREATE_GROUP) },
                 onNavigateToJoinGroup = { navController.navigate(Routes.JOIN_GROUP) }
             )
@@ -77,17 +81,13 @@ fun MainScreen(navController: NavHostController) {
             )
             Tab.Profile -> ProfileScreen(
                 modifier = Modifier.padding(padding),
+                authViewModel = authViewModel,
                 onNavigateToEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
                 onNavigateToChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
                 onNavigateToNotificationPrefs = { navController.navigate(Routes.NOTIFICATION_PREFS) },
                 onNavigateToPaymentMethods = { navController.navigate(Routes.PAYMENT_METHODS) },
                 onNavigateToBankAccount = { navController.navigate(Routes.BANK_ACCOUNT) },
-                onNavigateToHelp = { navController.navigate(Routes.HELP) },
-                onLogout = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
+                onNavigateToHelp = { navController.navigate(Routes.HELP) }
             )
         }
     }
