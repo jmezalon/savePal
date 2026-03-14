@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/savepal/id6744258498';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.savepal.app';
 
 export default function Landing() {
 
@@ -303,7 +304,7 @@ export default function Landing() {
                 SavePal on the Go
               </h2>
               <p className="text-lg text-gray-300 max-w-xl">
-                Manage your savings groups, make payments, and track your progress — all from your iPhone. Get push notifications so you never miss a payment.
+                Manage your savings groups, make payments, and track your progress — all from your phone. Get push notifications so you never miss a payment.
               </p>
               <div className="mt-6 flex flex-col sm:flex-row items-center gap-4 md:justify-start justify-center">
                 <a
@@ -320,12 +321,26 @@ export default function Landing() {
                     <div className="text-lg font-semibold leading-tight">App Store</div>
                   </div>
                 </a>
+                <a
+                  href={PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-6 py-3 bg-white text-gray-900 rounded-xl hover:bg-gray-100 transition-colors shadow-lg"
+                >
+                  <svg className="w-8 h-8 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 2.302c.7.4.7 1.08 0 1.48l-2.302 1.302-2.532-2.532 2.532-2.552zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z" />
+                  </svg>
+                  <div className="text-left">
+                    <div className="text-xs">Get it on</div>
+                    <div className="text-lg font-semibold leading-tight">Google Play</div>
+                  </div>
+                </a>
               </div>
             </div>
             <div className="flex-shrink-0">
               <img
                 src="/images/ios-app-screenshot.png"
-                alt="SavePal iOS app screenshot showing the dashboard"
+                alt="SavePal mobile app screenshot showing the dashboard"
                 className="w-64 md:w-72 rounded-2xl shadow-2xl"
               />
             </div>
