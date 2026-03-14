@@ -3,6 +3,8 @@ package com.savepal.app.data.repository
 import com.savepal.app.data.local.TokenManager
 import com.savepal.app.data.model.*
 import com.savepal.app.data.remote.ApiService
+import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -84,9 +86,24 @@ class AuthRepository @Inject constructor(
     suspend fun isLoggedIn(): Boolean = tokenManager.getToken() != null
 }
 
+private val lenientJson = Json { ignoreUnknownKeys = true }
+
 internal suspend fun <T> apiCall(block: suspend () -> T): Result<T> {
     return try {
         Result.success(block())
+    } catch (e: HttpException) {
+        val errorMessage = try {
+            val errorBody = e.response()?.errorBody()?.string()
+            if (errorBody != null) {
+                val errorResponse = lenientJson.decodeFromString<MessageResponse>(errorBody)
+                errorResponse.error ?: errorResponse.message ?: "Request failed (${e.code()})"
+            } else {
+                "Request failed (${e.code()})"
+            }
+        } catch (_: Exception) {
+            "Request failed (${e.code()})"
+        }
+        Result.failure(Exception(errorMessage))
     } catch (e: Exception) {
         Result.failure(e)
     }

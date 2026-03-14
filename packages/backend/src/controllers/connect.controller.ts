@@ -1,7 +1,29 @@
 import { Response, Request } from 'express';
+import Stripe from 'stripe';
 import prisma from '../utils/prisma.js';
 import stripeService from '../services/stripe.service.js';
 import notificationService from '../services/notification.service.js';
+
+function getUserFriendlyError(error: any): string {
+  if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+    const msg = error.message?.toLowerCase() || '';
+    if (msg.includes('routing')) return 'Invalid routing number. Please check and try again.';
+    if (msg.includes('account number')) return 'Invalid account number. Please check and try again.';
+    if (msg.includes('bank account')) return 'Could not verify bank account details. Please check your information.';
+    if (msg.includes('already has')) return 'A bank account is already linked. Please remove the existing one first.';
+    return 'There was an issue with your bank details. Please verify your information and try again.';
+  }
+  if (error instanceof Stripe.errors.StripeAPIError) {
+    return 'Our payment processor is temporarily unavailable. Please try again in a few minutes.';
+  }
+  if (error instanceof Stripe.errors.StripeConnectionError) {
+    return 'Unable to connect to our payment processor. Please check your connection and try again.';
+  }
+  if (error instanceof Stripe.errors.StripeError) {
+    return 'Something went wrong processing your request. Please try again.';
+  }
+  return error.message || 'An unexpected error occurred. Please try again.';
+}
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -151,9 +173,10 @@ class ConnectController {
         },
       });
     } catch (error: any) {
+      console.error('Connect setup error:', error.message);
       res.status(400).json({
         success: false,
-        error: error.message,
+        error: getUserFriendlyError(error),
       });
     }
   }
@@ -173,9 +196,10 @@ class ConnectController {
         data: status,
       });
     } catch (error: any) {
+      console.error('Connect status error:', error.message);
       res.status(400).json({
         success: false,
-        error: error.message,
+        error: getUserFriendlyError(error),
       });
     }
   }
@@ -279,9 +303,10 @@ class ConnectController {
         data: { transfersStatus: result.transfersStatus },
       });
     } catch (error: any) {
+      console.error('Verify identity error:', error.message);
       res.status(400).json({
         success: false,
-        error: error.message,
+        error: getUserFriendlyError(error),
       });
     }
   }
@@ -306,9 +331,10 @@ class ConnectController {
         message: 'Bank account removed successfully',
       });
     } catch (error: any) {
+      console.error('Remove bank account error:', error.message);
       res.status(400).json({
         success: false,
-        error: error.message,
+        error: getUserFriendlyError(error),
       });
     }
   }
