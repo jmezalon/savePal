@@ -441,6 +441,23 @@ class NotificationService {
       removed: 'A bank account was removed from your SavePal account. If you did not make this change, please secure your account immediately.',
     };
 
+    // Send security alert email (always, regardless of preferences)
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (user?.email) {
+        await emailService.sendBankAccountChangeEmail(
+          user.email,
+          user.firstName || 'there',
+          action
+        );
+      }
+    } catch (emailErr) {
+      console.error('Failed to send bank account change email:', emailErr);
+    }
+
     return this.createNotification({
       userId,
       type: 'BANK_ACCOUNT_UPDATED',

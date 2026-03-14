@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'PAYMENT_DISPUTED';
+ALTER TYPE "NotificationType" ADD VALUE 'BANK_ACCOUNT_UPDATED';
