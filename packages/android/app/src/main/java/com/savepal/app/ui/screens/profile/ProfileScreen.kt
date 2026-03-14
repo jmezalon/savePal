@@ -1,6 +1,7 @@
 package com.savepal.app.ui.screens.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -203,7 +204,7 @@ private fun ProfileMenuItem(
     title: String,
     onClick: () -> Unit
 ) {
-    SavePalCard(modifier = Modifier.padding(vertical = 2.dp)) {
+    SavePalCard(modifier = Modifier.padding(vertical = 2.dp).clickable(onClick = onClick)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -213,9 +214,7 @@ private fun ProfileMenuItem(
             Icon(icon, contentDescription = null, tint = SavePalBlue, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
             Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            IconButton(onClick = onClick) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SavePalTextTertiary)
-            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SavePalTextTertiary)
         }
     }
 }

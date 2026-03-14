@@ -38,6 +38,12 @@ fun EditProfileScreen(
         }
     }
 
+    LaunchedEffect(state.phoneVerified) {
+        if (state.phoneVerified) {
+            authViewModel.refreshUser()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -85,7 +91,7 @@ fun EditProfileScreen(
             )
 
             // Phone verification
-            if (state.phone.isNotBlank() && user?.phoneVerified != true) {
+            if (state.phone.isNotBlank() && user?.phoneVerified != true && !state.phoneVerified) {
                 Spacer(Modifier.height(16.dp))
                 SavePalCard {
                     Text("Phone Verification", style = MaterialTheme.typography.titleSmall)
@@ -113,10 +119,15 @@ fun EditProfileScreen(
                             }
                         }
                     }
+                }
+            }
 
-                    state.verificationMessage?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = SavePalGreen)
+            if (state.phoneVerified) {
+                Spacer(Modifier.height(16.dp))
+                SavePalCard {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SavePalGreen)
+                        Text("Phone verified!", color = SavePalGreen)
                     }
                 }
             }

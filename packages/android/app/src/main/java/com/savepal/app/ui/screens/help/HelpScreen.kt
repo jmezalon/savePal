@@ -153,14 +153,14 @@ fun HelpScreen(onBack: () -> Unit) {
 
             Spacer(Modifier.height(32.dp))
 
-            SavePalCard {
+            SavePalCard(modifier = Modifier.clickable { uriHandler.openUri("mailto:support@save-pals.com") }) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Email, contentDescription = null, tint = SavePalBlue)
                     Spacer(Modifier.height(8.dp))
                     Text("Need more help?", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Contact us at support@savepal.com",
+                        "Contact us at support@save-pals.com",
                         style = MaterialTheme.typography.bodySmall,
                         color = SavePalBlue
                     )

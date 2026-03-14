@@ -16,6 +16,7 @@ data class EditProfileState(
     val phone: String = "",
     val verificationCode: String = "",
     val codeSent: Boolean = false,
+    val phoneVerified: Boolean = false,
     val verificationMessage: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -91,7 +92,16 @@ class EditProfileViewModel @Inject constructor(
     fun verifyPhone() {
         viewModelScope.launch {
             authRepository.verifyPhone(_state.value.verificationCode)
-                .onSuccess { _state.update { it.copy(verificationMessage = "Phone verified!") } }
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            phoneVerified = true,
+                            codeSent = false,
+                            verificationCode = "",
+                            verificationMessage = "Phone verified!"
+                        )
+                    }
+                }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
