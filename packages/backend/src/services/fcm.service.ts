@@ -40,7 +40,7 @@ class FCMService {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { access_token: string; expires_in: number };
       this.accessToken = data.access_token;
       this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
       return this.accessToken;
@@ -133,7 +133,7 @@ class FCMService {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json() as { error?: { details?: { errorCode?: string }[] } };
           const errorCode = errorData?.error?.details?.[0]?.errorCode;
           if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
             await prisma.deviceToken.delete({ where: { id: dt.id } }).catch(() => {});
