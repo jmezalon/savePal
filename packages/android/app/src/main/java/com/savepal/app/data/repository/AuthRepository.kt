@@ -29,7 +29,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun googleAuth(token: String): Result<User> = apiCall {
-        val response = api.googleAuth(GoogleAuthRequest(token))
+        val response = api.googleAuth(GoogleAuthRequest(credential = token))
         val data = response.data ?: throw Exception(response.error ?: "Google auth failed")
         tokenManager.saveToken(data.token)
         data.user

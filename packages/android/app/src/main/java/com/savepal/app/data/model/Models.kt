@@ -83,7 +83,7 @@ data class RegisterRequest(
 
 @Serializable
 data class GoogleAuthRequest(
-    val token: String
+    val credential: String
 )
 
 @Serializable

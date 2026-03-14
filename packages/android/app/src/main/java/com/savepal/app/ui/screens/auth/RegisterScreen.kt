@@ -217,9 +217,13 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                Text("Already have an account? ", color = SavePalTextSecondary)
-                TextButton(onClick = onNavigateToLogin, contentPadding = PaddingValues(0.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Already have an account?", color = SavePalTextSecondary)
+                TextButton(onClick = onNavigateToLogin) {
                     Text("Sign In", color = SavePalBlue, fontWeight = FontWeight.SemiBold)
                 }
             }
