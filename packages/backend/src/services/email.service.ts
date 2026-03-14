@@ -359,6 +359,48 @@ class EmailService {
 
     await this.sendEmail({ to: email, subject, html, text });
   }
+  /**
+   * Send bank account change security alert email
+   */
+  async sendBankAccountChangeEmail(
+    email: string,
+    name: string,
+    action: 'added' | 'updated' | 'removed'
+  ): Promise<void> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@save-pals.com';
+
+    const subjects: Record<string, string> = {
+      added: 'Security Alert: Bank Account Added',
+      updated: 'Security Alert: Bank Account Updated',
+      removed: 'Security Alert: Bank Account Removed',
+    };
+
+    const descriptions: Record<string, string> = {
+      added: 'A bank account was successfully added to your SavePal account.',
+      updated: 'Your bank account verification details were updated on your SavePal account.',
+      removed: 'A bank account was removed from your SavePal account.',
+    };
+
+    const subject = subjects[action];
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Security Alert</h2>
+        <p>Hi ${name},</p>
+        <p>${descriptions[action]}</p>
+        <p style="color: #dc2626; font-weight: bold;">If you did not make this change, please secure your account immediately by changing your password and contacting our support team.</p>
+        <div style="margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/profile"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Review Account Settings
+          </a>
+        </div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `Hi ${name},\n\n${descriptions[action]}\n\nIf you did not make this change, please secure your account immediately by changing your password and contacting our support team.\n\nReview your account: ${process.env.FRONTEND_URL}/profile\n\nBest regards,\nThe SavePal Team\n\nNeed help? Contact us at ${supportEmail}`;
+
+    await this.sendEmail({ to: email, subject, html, text });
+  }
 }
 
 export default new EmailService();
