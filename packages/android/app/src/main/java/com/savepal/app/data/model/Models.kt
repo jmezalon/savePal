@@ -462,17 +462,14 @@ data class ConnectSetupRequest(
     val routingNumber: String,
     val accountNumber: String,
     val accountHolderName: String,
-    val dateOfBirth: String,
+    val dobDay: Int,
+    val dobMonth: Int,
+    val dobYear: Int,
     val ssnLast4: String,
-    val address: ConnectAddress
-)
-
-@Serializable
-data class ConnectAddress(
-    val line1: String,
-    val city: String,
-    val state: String,
-    val postalCode: String
+    val addressLine1: String,
+    val addressCity: String,
+    val addressState: String,
+    val addressPostalCode: String
 )
 
 @Serializable
@@ -516,9 +513,14 @@ data class ConnectRequirements(
 
 @Serializable
 data class VerifyIdentityRequest(
-    val dateOfBirth: String,
+    val dobDay: Int,
+    val dobMonth: Int,
+    val dobYear: Int,
     val ssnLast4: String,
-    val address: ConnectAddress
+    val addressLine1: String,
+    val addressCity: String,
+    val addressState: String,
+    val addressPostalCode: String
 )
 
 // ── Notifications ──

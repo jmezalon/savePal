@@ -65,9 +65,26 @@ class EditProfileViewModel @Inject constructor(
 
     fun sendVerificationCode() {
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            // Save the phone number to the profile first, then send verification
+            val phone = _state.value.phone.trim()
+            if (phone.isBlank()) {
+                _state.update { it.copy(isLoading = false, error = "Please enter a phone number") }
+                return@launch
+            }
+            authRepository.updateProfile(
+                UpdateProfileRequest(
+                    firstName = _state.value.firstName.trim(),
+                    lastName = _state.value.lastName.trim(),
+                    phoneNumber = phone
+                )
+            ).onFailure { e ->
+                _state.update { it.copy(isLoading = false, error = e.message) }
+                return@launch
+            }
             authRepository.sendPhoneVerification()
-                .onSuccess { _state.update { it.copy(codeSent = true, verificationMessage = "Code sent!") } }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+                .onSuccess { _state.update { it.copy(isLoading = false, codeSent = true, verificationMessage = "Code sent!") } }
+                .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 

@@ -81,14 +81,31 @@ class BankAccountViewModel @Inject constructor(
         val s = _state.value
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true, error = null) }
+            val dobParts = s.dateOfBirth.split("/")
+            if (dobParts.size != 3) {
+                _state.update { it.copy(isSaving = false, error = "Date of birth must be in MM/DD/YYYY format") }
+                return@launch
+            }
+            val dobMonth = dobParts[0].toIntOrNull()
+            val dobDay = dobParts[1].toIntOrNull()
+            val dobYear = dobParts[2].toIntOrNull()
+            if (dobMonth == null || dobDay == null || dobYear == null) {
+                _state.update { it.copy(isSaving = false, error = "Invalid date of birth") }
+                return@launch
+            }
             paymentRepository.setupConnect(
                 ConnectSetupRequest(
                     routingNumber = s.routingNumber,
                     accountNumber = s.accountNumber,
                     accountHolderName = s.accountHolderName,
-                    dateOfBirth = s.dateOfBirth,
+                    dobDay = dobDay,
+                    dobMonth = dobMonth,
+                    dobYear = dobYear,
                     ssnLast4 = s.ssnLast4,
-                    address = ConnectAddress(s.addressLine1, s.city, s.state, s.postalCode)
+                    addressLine1 = s.addressLine1,
+                    addressCity = s.city,
+                    addressState = s.state,
+                    addressPostalCode = s.postalCode
                 )
             ).onSuccess {
                 _state.update { it.copy(isSaving = false, success = true) }
