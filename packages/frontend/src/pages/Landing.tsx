@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-const APP_STORE_URL = 'https://apps.apple.com/app/savepal/id6744258498';
+const APP_STORE_URL = 'https://apps.apple.com/us/app/save-pals/id6760158627';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.savepal.app';
 
 export default function Landing() {
