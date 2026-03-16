@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-const APP_STORE_URL = 'https://apps.apple.com/app/savepal/id6744258498';
+const APP_STORE_URL = 'https://apps.apple.com/us/app/save-pals/id6760158627';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.savepal.app';
 
 function getMobilePlatform(): 'ios' | 'android' | null {
