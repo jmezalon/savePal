@@ -22,7 +22,10 @@ data class GroupDetailState(
     val error: String? = null,
     val actionMessage: String? = null,
     val deleted: Boolean = false,
-    val bidAmount: String = ""
+    val bidAmount: String = "",
+    val isReordering: Boolean = false,
+    val reorderLoading: Boolean = false,
+    val reorderMemberships: List<Membership> = emptyList()
 ) {
     val isOwner: Boolean get() = group?.createdById == currentUserId || group?.userRole == "OWNER"
     val currentCycle: Cycle? get() = cycles.firstOrNull { !it.isCompleted }
@@ -114,6 +117,52 @@ class GroupDetailViewModel @Inject constructor(
             groupRepository.resolveBidding(cycle.id)
                 .onSuccess { _state.update { it.copy(actionMessage = "Bidding resolved!") }; load() }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun startReordering() {
+        val memberships = _state.value.group?.memberships ?: return
+        _state.update {
+            it.copy(
+                isReordering = true,
+                reorderMemberships = memberships
+                    .filter { m -> m.isActive }
+                    .sortedBy { m -> m.payoutPosition ?: Int.MAX_VALUE }
+            )
+        }
+    }
+
+    fun cancelReordering() {
+        _state.update { it.copy(isReordering = false, reorderMemberships = emptyList()) }
+    }
+
+    fun moveMember(index: Int, direction: Int) {
+        val list = _state.value.reorderMemberships.toMutableList()
+        val swapIndex = index + direction
+        if (swapIndex < 0 || swapIndex >= list.size) return
+
+        val tempPos = list[index].payoutPosition
+        list[index] = list[index].copy(payoutPosition = list[swapIndex].payoutPosition)
+        list[swapIndex] = list[swapIndex].copy(payoutPosition = tempPos)
+        list.sortBy { it.payoutPosition ?: Int.MAX_VALUE }
+        _state.update { it.copy(reorderMemberships = list) }
+    }
+
+    fun saveReorder() {
+        viewModelScope.launch {
+            _state.update { it.copy(reorderLoading = true) }
+            val positions = _state.value.reorderMemberships.map { m ->
+                PositionItem(userId = m.userId, payoutPosition = m.payoutPosition ?: 0)
+            }
+            groupRepository.reorderMembers(groupId, positions)
+                .onSuccess {
+                    _state.update { it.copy(isReordering = false, reorderMemberships = emptyList(), actionMessage = "Positions updated!") }
+                    load()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
+                }
+            _state.update { it.copy(reorderLoading = false) }
         }
     }
 

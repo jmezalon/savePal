@@ -170,16 +170,96 @@ fun GroupDetailScreen(
 
                 // Members
                 Spacer(Modifier.height(20.dp))
-                Text("Members", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Members", style = MaterialTheme.typography.titleMedium)
+                    if (state.isOwner && group.status == GroupStatus.PENDING && (group.memberships?.size ?: 0) >= 2) {
+                        if (!state.isReordering) {
+                            TextButton(onClick = { viewModel.startReordering() }) {
+                                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Reorder")
+                            }
+                        }
+                    }
+                }
+
+                // Reorder mode controls
+                if (state.isReordering) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.cancelReordering() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = { viewModel.saveReorder() },
+                            modifier = Modifier.weight(1f),
+                            enabled = !state.reorderLoading,
+                            colors = ButtonDefaults.buttonColors(containerColor = SavePalBlue)
+                        ) {
+                            if (state.reorderLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Save Order")
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 Spacer(Modifier.height(8.dp))
 
-                group.memberships?.forEach { membership ->
-                    val member = membership.user ?: return@forEach
-                    SavePalCard(modifier = Modifier.padding(vertical = 2.dp)) {
+                val displayMemberships = if (state.isReordering) state.reorderMemberships else group.memberships ?: emptyList()
+
+                displayMemberships.forEachIndexed { index, membership ->
+                    val member = membership.user ?: return@forEachIndexed
+                    SavePalCard(
+                        modifier = Modifier.padding(vertical = 2.dp)
+                            .then(if (state.isReordering) Modifier.background(SavePalBlueLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)) else Modifier)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (state.isReordering) {
+                                Column {
+                                    IconButton(
+                                        onClick = { viewModel.moveMember(index, -1) },
+                                        enabled = index > 0,
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Move up",
+                                            tint = if (index > 0) SavePalBlue else SavePalBorder
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.moveMember(index, 1) },
+                                        enabled = index < displayMemberships.size - 1,
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Move down",
+                                            tint = if (index < displayMemberships.size - 1) SavePalBlue else SavePalBorder
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(4.dp))
+                            }
                             AvatarCircle(member.initials, size = 36)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -201,30 +281,32 @@ fun GroupDetailScreen(
                                     )
                                 }
                             }
-                            member.trustScore?.let { score ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            when {
-                                                score >= 80 -> SavePalGreenLight
-                                                score >= 50 -> SavePalAmberLight
-                                                else -> SavePalRedLight
+                            if (!state.isReordering) {
+                                member.trustScore?.let { score ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                when {
+                                                    score >= 80 -> SavePalGreenLight
+                                                    score >= 50 -> SavePalAmberLight
+                                                    else -> SavePalRedLight
+                                                }
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "$score",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when {
+                                                score >= 80 -> SavePalGreen
+                                                score >= 50 -> SavePalAmber
+                                                else -> SavePalRed
                                             }
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "$score",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when {
-                                            score >= 80 -> SavePalGreen
-                                            score >= 50 -> SavePalAmber
-                                            else -> SavePalRed
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
                         }

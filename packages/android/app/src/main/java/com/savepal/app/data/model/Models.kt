@@ -217,8 +217,8 @@ data class ReorderRequest(
 
 @Serializable
 data class PositionItem(
-    val membershipId: String,
-    val position: Int
+    val userId: String,
+    val payoutPosition: Int
 )
 
 // ── Membership ──
