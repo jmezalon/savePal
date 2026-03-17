@@ -351,8 +351,10 @@ class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    // Calculate stats
-    const activeGroups = user.memberships.length;
+    // Calculate stats - only count groups that are not completed or cancelled
+    const activeGroups = user.memberships.filter(
+      (m) => m.group.status !== 'COMPLETED' && m.group.status !== 'CANCELLED'
+    ).length;
     const completedGroups = await prisma.membership.count({
       where: {
         userId: userId,
