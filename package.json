@@ -16,6 +16,7 @@
     "db:push": "npm run db:push --workspace=@savepal/backend",
     "db:migrate": "npm run db:migrate --workspace=@savepal/backend",
     "db:studio": "npm run db:studio --workspace=@savepal/backend",
+    "db:seed": "npm run db:seed --workspace=@savepal/backend",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
   },
   "devDependencies": {

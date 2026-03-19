@@ -15,8 +15,12 @@
     "script:auto-verify": "tsx src/scripts/auto-verify-existing-users.ts",
     "script:test-join-notification": "tsx src/scripts/test-join-notification.ts",
     "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@parse/node-apn": "^7.1.0",

@@ -38,15 +38,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "API_BASE_URL", "\"https://savepal.onrender.com/api\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"145360208718-5s82vuffotrbet4j49tn8joakeigfo3d.apps.googleusercontent.com\"")
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"https://savepal.onrender.com/api\"")
+            // Points to dev backend (Render develop branch)
+            buildConfigField("String", "API_BASE_URL", "\"https://savepal-backend-dev.onrender.com/api\"")
         }
         release {
+            // Points to production backend (Render main branch)
+            buildConfigField("String", "API_BASE_URL", "\"https://savepal.onrender.com/api\"")
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
