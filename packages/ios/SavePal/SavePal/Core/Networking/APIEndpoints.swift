@@ -1,11 +1,16 @@
 import Foundation
 
 enum APIEndpoints {
-    #if DEBUG
-    static let baseURL = "https://savepal-backend-dev.onrender.com/api"
-    #else
-    static let baseURL = "https://savepal.onrender.com/api"
-    #endif
+    /// API base URL is determined by:
+    /// - Xcode Cloud: ci_post_clone.sh sets API_ENVIRONMENT based on branch
+    /// - Local development: defaults to dev API when running in DEBUG mode
+    static let baseURL: String = {
+        #if DEV_API
+        return "https://savepal-backend-dev.onrender.com/api"
+        #else
+        return "https://savepal.onrender.com/api"
+        #endif
+    }()
 
     // MARK: - Auth
     enum Auth {

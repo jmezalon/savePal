@@ -41,14 +41,24 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"145360208718-5s82vuffotrbet4j49tn8joakeigfo3d.apps.googleusercontent.com\"")
     }
 
-    buildTypes {
-        debug {
-            // Points to dev backend (Render develop branch)
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            versionNameSuffix = "-dev"
             buildConfigField("String", "API_BASE_URL", "\"https://savepal-backend-dev.onrender.com/api\"")
         }
-        release {
-            // Points to production backend (Render main branch)
+        create("prod") {
+            dimension = "environment"
             buildConfigField("String", "API_BASE_URL", "\"https://savepal.onrender.com/api\"")
+        }
+    }
+
+    buildTypes {
+        debug {
+            // Debug builds are not signed — for local testing only
+        }
+        release {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
