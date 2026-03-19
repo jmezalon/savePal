@@ -149,13 +149,15 @@ struct AddCardView: View {
     }
 
     private func handlePaymentSheetResult(_ result: PaymentSheetResult) {
-        switch result {
-        case .completed:
-            showSuccess = true
-        case .canceled:
-            break
-        case .failed(let error):
-            errorMessage = error.localizedDescription
+        DispatchQueue.main.async {
+            switch result {
+            case .completed:
+                showSuccess = true
+            case .canceled:
+                break
+            case .failed(let error):
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

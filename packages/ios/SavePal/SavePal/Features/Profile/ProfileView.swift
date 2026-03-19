@@ -672,10 +672,10 @@ struct BankAccountView: View {
         Group {
             if isLoading {
                 LoadingView()
-            } else if let status = connectStatus, status.accountId != nil {
-                bankStatusView(status)
             } else if showSetupForm {
                 setupFormView
+            } else if let status = connectStatus, status.accountId != nil {
+                bankStatusView(status)
             } else {
                 VStack(spacing: 16) {
                     EmptyStateView(
@@ -1043,6 +1043,7 @@ struct BankAccountView: View {
     }
 
     private func loadStatus() async {
+        if showSetupForm { isLoading = false; return }
         defer { isLoading = false }
         do {
             connectStatus = try await APIClient.shared.request(url: APIEndpoints.Connect.status)
