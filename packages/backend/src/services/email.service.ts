@@ -41,6 +41,16 @@ class EmailService {
   }
 
   async sendEmail({ to, subject, html, text }: EmailOptions): Promise<void> {
+    // In development, log emails to console instead of sending
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n📧 [DEV] Email suppressed:`);
+      console.log(`   To: ${to}`);
+      console.log(`   Subject: ${subject}`);
+      console.log(`   Text preview: ${text?.substring(0, 150) ?? '(no text)'}...`);
+      console.log(`   ℹ️  Set NODE_ENV=production to send real emails.\n`);
+      return;
+    }
+
     try {
       await this.transporter.sendMail({
         from: `SavePal <${process.env.EMAIL_FROM || 'noreply@save-pals.com'}>`,

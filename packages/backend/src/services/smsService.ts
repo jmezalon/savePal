@@ -24,10 +24,12 @@ export class SMSService {
    * @param code - The verification code
    */
   async sendVerificationCode(phoneNumber: string, code: string): Promise<void> {
-    // In development, log the code if Twilio is not configured
-    if (process.env.NODE_ENV === 'development' && !this.twilioClient) {
-      console.log(`\n📱 SMS Verification Code for ${phoneNumber}: ${code}\n`);
-      console.log(`This is a development-only message. Configure Twilio credentials to send real SMS.`);
+    // In development, always log instead of sending real SMS
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n📱 [DEV] SMS suppressed:`);
+      console.log(`   To: ${phoneNumber}`);
+      console.log(`   Verification Code: ${code}`);
+      console.log(`   ℹ️  Set NODE_ENV=production to send real SMS.\n`);
       return;
     }
 
@@ -62,8 +64,12 @@ export class SMSService {
    * @param message - The message body
    */
   async sendSMS(phoneNumber: string, message: string): Promise<void> {
-    if (process.env.NODE_ENV === 'development' && !this.twilioClient) {
-      console.log(`\n📱 SMS to ${phoneNumber}: ${message}\n`);
+    // In development, always log instead of sending real SMS
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n📱 [DEV] SMS suppressed:`);
+      console.log(`   To: ${phoneNumber}`);
+      console.log(`   Message: ${message}`);
+      console.log(`   ℹ️  Set NODE_ENV=production to send real SMS.\n`);
       return;
     }
 
