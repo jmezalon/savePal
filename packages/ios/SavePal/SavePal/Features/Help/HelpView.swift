@@ -71,6 +71,16 @@ struct HelpView: View {
             }
 
             Section {
+                Link(destination: URL(string: "mailto:support@save-pals.com")!) {
+                    Label("Contact Support", systemImage: "envelope")
+                }
+            } header: {
+                Text("Need Help?")
+            } footer: {
+                Text("Send us an email and we'll get back to you as soon as possible.")
+            }
+
+            Section {
                 Link(destination: URL(string: "https://save-pals.com/privacy")!) {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
