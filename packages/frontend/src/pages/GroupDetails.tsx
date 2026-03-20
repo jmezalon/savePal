@@ -248,7 +248,9 @@ export default function GroupDetails() {
   const handlePaymentSuccess = async () => {
     setShowPaymentModal(false);
     if (id) {
-      await fetchCycles(id);
+      // Small delay to ensure backend has committed the payment update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([fetchGroup(), fetchCycles(id)]);
     }
   };
 
