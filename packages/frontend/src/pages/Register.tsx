@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,8 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const [googleBtnWidth, setGoogleBtnWidth] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     // Redirect if already authenticated
@@ -25,6 +27,17 @@ export default function Register() {
       navigate(redirectTo);
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const el = googleBtnRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = Math.floor(entries[0].contentRect.width);
+      setGoogleBtnWidth(width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     // Clear error when component unmounts
@@ -236,13 +249,15 @@ export default function Register() {
           </div>
 
           <div className="flex flex-col gap-3 items-center">
-            <div className="google-signin-wrapper w-full max-w-[400px]">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => console.error('Google Sign-up Failed')}
-                width={400}
-                text="signup_with"
-              />
+            <div ref={googleBtnRef} className="google-signin-wrapper w-full max-w-[400px]">
+              {googleBtnWidth && (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => console.error('Google Sign-up Failed')}
+                  width={googleBtnWidth}
+                  text="signup_with"
+                />
+              )}
             </div>
             <div className="w-full max-w-[400px]">
               <AppleSignInButton
