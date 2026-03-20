@@ -250,7 +250,7 @@ export default function GroupDetails() {
     if (id) {
       // Small delay to ensure backend has committed the payment update
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await Promise.all([fetchGroup(), fetchCycles(id)]);
+      await Promise.all([fetchGroupDetails(), fetchCycles(id)]);
     }
   };
 
