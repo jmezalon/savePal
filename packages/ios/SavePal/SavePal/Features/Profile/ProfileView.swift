@@ -633,6 +633,7 @@ struct PaymentMethodsView: View {
 }
 
 struct BankAccountView: View {
+    @Environment(AuthManager.self) private var authManager
     @State private var connectStatus: ConnectStatus?
     @State private var isLoading = true
     @State private var showSetupForm = false
@@ -909,6 +910,7 @@ struct BankAccountView: View {
             )
             verifySuccess = message
             await loadStatus()
+            await authManager.refreshUser()
         } catch let error as APIError {
             verifyError = error.errorDescription
         } catch {
@@ -1035,6 +1037,7 @@ struct BankAccountView: View {
             successMessage = "Bank account set up successfully!"
             showSetupForm = false
             await loadStatus()
+            await authManager.refreshUser()
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
