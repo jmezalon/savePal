@@ -758,7 +758,7 @@ struct GroupDetailView: View {
                         .font(.subheadline)
                     Text(recipientId == authManager.currentUser?.id
                          ? "You"
-                         : (group.memberships?.first { $0.userId == recipientId }?.user?.firstName ?? "Unknown"))
+                         : (group.memberships?.first { $0.userId == recipientId }?.user?.firstName ?? "Someone else"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
