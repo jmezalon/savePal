@@ -159,7 +159,7 @@ export default function Login() {
           </div>
 
           <div className="flex flex-col gap-3 items-center">
-            <div className="google-signin-wrapper w-full max-w-[400px]">
+            <div className="google-signin-wrapper w-full max-w-[400px] overflow-hidden">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.error('Google Login Failed')}
