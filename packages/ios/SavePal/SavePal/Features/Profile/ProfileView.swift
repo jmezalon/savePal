@@ -595,10 +595,10 @@ struct PaymentMethodsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddCard) {
-            AddCardView {
-                Task { await loadMethods() }
-            }
+        .sheet(isPresented: $showAddCard, onDismiss: {
+            Task { await loadMethods() }
+        }) {
+            AddCardView()
         }
         .task { await loadMethods() }
         .refreshable { await loadMethods() }
@@ -911,6 +911,9 @@ struct BankAccountView: View {
             verifySuccess = message
             await loadStatus()
             await authManager.refreshUser()
+            // Auto-dismiss after a brief delay so user sees the success message
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            showUpdateVerification = false
         } catch let error as APIError {
             verifyError = error.errorDescription
         } catch {
@@ -927,10 +930,12 @@ struct BankAccountView: View {
             )
             connectStatus = nil
             showSetupForm = true
-            isLoading = false
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
         } catch {
-            isLoading = false
+            errorMessage = error.localizedDescription
         }
+        isLoading = false
     }
 
     private var setupFormView: some View {
