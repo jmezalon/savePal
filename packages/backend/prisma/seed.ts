@@ -77,7 +77,7 @@ async function main() {
       phoneNumber: '+15551000003',
       emailVerified: true,
       phoneVerified: false,
-      trustScore: 85,
+      trustScore: 95,
       role: 'USER',
     },
   });
@@ -103,7 +103,7 @@ async function main() {
       firstName: 'Dave',
       lastName: 'Martinez',
       emailVerified: true,
-      trustScore: 88,
+      trustScore: 108,
       role: 'USER',
     },
   });
@@ -117,7 +117,7 @@ async function main() {
       phoneNumber: '+15551000006',
       emailVerified: true,
       phoneVerified: true,
-      trustScore: 95,
+      trustScore: 105,
       role: 'USER',
     },
   });
@@ -147,7 +147,7 @@ async function main() {
     },
   });
 
-  // Group B: Biweekly, Bidding, 4 members, ACTIVE (started ~3 weeks ago)
+  // Group B: Biweekly, Bidding, 4 members, COMPLETED (started ~9 weeks ago, all 4 cycles done)
   const groupB = await prisma.group.create({
     data: {
       name: 'Biweekly Bid Pool',
@@ -155,11 +155,11 @@ async function main() {
       contributionAmount: 150,
       frequency: 'BIWEEKLY',
       payoutMethod: 'BIDDING',
-      status: 'ACTIVE',
+      status: 'COMPLETED',
       maxMembers: 4,
       currentMembers: 4,
-      startDate: daysAgo(21),
-      endDate: daysFromNow(35),
+      startDate: daysAgo(63),
+      endDate: daysAgo(7),
       createdById: bob.id,
     },
   });
@@ -260,8 +260,8 @@ async function main() {
       groupId: groupA.id,
       cycleNumber: 1,
       recipientId: alice.id,
-      dueDate: daysAgo(30),
-      completedDate: daysAgo(28),
+      dueDate: daysAgo(90),
+      completedDate: daysAgo(88),
       totalAmount: 200 * 5,
       isCompleted: true,
     },
@@ -273,8 +273,8 @@ async function main() {
       groupId: groupA.id,
       cycleNumber: 2,
       recipientId: bob.id,
-      dueDate: daysAgo(2),
-      completedDate: daysAgo(1),
+      dueDate: daysAgo(60),
+      completedDate: daysAgo(58),
       totalAmount: 200 * 5,
       isCompleted: true,
     },
@@ -286,7 +286,31 @@ async function main() {
       groupId: groupA.id,
       cycleNumber: 3,
       recipientId: carol.id,
-      dueDate: daysFromNow(28),
+      dueDate: daysFromNow(10),
+      totalAmount: 200 * 5,
+      isCompleted: false,
+    },
+  });
+
+  // Group A: Cycle 4 (upcoming, dave is next)
+  await prisma.cycle.create({
+    data: {
+      groupId: groupA.id,
+      cycleNumber: 4,
+      recipientId: dave.id,
+      dueDate: daysFromNow(40),
+      totalAmount: 200 * 5,
+      isCompleted: false,
+    },
+  });
+
+  // Group A: Cycle 5 (upcoming, eve is last)
+  await prisma.cycle.create({
+    data: {
+      groupId: groupA.id,
+      cycleNumber: 5,
+      recipientId: eve.id,
+      dueDate: daysFromNow(70),
       totalAmount: 200 * 5,
       isCompleted: false,
     },
@@ -298,27 +322,57 @@ async function main() {
       groupId: groupB.id,
       cycleNumber: 1,
       recipientId: bob.id,
-      dueDate: daysAgo(7),
-      completedDate: daysAgo(6),
+      dueDate: daysAgo(49),
+      completedDate: daysAgo(48),
       totalAmount: 150 * 4,
       isCompleted: true,
       biddingStatus: 'CLOSED',
     },
   });
 
-  // Group B: Cycle 2 (current, bidding open)
+  // Group B: Cycle 2 (completed, alice won the bid)
   const cycleB2 = await prisma.cycle.create({
     data: {
       groupId: groupB.id,
       cycleNumber: 2,
-      dueDate: daysFromNow(7),
+      recipientId: alice.id,
+      dueDate: daysAgo(35),
+      completedDate: daysAgo(34),
       totalAmount: 150 * 4,
-      isCompleted: false,
-      biddingStatus: 'OPEN',
+      isCompleted: true,
+      biddingStatus: 'CLOSED',
     },
   });
 
-  console.log('  Created 5 cycles');
+  // Group B: Cycle 3 (completed, dave won the bid)
+  const cycleB3 = await prisma.cycle.create({
+    data: {
+      groupId: groupB.id,
+      cycleNumber: 3,
+      recipientId: dave.id,
+      dueDate: daysAgo(21),
+      completedDate: daysAgo(20),
+      totalAmount: 150 * 4,
+      isCompleted: true,
+      biddingStatus: 'CLOSED',
+    },
+  });
+
+  // Group B: Cycle 4 (completed, eve won the bid — last member)
+  const cycleB4 = await prisma.cycle.create({
+    data: {
+      groupId: groupB.id,
+      cycleNumber: 4,
+      recipientId: eve.id,
+      dueDate: daysAgo(7),
+      completedDate: daysAgo(7),
+      totalAmount: 150 * 4,
+      isCompleted: true,
+      biddingStatus: 'CLOSED',
+    },
+  });
+
+  console.log('  Created 9 cycles');
 
   // ==========================================
   // PAYMENTS
@@ -428,54 +482,37 @@ async function main() {
     [bob.id, alice.id, dave.id, eve.id],
     bob.id,
     150,
-    6
+    48
   );
 
-  // Group B, Cycle 2 payments (current — mixed)
-  await prisma.payment.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: bob.id,
-      amount: 150,
-      status: 'COMPLETED',
-      contributionPeriod: 1,
-      dueDate: daysFromNow(7),
-      paidAt: daysAgo(1),
-    },
-  });
-  await prisma.payment.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: alice.id,
-      amount: 150,
-      status: 'COMPLETED',
-      contributionPeriod: 1,
-      dueDate: daysFromNow(7),
-      paidAt: daysAgo(0),
-    },
-  });
-  await prisma.payment.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: dave.id,
-      amount: 150,
-      status: 'PENDING',
-      contributionPeriod: 1,
-      dueDate: daysFromNow(7),
-    },
-  });
-  await prisma.payment.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: eve.id,
-      amount: 150,
-      status: 'PENDING',
-      contributionPeriod: 1,
-      dueDate: daysFromNow(7),
-    },
-  });
+  // Group B, Cycle 2 payments (all completed)
+  await createCompletedCyclePayments(
+    cycleB2.id,
+    [bob.id, alice.id, dave.id, eve.id],
+    alice.id,
+    150,
+    34
+  );
 
-  console.log('  Created 19 payments');
+  // Group B, Cycle 3 payments (all completed)
+  await createCompletedCyclePayments(
+    cycleB3.id,
+    [bob.id, alice.id, dave.id, eve.id],
+    dave.id,
+    150,
+    20
+  );
+
+  // Group B, Cycle 4 payments (all completed)
+  await createCompletedCyclePayments(
+    cycleB4.id,
+    [bob.id, alice.id, dave.id, eve.id],
+    eve.id,
+    150,
+    7
+  );
+
+  console.log('  Created 31 payments');
 
   // ==========================================
   // PAYOUTS
@@ -517,43 +554,92 @@ async function main() {
       feeAmount: 15,
       netAmount: 585,
       status: 'COMPLETED',
-      transferredAt: daysAgo(5),
+      transferredAt: daysAgo(47),
     },
   });
 
-  console.log('  Created 3 payouts');
+  // Group B, Cycle 2 payout to Alice
+  await prisma.payout.create({
+    data: {
+      cycleId: cycleB2.id,
+      recipientId: alice.id,
+      amount: 600,
+      feeAmount: 15,
+      netAmount: 585,
+      status: 'COMPLETED',
+      transferredAt: daysAgo(33),
+    },
+  });
+
+  // Group B, Cycle 3 payout to Dave
+  await prisma.payout.create({
+    data: {
+      cycleId: cycleB3.id,
+      recipientId: dave.id,
+      amount: 600,
+      feeAmount: 15,
+      netAmount: 585,
+      status: 'COMPLETED',
+      transferredAt: daysAgo(19),
+    },
+  });
+
+  // Group B, Cycle 4 payout to Eve
+  await prisma.payout.create({
+    data: {
+      cycleId: cycleB4.id,
+      recipientId: eve.id,
+      amount: 600,
+      feeAmount: 15,
+      netAmount: 585,
+      status: 'COMPLETED',
+      transferredAt: daysAgo(6),
+    },
+  });
+
+  console.log('  Created 6 payouts');
 
   // ==========================================
   // BIDS (Group B - Bidding method)
   // ==========================================
   console.log('Creating bids...');
 
-  // Bids on Group B, Cycle 2 (currently open)
+  // Bids on Group B, Cycle 1 (bob won with highest bid)
   await prisma.bid.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: alice.id,
-      amount: 25, // willing to pay $25 fee for priority
-    },
+    data: { cycleId: cycleB1.id, userId: bob.id, amount: 50 },
+  });
+  await prisma.bid.create({
+    data: { cycleId: cycleB1.id, userId: alice.id, amount: 30 },
+  });
+  await prisma.bid.create({
+    data: { cycleId: cycleB1.id, userId: dave.id, amount: 20 },
   });
 
+  // Bids on Group B, Cycle 2 (alice won with highest bid)
   await prisma.bid.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: dave.id,
-      amount: 40, // willing to pay $40
-    },
+    data: { cycleId: cycleB2.id, userId: alice.id, amount: 45 },
+  });
+  await prisma.bid.create({
+    data: { cycleId: cycleB2.id, userId: dave.id, amount: 35 },
+  });
+  await prisma.bid.create({
+    data: { cycleId: cycleB2.id, userId: eve.id, amount: 15 },
   });
 
+  // Bids on Group B, Cycle 3 (dave won with highest bid)
   await prisma.bid.create({
-    data: {
-      cycleId: cycleB2.id,
-      userId: eve.id,
-      amount: 15, // willing to pay $15
-    },
+    data: { cycleId: cycleB3.id, userId: dave.id, amount: 40 },
+  });
+  await prisma.bid.create({
+    data: { cycleId: cycleB3.id, userId: eve.id, amount: 25 },
   });
 
-  console.log('  Created 3 bids');
+  // Bids on Group B, Cycle 4 (eve was last remaining, auto-assigned)
+  await prisma.bid.create({
+    data: { cycleId: cycleB4.id, userId: eve.id, amount: 10 },
+  });
+
+  console.log('  Created 9 bids');
 
   // ==========================================
   // PAYMENT METHODS
@@ -612,10 +698,11 @@ async function main() {
     { userId: bob.id, groupId: groupA.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $975.00 from Monthly Savings Circle.', isRead: false, sentAt: daysAgo(0) },
     { userId: carol.id, groupId: groupA.id, type: 'PAYMENT_DUE' as const, title: 'Payment Due', message: 'Your $200.00 contribution to Monthly Savings Circle is due on the 15th.', isRead: false, sentAt: daysAgo(0) },
     { userId: eve.id, groupId: groupA.id, type: 'PAYMENT_FAILED' as const, title: 'Payment Failed', message: 'Your payment of $200.00 to Monthly Savings Circle failed. Please update your payment method.', isRead: false, sentAt: daysAgo(0) },
-    { userId: alice.id, groupId: groupB.id, type: 'GROUP_STARTED' as const, title: 'Group Started', message: 'Biweekly Bid Pool has officially started! First cycle is underway.', isRead: true, sentAt: daysAgo(21) },
-    { userId: bob.id, groupId: groupB.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $585.00 from Biweekly Bid Pool.', isRead: true, sentAt: daysAgo(5) },
-    { userId: dave.id, groupId: groupB.id, type: 'PAYMENT_DUE' as const, title: 'Payment Due Soon', message: 'Your $150.00 contribution to Biweekly Bid Pool is due in 7 days.', isRead: false, sentAt: daysAgo(0) },
-    { userId: eve.id, groupId: groupB.id, type: 'REMINDER' as const, title: 'Place Your Bid', message: 'Bidding is open for Cycle 2 of Biweekly Bid Pool. Place your bid now!', isRead: false, sentAt: daysAgo(1) },
+    { userId: alice.id, groupId: groupB.id, type: 'GROUP_STARTED' as const, title: 'Group Started', message: 'Biweekly Bid Pool has officially started! First cycle is underway.', isRead: true, sentAt: daysAgo(63) },
+    { userId: bob.id, groupId: groupB.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $585.00 from Biweekly Bid Pool.', isRead: true, sentAt: daysAgo(47) },
+    { userId: alice.id, groupId: groupB.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $585.00 from Biweekly Bid Pool.', isRead: true, sentAt: daysAgo(33) },
+    { userId: dave.id, groupId: groupB.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $585.00 from Biweekly Bid Pool.', isRead: true, sentAt: daysAgo(19) },
+    { userId: eve.id, groupId: groupB.id, type: 'PAYOUT_COMPLETED' as const, title: 'Payout Received!', message: 'You received your payout of $585.00 from Biweekly Bid Pool.', isRead: true, sentAt: daysAgo(6) },
     { userId: carol.id, groupId: groupC.id, type: 'GROUP_INVITE' as const, title: 'New Group Created', message: 'You created Quick Weekly Fund. Share the invite code to get members!', isRead: true, sentAt: daysAgo(3) },
     { userId: admin.id, groupId: groupC.id, type: 'GROUP_INVITE' as const, title: 'Group Invitation', message: 'Carol Davis invited you to join Quick Weekly Fund.', isRead: false, sentAt: daysAgo(2) },
     { userId: eve.id, groupId: groupC.id, type: 'GROUP_INVITE' as const, title: 'Group Invitation', message: 'Carol Davis invited you to join Quick Weekly Fund.', isRead: true, sentAt: daysAgo(2) },
@@ -734,12 +821,12 @@ async function main() {
   console.log('\n✅ Seed completed successfully!');
   console.log('─────────────────────────────────');
   console.log('  Users:              6');
-  console.log('  Groups:             3 (1 active-sequential, 1 active-bidding, 1 pending)');
+  console.log('  Groups:             3 (1 active-sequential, 1 completed-bidding, 1 pending)');
   console.log('  Memberships:        12');
-  console.log('  Cycles:             5 (3 completed, 2 in-progress)');
-  console.log('  Payments:           19');
-  console.log('  Payouts:            3');
-  console.log('  Bids:               3');
+  console.log('  Cycles:             9 (6 completed, 3 pending)');
+  console.log('  Payments:           31');
+  console.log('  Payouts:            6');
+  console.log('  Bids:               9');
   console.log('  Payment Methods:    3');
   console.log(`  Notifications:      ${notifications.length}`);
   console.log('  Device Tokens:      3');
