@@ -91,7 +91,7 @@ class StripeService {
   /**
    * Create a SetupIntent for saving payment methods
    */
-  async createSetupIntent(userId: string): Promise<{ clientSecret: string }> {
+  async createSetupIntent(userId: string): Promise<{ id: string; clientSecret: string }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
