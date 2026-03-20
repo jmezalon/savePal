@@ -93,6 +93,7 @@ enum APIEndpoints {
         static let base = "\(baseURL)/payment-methods"
         static let config = "\(base)/config"
         static let setupIntent = "\(base)/setup-intent"
+        static let confirmSetup = "\(base)/confirm-setup"
         static func detail(_ id: String) -> String { "\(base)/\(id)" }
         static func setDefault(_ id: String) -> String { "\(base)/\(id)/default" }
     }

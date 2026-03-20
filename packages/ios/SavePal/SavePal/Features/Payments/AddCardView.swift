@@ -4,9 +4,11 @@ import StripePaymentSheet
 struct AddCardView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isLoading = true
+    @State private var isSaving = false
     @State private var paymentSheet: PaymentSheet?
     @State private var errorMessage: String?
     @State private var showSuccess = false
+    @State private var setupIntentId: String?
 
     var onCardAdded: (() -> Void)?
 
@@ -15,6 +17,8 @@ struct AddCardView: View {
             VStack(spacing: 24) {
                 if isLoading {
                     LoadingView(message: "Preparing card setup...")
+                } else if isSaving {
+                    LoadingView(message: "Saving card...")
                 } else if showSuccess {
                     successView
                 } else if let error = errorMessage {
@@ -134,6 +138,7 @@ struct AddCardView: View {
                 isLoading = false
                 return
             }
+            self.setupIntentId = response.id
             let sheet = StripeManager.shared.makeSetupPaymentSheet(clientSecret: secret)
             await MainActor.run {
                 self.paymentSheet = sheet
@@ -152,12 +157,38 @@ struct AddCardView: View {
         DispatchQueue.main.async {
             switch result {
             case .completed:
-                showSuccess = true
+                Task { await confirmAndSaveCard() }
             case .canceled:
                 break
             case .failed(let error):
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func confirmAndSaveCard() async {
+        guard let setupIntentId = setupIntentId else {
+            await MainActor.run { showSuccess = true }
+            return
+        }
+
+        await MainActor.run { isSaving = true }
+
+        do {
+            _ = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.PaymentMethods.confirmSetup,
+                method: "POST",
+                body: ["setupIntentId": setupIntentId]
+            )
+        } catch {
+            #if DEBUG
+            print("AddCardView: Failed to confirm setup: \(error)")
+            #endif
+        }
+
+        await MainActor.run {
+            isSaving = false
+            showSuccess = true
         }
     }
 }

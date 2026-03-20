@@ -277,10 +277,7 @@ struct EditProfileView: View {
     // Phone verification state
     @State private var smsConsentChecked = false
     @State private var isSendingCode = false
-    @State private var isVerifyingPhone = false
-    @State private var showCodeInput = false
-    @State private var verificationCode = ""
-    @State private var verificationMessage: String?
+    @State private var showVerificationSheet = false
     @State private var verificationError: String?
 
     var body: some View {
@@ -296,60 +293,33 @@ struct EditProfileView: View {
                 // Phone Verification Section
                 if let user = authManager.currentUser, !phoneNumber.isEmpty, !user.phoneVerified {
                     Section {
-                        if !showCodeInput {
-                            Toggle(isOn: $smsConsentChecked) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("SMS Consent")
-                                        .font(.subheadline.weight(.medium))
-                                    Text("I agree to receive SMS verification codes from SavePal. Message and data rates may apply.")
-                                        .font(.caption)
+                        Toggle(isOn: $smsConsentChecked) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("SMS Consent")
+                                    .font(.subheadline.weight(.medium))
+                                Text("I agree to receive SMS verification codes from SavePal. Message and data rates may apply.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Button {
+                            Task { await sendVerificationCode() }
+                        } label: {
+                            if isSendingCode {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                    Text("Saving & sending code...")
                                         .foregroundStyle(.secondary)
                                 }
+                                .frame(maxWidth: .infinity)
+                            } else {
+                                Text("Send Verification Code")
+                                    .frame(maxWidth: .infinity)
                             }
-
-                            Button {
-                                Task { await sendVerificationCode() }
-                            } label: {
-                                if isSendingCode {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Text("Send Verification Code")
-                                        .frame(maxWidth: .infinity)
-                                }
-                            }
-                            .disabled(!smsConsentChecked || isSendingCode)
-                        } else {
-                            TextField("Enter 6-digit code", text: $verificationCode)
-                                .keyboardType(.numberPad)
-                                .onChange(of: verificationCode) { _, newValue in
-                                    verificationCode = String(newValue.filter { $0.isNumber }.prefix(6))
-                                }
-
-                            Button {
-                                Task { await verifyPhone() }
-                            } label: {
-                                if isVerifyingPhone {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Text("Verify")
-                                        .frame(maxWidth: .infinity)
-                                }
-                            }
-                            .disabled(isVerifyingPhone || verificationCode.count != 6)
-
-                            Button {
-                                Task { await sendVerificationCode() }
-                            } label: {
-                                Text(isSendingCode ? "Sending..." : "Resend Code")
-                            }
-                            .disabled(isSendingCode)
                         }
+                        .disabled(!smsConsentChecked || isSendingCode)
 
-                        if let msg = verificationMessage {
-                            Text(msg).foregroundStyle(.green).font(.caption)
-                        }
                         if let err = verificationError {
                             Text(err).foregroundStyle(.red).font(.caption)
                         }
@@ -386,45 +356,36 @@ struct EditProfileView: View {
                     phoneNumber = user.phoneNumber ?? ""
                 }
             }
+            .sheet(isPresented: $showVerificationSheet) {
+                PhoneVerificationSheet(phoneNumber: phoneNumber)
+            }
         }
     }
 
     private func sendVerificationCode() async {
         isSendingCode = true
         verificationError = nil
-        verificationMessage = nil
         defer { isSendingCode = false }
 
         do {
-            let message = try await APIClient.shared.requestMessage(
+            // Auto-save profile (including phone number) before sending verification
+            let body: [String: Any] = [
+                "firstName": firstName.trimmingCharacters(in: .whitespaces),
+                "lastName": lastName.trimmingCharacters(in: .whitespaces),
+                "phoneNumber": phoneNumber,
+            ]
+            let _: User = try await APIClient.shared.request(
+                url: APIEndpoints.Auth.profile,
+                method: "PATCH",
+                body: body
+            )
+            await authManager.refreshUser()
+
+            _ = try await APIClient.shared.requestMessage(
                 url: APIEndpoints.Auth.sendPhoneVerification,
                 method: "POST"
             )
-            verificationMessage = message
-            showCodeInput = true
-        } catch let error as APIError {
-            verificationError = error.errorDescription
-        } catch {
-            verificationError = error.localizedDescription
-        }
-    }
-
-    private func verifyPhone() async {
-        isVerifyingPhone = true
-        verificationError = nil
-        verificationMessage = nil
-        defer { isVerifyingPhone = false }
-
-        do {
-            let message = try await APIClient.shared.requestMessage(
-                url: APIEndpoints.Auth.verifyPhone,
-                method: "POST",
-                body: ["code": verificationCode]
-            )
-            verificationMessage = message
-            verificationCode = ""
-            showCodeInput = false
-            await authManager.refreshUser()
+            showVerificationSheet = true
         } catch let error as APIError {
             verificationError = error.errorDescription
         } catch {
@@ -455,6 +416,255 @@ struct EditProfileView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+}
+
+// MARK: - Phone Verification Sheet
+
+struct PhoneVerificationSheet: View {
+    @Environment(AuthManager.self) private var authManager
+    @Environment(\.dismiss) private var dismiss
+
+    let phoneNumber: String
+
+    @State private var digits: [String] = Array(repeating: "", count: 6)
+    @FocusState private var focusedIndex: Int?
+    @State private var isVerifying = false
+    @State private var isResending = false
+    @State private var errorMessage: String?
+    @State private var successMessage: String?
+    @State private var isVerified = false
+
+    private var code: String { digits.joined() }
+    private var isCodeComplete: Bool { code.count == 6 }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.savePalBlue.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: isVerified ? "checkmark.circle.fill" : "phone.badge.checkmark")
+                        .font(.system(size: 36))
+                        .foregroundStyle(isVerified ? .green : Color.savePalBlue)
+                }
+                .padding(.bottom, 24)
+
+                // Title
+                Text(isVerified ? "Phone Verified!" : "Enter Verification Code")
+                    .font(.title2.weight(.bold))
+                    .padding(.bottom, 8)
+
+                // Subtitle
+                Text(isVerified ? "Your phone number has been verified successfully." : "We sent a 6-digit code to \(phoneNumber)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 32)
+
+                if !isVerified {
+                    // OTP Input Boxes
+                    HStack(spacing: 10) {
+                        ForEach(0..<6, id: \.self) { index in
+                            OTPDigitBox(
+                                digit: $digits[index],
+                                isFocused: focusedIndex == index
+                            )
+                            .focused($focusedIndex, equals: index)
+                            .onChange(of: digits[index]) { _, newValue in
+                                handleDigitChange(at: index, newValue: newValue)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
+
+                    // Error / Success messages
+                    if let error = errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                            .padding(.bottom, 16)
+                    }
+
+                    // Verify Button
+                    Button {
+                        Task { await verifyCode() }
+                    } label: {
+                        if isVerifying {
+                            ProgressView()
+                                .tint(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                        } else {
+                            Text("Verify")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                        }
+                    }
+                    .background(isCodeComplete ? Color.savePalBlue : Color.savePalBlue.opacity(0.4))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .disabled(!isCodeComplete || isVerifying)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+
+                    // Resend
+                    Button {
+                        Task { await resendCode() }
+                    } label: {
+                        if isResending {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Sending...")
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        } else {
+                            Text("Didn't receive a code? Resend")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.savePalBlue)
+                        }
+                    }
+                    .disabled(isResending)
+                } else {
+                    // Done button after verification
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Done")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .background(Color.savePalBlue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+                Spacer()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if !isVerified {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+            }
+            .onAppear {
+                focusedIndex = 0
+            }
+        }
+    }
+
+    private func handleDigitChange(at index: Int, newValue: String) {
+        // Only allow single digits
+        let filtered = String(newValue.filter { $0.isNumber }.prefix(1))
+        if digits[index] != filtered {
+            digits[index] = filtered
+        }
+
+        // Handle paste (multiple digits at once)
+        if newValue.count > 1 {
+            let allDigits = newValue.filter { $0.isNumber }
+            for (offset, char) in allDigits.prefix(6 - index).enumerated() {
+                digits[index + offset] = String(char)
+            }
+            let nextIndex = min(index + allDigits.count, 5)
+            focusedIndex = nextIndex
+            return
+        }
+
+        // Auto-advance to next field
+        if !filtered.isEmpty && index < 5 {
+            focusedIndex = index + 1
+        }
+
+        // Auto-verify when all 6 digits are entered
+        if isCodeComplete && !isVerifying {
+            Task { await verifyCode() }
+        }
+    }
+
+    private func verifyCode() async {
+        isVerifying = true
+        errorMessage = nil
+        defer { isVerifying = false }
+
+        do {
+            _ = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Auth.verifyPhone,
+                method: "POST",
+                body: ["code": code]
+            )
+            await authManager.refreshUser()
+            isVerified = true
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            // Clear digits on error so user can retry
+            digits = Array(repeating: "", count: 6)
+            focusedIndex = 0
+        } catch {
+            errorMessage = error.localizedDescription
+            digits = Array(repeating: "", count: 6)
+            focusedIndex = 0
+        }
+    }
+
+    private func resendCode() async {
+        isResending = true
+        errorMessage = nil
+        defer { isResending = false }
+
+        do {
+            _ = try await APIClient.shared.requestMessage(
+                url: APIEndpoints.Auth.sendPhoneVerification,
+                method: "POST"
+            )
+            errorMessage = nil
+            digits = Array(repeating: "", count: 6)
+            focusedIndex = 0
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - OTP Digit Box
+
+private struct OTPDigitBox: View {
+    @Binding var digit: String
+    let isFocused: Bool
+
+    var body: some View {
+        TextField("", text: $digit)
+            .keyboardType(.numberPad)
+            .textContentType(.oneTimeCode)
+            .multilineTextAlignment(.center)
+            .font(.title2.weight(.semibold))
+            .frame(width: 48, height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isFocused ? Color.savePalBlue.opacity(0.05) : Color(.systemGray6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isFocused ? Color.savePalBlue : (digit.isEmpty ? Color(.systemGray4) : Color.savePalBlue.opacity(0.5)), lineWidth: isFocused ? 2 : 1)
+            )
     }
 }
 
@@ -632,6 +842,10 @@ struct PaymentMethodsView: View {
     }
 }
 
+private enum DOBField: Hashable {
+    case month, day, year
+}
+
 struct BankAccountView: View {
     @Environment(AuthManager.self) private var authManager
     @State private var connectStatus: ConnectStatus?
@@ -653,6 +867,7 @@ struct BankAccountView: View {
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @State private var successMessage: String?
+    @FocusState private var setupDobFocus: DOBField?
 
     // Update verification form
     @State private var showUpdateVerification = false
@@ -668,6 +883,7 @@ struct BankAccountView: View {
     @State private var isVerifySubmitting = false
     @State private var verifyError: String?
     @State private var verifySuccess: String?
+    @FocusState private var verifyDobFocus: DOBField?
 
     var body: some View {
         Group {
@@ -833,17 +1049,34 @@ struct BankAccountView: View {
                     TextField("MM", text: $verifyDobMonth)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 50)
+                        .focused($verifyDobFocus, equals: .month)
+                        .onChange(of: verifyDobMonth) { _, newValue in
+                            verifyDobMonth = String(newValue.filter { $0.isNumber }.prefix(2))
+                            if verifyDobMonth.count == 2 { verifyDobFocus = .day }
+                        }
                     Text("/")
                     TextField("DD", text: $verifyDobDay)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 50)
+                        .focused($verifyDobFocus, equals: .day)
+                        .onChange(of: verifyDobDay) { _, newValue in
+                            verifyDobDay = String(newValue.filter { $0.isNumber }.prefix(2))
+                            if verifyDobDay.count == 2 { verifyDobFocus = .year }
+                        }
                     Text("/")
                     TextField("YYYY", text: $verifyDobYear)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 70)
+                        .focused($verifyDobFocus, equals: .year)
+                        .onChange(of: verifyDobYear) { _, newValue in
+                            verifyDobYear = String(newValue.filter { $0.isNumber }.prefix(4))
+                        }
                 }
                 TextField("SSN Last 4", text: $verifySsnLast4)
                     .keyboardType(.numberPad)
+                    .onChange(of: verifySsnLast4) { _, newValue in
+                        verifySsnLast4 = String(newValue.filter { $0.isNumber }.prefix(4))
+                    }
             }
 
             Section("Address") {
@@ -953,17 +1186,34 @@ struct BankAccountView: View {
                     TextField("MM", text: $dobMonth)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 50)
+                        .focused($setupDobFocus, equals: .month)
+                        .onChange(of: dobMonth) { _, newValue in
+                            dobMonth = String(newValue.filter { $0.isNumber }.prefix(2))
+                            if dobMonth.count == 2 { setupDobFocus = .day }
+                        }
                     Text("/")
                     TextField("DD", text: $dobDay)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 50)
+                        .focused($setupDobFocus, equals: .day)
+                        .onChange(of: dobDay) { _, newValue in
+                            dobDay = String(newValue.filter { $0.isNumber }.prefix(2))
+                            if dobDay.count == 2 { setupDobFocus = .year }
+                        }
                     Text("/")
                     TextField("YYYY", text: $dobYear)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 70)
+                        .focused($setupDobFocus, equals: .year)
+                        .onChange(of: dobYear) { _, newValue in
+                            dobYear = String(newValue.filter { $0.isNumber }.prefix(4))
+                        }
                 }
                 TextField("SSN Last 4", text: $ssnLast4)
                     .keyboardType(.numberPad)
+                    .onChange(of: ssnLast4) { _, newValue in
+                        ssnLast4 = String(newValue.filter { $0.isNumber }.prefix(4))
+                    }
             }
 
             Section("Address") {

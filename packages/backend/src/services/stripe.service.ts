@@ -121,8 +121,77 @@ class StripeService {
     });
 
     return {
+      id: setupIntent.id,
       clientSecret: setupIntent.client_secret!,
     };
+  }
+
+  /**
+   * Confirm a completed SetupIntent and save the payment method to the database
+   */
+  async confirmSetupIntent(
+    userId: string,
+    setupIntentId: string
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true },
+    });
+
+    if (!user?.stripeCustomerId) {
+      throw new Error('Customer not found');
+    }
+
+    // Retrieve the completed SetupIntent from Stripe
+    const setupIntent = await this.stripe.setupIntents.retrieve(setupIntentId);
+
+    if (setupIntent.status !== 'succeeded') {
+      throw new Error('SetupIntent has not been completed');
+    }
+
+    const paymentMethodId = setupIntent.payment_method as string;
+    if (!paymentMethodId) {
+      throw new Error('No payment method found on SetupIntent');
+    }
+
+    // Get payment method details
+    const paymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+
+    // Check if this payment method already exists in our database
+    const existing = await prisma.paymentMethod.findFirst({
+      where: { userId, stripePaymentMethodId: paymentMethodId },
+    });
+
+    if (existing) {
+      return; // Already saved
+    }
+
+    // Check if user has any existing payment methods to determine default
+    const existingMethods = await prisma.paymentMethod.count({ where: { userId } });
+    const isDefault = existingMethods === 0;
+
+    // Save to database (payment method is already attached by PaymentSheet)
+    await prisma.paymentMethod.create({
+      data: {
+        userId,
+        stripePaymentMethodId: paymentMethodId,
+        type: paymentMethod.type,
+        last4: paymentMethod.card?.last4 || '',
+        brand: paymentMethod.card?.brand || null,
+        expiryMonth: paymentMethod.card?.exp_month || null,
+        expiryYear: paymentMethod.card?.exp_year || null,
+        isDefault,
+      },
+    });
+
+    // Set as default on Stripe if first card
+    if (isDefault) {
+      await this.stripe.customers.update(user.stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+    }
   }
 
   /**

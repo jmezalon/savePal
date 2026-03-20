@@ -33,6 +33,44 @@ class PaymentMethodController {
   }
 
   /**
+   * POST /api/payment-methods/confirm-setup
+   * Confirm a completed SetupIntent and save the payment method
+   */
+  async confirmSetup(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { setupIntentId } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      if (!setupIntentId) {
+        return res.status(400).json({
+          success: false,
+          error: 'SetupIntent ID is required',
+        });
+      }
+
+      await stripeService.confirmSetupIntent(userId, setupIntentId);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Payment method saved successfully',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to confirm setup';
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  /**
    * POST /api/payment-methods
    * Save a payment method
    */
