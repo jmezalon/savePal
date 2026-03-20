@@ -138,6 +138,7 @@ struct NotificationsView: View {
         case .REMINDER: return "bell.fill"
         case .DEBT_RECORDED, .DEBT_DEDUCTED_FROM_PAYOUT: return "exclamationmark.circle.fill"
         case .PAYMENT_DISPUTED: return "flag.fill"
+        case .BANK_ACCOUNT_UPDATED: return "building.columns.fill"
         }
     }
 
@@ -151,6 +152,8 @@ struct NotificationsView: View {
             return .orange
         case .GROUP_INVITE, .GROUP_STARTED, .REMINDER, .DEBT_DEDUCTED_FROM_PAYOUT:
             return .blue
+        case .BANK_ACCOUNT_UPDATED:
+            return .blue
         }
     }
 
@@ -160,7 +163,9 @@ struct NotificationsView: View {
         defer { isLoading = false }
         do {
             notifications = try await APIClient.shared.request(url: APIEndpoints.Notifications.base)
-        } catch {}
+        } catch {
+            print("Failed to load notifications: \(error)")
+        }
     }
 
     private func markRead(_ notification: AppNotification) async {

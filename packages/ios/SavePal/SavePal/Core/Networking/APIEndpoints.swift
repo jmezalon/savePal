@@ -1,10 +1,13 @@
 import Foundation
 
 enum APIEndpoints {
-    /// API base URL — defaults to production.
-    /// Xcode Cloud's ci_post_clone.sh replaces this with the dev URL
-    /// when building from the develop branch.
+    #if targetEnvironment(simulator)
+    static let baseURL = "https://savepal-backend-dev.onrender.com/api"
+    #else
+    /// Production by default — Xcode Cloud's ci_post_clone.sh replaces
+    /// this with the dev URL when building from the develop branch.
     static let baseURL = "https://savepal.onrender.com/api"
+    #endif
 
     // MARK: - Auth
     enum Auth {

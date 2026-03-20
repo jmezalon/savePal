@@ -17,6 +17,7 @@ enum NotificationType: String, Codable {
     case DEBT_RECORDED
     case DEBT_DEDUCTED_FROM_PAYOUT
     case PAYMENT_DISPUTED
+    case BANK_ACCOUNT_UPDATED
 }
 
 struct AppNotification: Codable, Identifiable {
