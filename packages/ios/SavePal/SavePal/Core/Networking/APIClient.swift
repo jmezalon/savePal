@@ -52,10 +52,19 @@ actor APIClient {
         }
 
         if httpResponse.statusCode == 401 {
-            await MainActor.run {
-                AuthManager.shared.handleUnauthorized()
+            if authenticated {
+                await MainActor.run {
+                    AuthManager.shared.handleUnauthorized()
+                }
+                throw APIError.unauthorized
+            } else {
+                // For unauthenticated requests (login, register), show the actual error
+                if let errorResponse = try? decoder.decode(APIResponse<T>.self, from: data),
+                   let error = errorResponse.error {
+                    throw APIError.serverError(error)
+                }
+                throw APIError.serverError("Invalid credentials")
             }
-            throw APIError.unauthorized
         }
 
         // Try to decode as API response envelope
@@ -138,10 +147,18 @@ actor APIClient {
         }
 
         if httpResponse.statusCode == 401 {
-            await MainActor.run {
-                AuthManager.shared.handleUnauthorized()
+            if authenticated {
+                await MainActor.run {
+                    AuthManager.shared.handleUnauthorized()
+                }
+                throw APIError.unauthorized
+            } else {
+                if let errorResponse = try? decoder.decode(APIResponse<EmptyData>.self, from: data),
+                   let error = errorResponse.error {
+                    throw APIError.serverError(error)
+                }
+                throw APIError.serverError("Invalid credentials")
             }
-            throw APIError.unauthorized
         }
 
         if let apiResponse = try? decoder.decode(APIResponse<EmptyData>.self, from: data) {
