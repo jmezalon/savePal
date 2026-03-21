@@ -13,7 +13,9 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
   const googleBtnRef = useRef<HTMLDivElement>(null);
-  const [googleBtnWidth, setGoogleBtnWidth] = useState<number | undefined>(undefined);
+  const [googleBtnWidth, setGoogleBtnWidth] = useState(() =>
+    Math.min(400, window.innerWidth - 32)
+  );
 
   useEffect(() => {
     // Load saved email if remembered
@@ -168,14 +170,12 @@ export default function Login() {
 
           <div className="flex flex-col gap-3 items-center">
             <div ref={googleBtnRef} className="google-signin-wrapper w-full max-w-[400px]">
-              {googleBtnWidth && (
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => console.error('Google Login Failed')}
-                  width={googleBtnWidth}
-                  text="signin_with"
-                />
-              )}
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.error('Google Login Failed')}
+                width={googleBtnWidth}
+                text="signin_with"
+              />
             </div>
             <div className="w-full max-w-[400px]">
               <AppleSignInButton

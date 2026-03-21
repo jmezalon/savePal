@@ -19,7 +19,9 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
   const googleBtnRef = useRef<HTMLDivElement>(null);
-  const [googleBtnWidth, setGoogleBtnWidth] = useState<number | undefined>(undefined);
+  const [googleBtnWidth, setGoogleBtnWidth] = useState(() =>
+    Math.min(400, window.innerWidth - 32)
+  );
 
   useEffect(() => {
     // Redirect if already authenticated
@@ -245,14 +247,12 @@ export default function Register() {
 
           <div className="flex flex-col gap-3 items-center">
             <div ref={googleBtnRef} className="google-signin-wrapper w-full max-w-[400px]">
-              {googleBtnWidth && (
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => console.error('Google Sign-up Failed')}
-                  width={googleBtnWidth}
-                  text="signup_with"
-                />
-              )}
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.error('Google Sign-up Failed')}
+                width={googleBtnWidth}
+                text="signup_with"
+              />
             </div>
             <div className="w-full max-w-[400px]">
               <AppleSignInButton
