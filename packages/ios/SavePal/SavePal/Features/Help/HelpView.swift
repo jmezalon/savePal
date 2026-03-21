@@ -40,7 +40,7 @@ struct HelpView: View {
         ),
         FAQItem(
             question: "Is there a fee to create a group?",
-            answer: "A one-time $2.99 creation fee may apply. This fee is waived if you've completed a previous group or have a valid waiver code."
+            answer: "A one-time $10 creation fee applies. This fee is waived after 2 successful group completions or if you have a valid waiver code."
         ),
     ]
 
