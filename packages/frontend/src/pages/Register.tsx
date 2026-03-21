@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,10 +18,6 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
-  const googleBtnRef = useRef<HTMLDivElement>(null);
-  const [googleBtnWidth, setGoogleBtnWidth] = useState(() =>
-    Math.min(400, window.innerWidth - 32)
-  );
 
   useEffect(() => {
     // Redirect if already authenticated
@@ -29,12 +25,6 @@ export default function Register() {
       navigate(redirectTo);
     }
   }, [isAuthenticated, navigate]);
-
-  useLayoutEffect(() => {
-    if (googleBtnRef.current) {
-      setGoogleBtnWidth(Math.floor(googleBtnRef.current.offsetWidth));
-    }
-  }, []);
 
   useEffect(() => {
     // Clear error when component unmounts
@@ -246,11 +236,11 @@ export default function Register() {
           </div>
 
           <div className="flex flex-col gap-3 items-center">
-            <div ref={googleBtnRef} className="google-signin-wrapper w-full max-w-[400px]">
+            <div className="google-signin-wrapper w-full max-w-[400px]">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.error('Google Sign-up Failed')}
-                width={googleBtnWidth}
+                width={400}
                 text="signup_with"
               />
             </div>
