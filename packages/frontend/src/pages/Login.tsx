@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,15 +31,10 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const el = googleBtnRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = Math.floor(entries[0].contentRect.width);
-      setGoogleBtnWidth(width);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
+  useLayoutEffect(() => {
+    if (googleBtnRef.current) {
+      setGoogleBtnWidth(Math.floor(googleBtnRef.current.offsetWidth));
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
