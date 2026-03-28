@@ -117,11 +117,17 @@ fun AppNavGraph(
         }
 
         composable(Routes.BANK_ACCOUNT) {
-            BankAccountScreen(onBack = { navController.popBackStack() })
+            BankAccountScreen(
+                onBack = { navController.popBackStack() },
+                authViewModel = authViewModel
+            )
         }
 
         composable(Routes.EDIT_PROFILE) {
-            EditProfileScreen(onBack = { navController.popBackStack() })
+            EditProfileScreen(
+                onBack = { navController.popBackStack() },
+                authViewModel = authViewModel
+            )
         }
 
         composable(Routes.CHANGE_PASSWORD) {

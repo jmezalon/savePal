@@ -51,6 +51,10 @@ class PaymentRepository @Inject constructor(
         api.createSetupIntent().data ?: throw Exception("Failed to create setup intent")
     }
 
+    suspend fun confirmSetupIntent(setupIntentId: String): Result<String> = apiCall {
+        api.confirmSetupIntent(ConfirmSetupRequest(setupIntentId)).message ?: "Confirmed"
+    }
+
     suspend fun savePaymentMethod(paymentMethodId: String, setDefault: Boolean): Result<SavedPaymentMethod> = apiCall {
         api.savePaymentMethod(SavePaymentMethodRequest(paymentMethodId, setDefault)).data
             ?: throw Exception("Failed to save payment method")

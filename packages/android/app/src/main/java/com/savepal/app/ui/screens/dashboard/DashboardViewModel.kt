@@ -72,4 +72,12 @@ class DashboardViewModel @Inject constructor(
             _state.update { it.copy(unreadCount = count) }
         }
     }
+
+    fun refreshUnreadCount() {
+        viewModelScope.launch {
+            notificationRepository.getUnreadCount().onSuccess { count ->
+                _state.update { it.copy(unreadCount = count) }
+            }
+        }
+    }
 }

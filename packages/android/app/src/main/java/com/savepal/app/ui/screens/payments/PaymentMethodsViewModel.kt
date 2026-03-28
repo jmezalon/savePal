@@ -17,6 +17,7 @@ data class PaymentMethodsState(
     val addCardLoading: Boolean = false,
     val addCardError: String? = null,
     val clientSecret: String? = null,
+    val setupIntentId: String? = null,
     val readyToPresent: Boolean = false
 )
 
@@ -65,7 +66,7 @@ class PaymentMethodsViewModel @Inject constructor(
                 .onSuccess { intent ->
                     val secret = intent.secret
                     if (secret != null) {
-                        _state.update { it.copy(clientSecret = secret, addCardLoading = false, readyToPresent = true) }
+                        _state.update { it.copy(clientSecret = secret, setupIntentId = intent.id, addCardLoading = false, readyToPresent = true) }
                     } else {
                         _state.update { it.copy(addCardLoading = false, addCardError = "Failed to get client secret") }
                     }
@@ -83,10 +84,21 @@ class PaymentMethodsViewModel @Inject constructor(
     fun onPaymentSheetResult(result: PaymentSheetResult) {
         stripeHelper.handlePaymentSheetResult(
             result = result,
-            onSuccess = { load() },
+            onSuccess = { confirmAndLoad() },
             onCanceled = { /* user cancelled */ },
             onFailed = { msg -> _state.update { it.copy(addCardError = msg) } }
         )
+    }
+
+    private fun confirmAndLoad() {
+        viewModelScope.launch {
+            val setupIntentId = _state.value.setupIntentId
+            if (setupIntentId != null) {
+                paymentRepository.confirmSetupIntent(setupIntentId)
+                _state.update { it.copy(setupIntentId = null) }
+            }
+            load()
+        }
     }
 
     fun getPaymentSheetConfig() = stripeHelper.buildPaymentSheetConfig()

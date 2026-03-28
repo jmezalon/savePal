@@ -9,7 +9,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,6 +26,33 @@ import kotlinx.coroutines.flow.*
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private class DateOfBirthTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text
+        val formatted = buildString {
+            digits.forEachIndexed { i, c ->
+                if (i == 2 || i == 4) append('/')
+                append(c)
+            }
+        }
+        return TransformedText(
+            AnnotatedString(formatted),
+            object : OffsetMapping {
+                override fun originalToTransformed(offset: Int): Int = when {
+                    offset <= 2 -> offset
+                    offset <= 4 -> offset + 1
+                    else -> offset + 2
+                }
+                override fun transformedToOriginal(offset: Int): Int = when {
+                    offset <= 2 -> offset
+                    offset <= 5 -> offset - 1
+                    else -> offset - 2
+                }
+            }
+        )
+    }
+}
 
 data class BankAccountState(
     val connectStatus: ConnectStatus? = null,
@@ -64,7 +95,7 @@ class BankAccountViewModel @Inject constructor(
                 "routing" -> it.copy(routingNumber = value)
                 "account" -> it.copy(accountNumber = value)
                 "holder" -> it.copy(accountHolderName = value)
-                "dob" -> it.copy(dateOfBirth = value)
+                "dob" -> it.copy(dateOfBirth = value.filter { c -> c.isDigit() }.take(8))
                 "ssn" -> it.copy(ssnLast4 = value)
                 "address" -> it.copy(addressLine1 = value)
                 "city" -> it.copy(city = value)
@@ -81,14 +112,13 @@ class BankAccountViewModel @Inject constructor(
         val s = _state.value
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true, error = null) }
-            val dobParts = s.dateOfBirth.split("/")
-            if (dobParts.size != 3) {
+            if (s.dateOfBirth.length != 8) {
                 _state.update { it.copy(isSaving = false, error = "Date of birth must be in MM/DD/YYYY format") }
                 return@launch
             }
-            val dobMonth = dobParts[0].toIntOrNull()
-            val dobDay = dobParts[1].toIntOrNull()
-            val dobYear = dobParts[2].toIntOrNull()
+            val dobMonth = s.dateOfBirth.substring(0, 2).toIntOrNull()
+            val dobDay = s.dateOfBirth.substring(2, 4).toIntOrNull()
+            val dobYear = s.dateOfBirth.substring(4, 8).toIntOrNull()
             if (dobMonth == null || dobDay == null || dobYear == null) {
                 _state.update { it.copy(isSaving = false, error = "Invalid date of birth") }
                 return@launch
@@ -128,9 +158,16 @@ class BankAccountViewModel @Inject constructor(
 @Composable
 fun BankAccountScreen(
     onBack: () -> Unit,
-    viewModel: BankAccountViewModel = hiltViewModel()
+    viewModel: BankAccountViewModel = hiltViewModel(),
+    authViewModel: com.savepal.app.ui.screens.auth.AuthViewModel? = null
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.success) {
+        if (state.success) {
+            authViewModel?.refreshUser()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -156,6 +193,17 @@ fun BankAccountScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            if (state.success) {
+                SavePalCard {
+                    Row {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SavePalGreen, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Bank account saved successfully", color = SavePalGreen)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
             state.error?.let {
                 ErrorBanner(message = it, onDismiss = { viewModel.clearError() })
                 Spacer(Modifier.height(16.dp))
@@ -216,7 +264,7 @@ fun BankAccountScreen(
                 Spacer(Modifier.height(24.dp))
                 Text("Identity Verification", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                SavePalTextField(state.dateOfBirth, { viewModel.update("dob", it) }, "Date of Birth (MM/DD/YYYY)")
+                SavePalTextField(state.dateOfBirth, { viewModel.update("dob", it) }, "Date of Birth (MM/DD/YYYY)", visualTransformation = DateOfBirthTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 Spacer(Modifier.height(12.dp))
                 SavePalTextField(state.ssnLast4, { viewModel.update("ssn", it) }, "SSN Last 4", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
