@@ -1,6 +1,10 @@
 package com.savepal.app.ui.screens.groups
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -133,26 +137,50 @@ fun GroupDetailScreen(
                     Spacer(Modifier.height(16.dp))
                     SavePalCard {
                         Text("Invite Code", style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Share this code with people you want to join your group",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SavePalTextSecondary
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            group.inviteCode!!,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SavePalBlue,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                group.inviteCode!!,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = SavePalBlue
-                            )
-                            IconButton(onClick = {
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, "Join my SavePal group! Use invite code: ${group.inviteCode}")
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Share Invite Code"))
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = "Share")
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Invite Code", group.inviteCode))
+                                    Toast.makeText(context, "Invite code copied!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Copy Code")
+                            }
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, "Join my SavePal savings group \"${group.name}\"! Use invite code: ${group.inviteCode}")
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Invite Code"))
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Share")
                             }
                         }
                     }
