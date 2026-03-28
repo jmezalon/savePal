@@ -149,7 +149,7 @@ fun DashboardScreen(
                         Icon(Icons.Default.Savings, contentDescription = null, tint = SavePalGreen, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            (state.paymentStats?.paidAmount ?: 0.0).toCurrency(),
+                            (state.payoutStats?.receivedAmount ?: 0.0).toCurrency(),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )

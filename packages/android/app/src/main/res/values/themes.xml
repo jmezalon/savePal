@@ -3,8 +3,8 @@
     <style name="Theme.SavePal" parent="android:Theme.Material.Light.NoActionBar" />
 
     <style name="Theme.SavePal.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#FFFFFF</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenBackground">#2563EB</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
         <item name="postSplashScreenTheme">@style/Theme.SavePal</item>
     </style>
 </resources>
