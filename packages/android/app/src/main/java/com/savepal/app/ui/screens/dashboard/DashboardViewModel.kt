@@ -17,6 +17,7 @@ data class DashboardState(
     val groups: List<SavingsGroup> = emptyList(),
     val pendingPayments: List<Payment> = emptyList(),
     val paymentStats: PaymentStats? = null,
+    val payoutStats: PayoutStats? = null,
     val unreadCount: Int = 0,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false
@@ -63,6 +64,9 @@ class DashboardViewModel @Inject constructor(
         }
         paymentRepository.getPaymentStats().onSuccess { stats ->
             _state.update { it.copy(paymentStats = stats) }
+        }
+        paymentRepository.getPayoutStats().onSuccess { stats ->
+            _state.update { it.copy(payoutStats = stats) }
         }
         notificationRepository.getUnreadCount().onSuccess { count ->
             _state.update { it.copy(unreadCount = count) }
