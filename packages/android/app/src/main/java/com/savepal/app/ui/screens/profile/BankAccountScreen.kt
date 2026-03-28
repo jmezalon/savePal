@@ -156,6 +156,17 @@ fun BankAccountScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            if (state.success) {
+                SavePalCard {
+                    Row {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SavePalGreen, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Bank account saved successfully", color = SavePalGreen)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
             state.error?.let {
                 ErrorBanner(message = it, onDismiss = { viewModel.clearError() })
                 Spacer(Modifier.height(16.dp))

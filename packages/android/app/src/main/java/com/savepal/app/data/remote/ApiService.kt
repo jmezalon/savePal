@@ -163,6 +163,9 @@ interface ApiService {
     @POST("payment-methods/setup-intent")
     suspend fun createSetupIntent(): ApiResponse<SetupIntentResponse>
 
+    @POST("payment-methods/confirm-setup")
+    suspend fun confirmSetupIntent(@Body request: ConfirmSetupRequest): MessageResponse
+
     @POST("payment-methods")
     suspend fun savePaymentMethod(@Body request: SavePaymentMethodRequest): ApiResponse<SavedPaymentMethod>
 

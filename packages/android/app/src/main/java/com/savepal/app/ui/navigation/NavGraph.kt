@@ -121,7 +121,10 @@ fun AppNavGraph(
         }
 
         composable(Routes.EDIT_PROFILE) {
-            EditProfileScreen(onBack = { navController.popBackStack() })
+            EditProfileScreen(
+                onBack = { navController.popBackStack() },
+                authViewModel = authViewModel
+            )
         }
 
         composable(Routes.CHANGE_PASSWORD) {

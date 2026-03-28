@@ -455,6 +455,11 @@ data class SavePaymentMethodRequest(
     val setDefault: Boolean = false
 )
 
+@Serializable
+data class ConfirmSetupRequest(
+    val setupIntentId: String
+)
+
 // ── Connect / Bank Account ──
 
 @Serializable

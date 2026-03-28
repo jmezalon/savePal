@@ -46,7 +46,7 @@ class EmailService {
       console.log(`\n📧 [DEV] Email suppressed:`);
       console.log(`   To: ${to}`);
       console.log(`   Subject: ${subject}`);
-      console.log(`   Text preview: ${text?.substring(0, 150) ?? '(no text)'}...`);
+      console.log(`   Full text:\n${text ?? '(no text)'}`);
       console.log(`   ℹ️  Set NODE_ENV=production to send real emails.\n`);
       return;
     }
