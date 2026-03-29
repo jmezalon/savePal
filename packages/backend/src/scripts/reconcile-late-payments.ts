@@ -36,6 +36,22 @@ async function reconcileLatePayments() {
   // -------------------------------------------------------
   console.log('--- Phase 1: Recording untracked debts ---\n');
 
+  // Debug: check the specific payment we know about
+  const debugPayment = await prisma.payment.findUnique({
+    where: { id: '1e7af0d2-f458-4412-915f-7f884a37d4b8' },
+    include: { cycle: true },
+  });
+  if (debugPayment) {
+    console.log('[DEBUG] Payment 1e7af0d2:');
+    console.log(`  status: ${debugPayment.status}`);
+    console.log(`  retryCount: ${debugPayment.retryCount}`);
+    console.log(`  fallbackMethod: ${debugPayment.fallbackMethod}`);
+    console.log(`  cycle.isCompleted: ${debugPayment.cycle.isCompleted}`);
+    console.log('');
+  } else {
+    console.log('[DEBUG] Payment 1e7af0d2 NOT FOUND in this database\n');
+  }
+
   const untrackedFailedPayments = await prisma.payment.findMany({
     where: {
       status: 'FAILED',
@@ -43,7 +59,6 @@ async function reconcileLatePayments() {
       fallbackMethod: null,
       cycle: {
         isCompleted: true,
-        group: { status: 'ACTIVE' },
       },
     },
     include: {
