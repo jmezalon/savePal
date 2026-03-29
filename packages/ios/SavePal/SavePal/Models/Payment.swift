@@ -62,6 +62,32 @@ struct PaymentBreakdown: Codable {
     let total: Double
 }
 
+// MARK: - Debt
+
+struct DebtInfo: Codable {
+    let outstandingDebt: Double
+    let chargeAmount: Double
+    let processingFee: Double
+    let debtPayments: [DebtPayment]
+}
+
+struct DebtPayment: Codable, Identifiable {
+    let id: String
+    let amount: Double
+    let createdAt: String
+    let cycle: DebtPaymentCycle
+}
+
+struct DebtPaymentCycle: Codable {
+    let cycleNumber: Int
+}
+
+struct DebtPaymentResult: Codable {
+    let debtAmount: Double
+    let chargeAmount: Double
+    let paymentsResolved: Int
+}
+
 // MARK: - Payment Stats
 
 struct PaymentStats: Codable {

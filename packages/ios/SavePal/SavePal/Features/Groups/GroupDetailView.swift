@@ -18,6 +18,10 @@ struct GroupDetailView: View {
     @State private var isStarting = false
     @State private var selectedPaymentId: IdentifiableString?
 
+    // Debt state
+    @State private var debtInfo: DebtInfo?
+    @State private var showPayDebt = false
+
     // Reorder state
     @State private var isReordering = false
     @State private var reorderMemberships: [Membership] = []
@@ -62,6 +66,11 @@ struct GroupDetailView: View {
                 Task { await loadAll() }
             }
         }
+        .sheet(isPresented: $showPayDebt) {
+            PayDebtView(groupId: groupId) {
+                Task { await loadAll() }
+            }
+        }
         .alert("Delete Group", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task { await deleteGroup() }
@@ -80,6 +89,11 @@ struct GroupDetailView: View {
 
                 // Stats
                 statsCards(group)
+
+                // Debt Banner
+                if group.status == .ACTIVE, let debt = debtInfo, debt.outstandingDebt > 0 {
+                    debtBanner(debt)
+                }
 
                 // Invite Code (owner only)
                 if isOwner && group.status == .PENDING {
@@ -116,6 +130,40 @@ struct GroupDetailView: View {
             }
             .padding()
         }
+    }
+
+    // MARK: - Debt Banner
+
+    private func debtBanner(_ debt: DebtInfo) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.savePalAmber)
+                Text("Outstanding Debt")
+                    .font(.headline)
+                    .foregroundStyle(Color.savePalAmber)
+                Spacer()
+            }
+
+            Text("You have \(debt.outstandingDebt.formattedCurrency) in unpaid contributions from \(debt.debtPayments.count) missed payment\(debt.debtPayments.count == 1 ? "" : "s").")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button {
+                showPayDebt = true
+            } label: {
+                Text("Pay Now")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.savePalAmber)
+        }
+        .padding()
+        .background(Color.savePalAmber.opacity(0.1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.savePalAmber.opacity(0.3)))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Header
@@ -819,6 +867,11 @@ struct GroupDetailView: View {
             group = g
             cycles = c
             currentCycle = c.first(where: { !$0.isCompleted })
+
+            // Fetch debt info for active groups
+            if g.status == .ACTIVE {
+                debtInfo = try? await APIClient.shared.request(url: APIEndpoints.Payments.debtInfo(groupId))
+            }
 
             // Fetch bids if current cycle has bidding
             if let current = currentCycle, current.biddingStatus != nil {
