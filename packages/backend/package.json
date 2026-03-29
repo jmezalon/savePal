@@ -16,6 +16,7 @@
     "script:test-join-notification": "tsx src/scripts/test-join-notification.ts",
     "script:seed-superadmin": "tsx src/scripts/seed-superadmin.ts",
     "script:reconcile-dev-data": "tsx src/scripts/reconcile-dev-data.ts",
+    "script:reconcile-late-payments": "tsx src/scripts/reconcile-late-payments.ts",
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest"
