@@ -43,7 +43,6 @@ async function reconcileLatePayments() {
       fallbackMethod: null,
       cycle: {
         isCompleted: true,
-        group: { status: 'ACTIVE' },
       },
     },
     include: {
