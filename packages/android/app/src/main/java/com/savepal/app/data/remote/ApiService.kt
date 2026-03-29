@@ -121,6 +121,12 @@ interface ApiService {
         @Body request: ProcessPaymentRequest
     ): ApiResponse<Payment>
 
+    @GET("payments/debt/{groupId}")
+    suspend fun getDebtInfo(@Path("groupId") groupId: String): ApiResponse<DebtInfo>
+
+    @POST("payments/debt/{groupId}/pay")
+    suspend fun payDebt(@Path("groupId") groupId: String, @Body body: PayDebtRequest): ApiResponse<DebtPaymentResult>
+
     // ── Payouts ──
 
     @GET("payouts/my-payouts")

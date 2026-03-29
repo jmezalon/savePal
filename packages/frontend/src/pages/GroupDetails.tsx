@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import PaymentModal from '../components/PaymentModal';
+import DebtPaymentModal from '../components/DebtPaymentModal';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface GroupMember {
@@ -105,6 +106,12 @@ export default function GroupDetails() {
   const [bidLoading, setBidLoading] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
 
+  // Debt state
+  const [outstandingDebt, setOutstandingDebt] = useState<number>(0);
+  const [debtChargeAmount, setDebtChargeAmount] = useState<number>(0);
+  const [debtProcessingFee, setDebtProcessingFee] = useState<number>(0);
+  const [showDebtModal, setShowDebtModal] = useState(false);
+
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -112,6 +119,7 @@ export default function GroupDetails() {
     fetchGroupDetails();
     if (id) {
       fetchCycles(id);
+      fetchDebt(id);
     }
   }, [id]);
 
@@ -215,6 +223,32 @@ export default function GroupDetails() {
       }
     } catch (err) {
       console.error('Failed to fetch cycles:', err);
+    }
+  };
+
+  const fetchDebt = async (groupId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/debt/${groupId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const debt = data.data || data;
+        setOutstandingDebt(debt.outstandingDebt || 0);
+        setDebtChargeAmount(debt.chargeAmount || 0);
+        setDebtProcessingFee(debt.processingFee || 0);
+      }
+    } catch {
+      // Fail silently - debt info is supplementary
+    }
+  };
+
+  const handleDebtPaymentSuccess = async () => {
+    setShowDebtModal(false);
+    if (id) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([fetchGroupDetails(), fetchCycles(id), fetchDebt(id)]);
     }
   };
 

@@ -371,6 +371,35 @@ data class ProcessPaymentRequest(
     val paymentMethodId: String
 )
 
+@Serializable
+data class DebtInfo(
+    val outstandingDebt: Double,
+    val chargeAmount: Double,
+    val processingFee: Double,
+    val debtPayments: List<DebtPaymentItem>
+)
+
+@Serializable
+data class DebtPaymentItem(
+    val id: String,
+    val amount: Double,
+    val createdAt: String,
+    val cycle: DebtPaymentCycle
+)
+
+@Serializable
+data class DebtPaymentCycle(val cycleNumber: Int)
+
+@Serializable
+data class DebtPaymentResult(
+    val debtAmount: Double,
+    val chargeAmount: Double,
+    val paymentsResolved: Int
+)
+
+@Serializable
+data class PayDebtRequest(val paymentMethodId: String)
+
 // ── Payouts ──
 
 @Serializable

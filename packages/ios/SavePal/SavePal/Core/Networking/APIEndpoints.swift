@@ -68,6 +68,8 @@ enum APIEndpoints {
         static func detail(_ id: String) -> String { "\(base)/\(id)" }
         static func breakdown(_ id: String) -> String { "\(base)/\(id)/breakdown" }
         static func process(_ id: String) -> String { "\(base)/\(id)/process" }
+        static func debtInfo(_ groupId: String) -> String { "\(base)/debt/\(groupId)" }
+        static func payDebt(_ groupId: String) -> String { "\(base)/debt/\(groupId)/pay" }
     }
 
     // MARK: - Payouts
