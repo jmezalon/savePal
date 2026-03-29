@@ -430,7 +430,6 @@ class SchedulerService {
         retryCount: { gte: 3 },
         fallbackMethod: null, // not yet resolved
         cycle: {
-          isCompleted: false,
           group: { status: 'ACTIVE' },
         },
       },
