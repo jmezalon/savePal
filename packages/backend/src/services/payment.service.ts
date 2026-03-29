@@ -454,39 +454,50 @@ class PaymentService {
   }
 
   /**
-   * Reconcile a late payment that was previously recorded as debt.
-   * Clears the debt from the member's membership and forwards the late payment
-   * amount (minus platform fee) to the cycle's payout recipient as a top-up transfer.
+   * Reconcile a late payment on an already-completed cycle.
+   *
+   * Handles two scenarios:
+   *   A) Debt was recorded on the membership (debtPaymentIds contains this payment)
+   *   B) Debt was never recorded (e.g. webhook incremented retryCount but
+   *      recordOutstandingDebt was never called before the cycle completed)
+   *
+   * If the payout is still PENDING, adjusts the payout amount so the recipient
+   * gets the full amount when it eventually processes. If the payout already
+   * COMPLETED, sends a separate top-up transfer to the recipient.
    */
   async reconcileLatePayment(
     paymentId: string,
     userId: string,
     cycle: { id: string; groupId: string; group: { id: string; name: string } }
   ) {
+    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    if (!payment) return;
+
+    // Skip if already reconciled
+    if (payment.fallbackMethod === 'late_payment') return;
+
+    const lateAmount = payment.amount;
+
+    // Clear debt from membership if it was recorded
     const membership = await prisma.membership.findFirst({
       where: { groupId: cycle.groupId, userId, isActive: true },
     });
 
-    if (!membership || !membership.debtPaymentIds.includes(paymentId)) {
-      // Payment was not recorded as debt — nothing to reconcile
-      return;
+    if (membership && membership.debtPaymentIds.includes(paymentId)) {
+      const updatedDebtIds = membership.debtPaymentIds.filter(id => id !== paymentId);
+      const clearedDebt = Math.min(lateAmount, membership.outstandingDebt);
+      const remainingDebt = Math.round((membership.outstandingDebt - clearedDebt) * 100) / 100;
+
+      await prisma.membership.update({
+        where: { id: membership.id },
+        data: {
+          outstandingDebt: remainingDebt,
+          debtPaymentIds: updatedDebtIds,
+        },
+      });
+
+      console.log(`[Payment] Cleared $${clearedDebt} debt for user ${userId} (late payment ${paymentId})`);
     }
-
-    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
-    if (!payment) return;
-
-    // Clear this payment from the member's debt
-    const updatedDebtIds = membership.debtPaymentIds.filter(id => id !== paymentId);
-    const clearedAmount = Math.min(payment.amount, membership.outstandingDebt);
-    const remainingDebt = Math.round((membership.outstandingDebt - clearedAmount) * 100) / 100;
-
-    await prisma.membership.update({
-      where: { id: membership.id },
-      data: {
-        outstandingDebt: remainingDebt,
-        debtPaymentIds: updatedDebtIds,
-      },
-    });
 
     // Mark the payment as resolved via late payment
     await prisma.payment.update({
@@ -497,15 +508,43 @@ class PaymentService {
       },
     });
 
-    console.log(`[Payment] Cleared $${clearedAmount} debt for user ${userId} (late payment ${paymentId})`);
-
-    // Forward the late payment to the cycle's payout recipient as a top-up
+    // Find the payout for this cycle and adjust it
     const payout = await prisma.payout.findUnique({ where: { cycleId: cycle.id } });
-    if (!payout || payout.status !== 'COMPLETED') {
-      console.log(`[Payment] Payout for cycle ${cycle.id} not yet completed, skipping top-up transfer`);
+    if (!payout) return;
+
+    const topUpFee = Math.min(lateAmount * 0.03, 150);
+    const topUpNet = Math.round((lateAmount - topUpFee) * 100) / 100;
+
+    if (topUpNet <= 0) return;
+
+    if (payout.status === 'PENDING' || payout.status === 'PROCESSING') {
+      // Payout hasn't been sent yet — just increase the amounts so the
+      // recipient gets the full payout when it eventually processes.
+      await prisma.payout.update({
+        where: { id: payout.id },
+        data: {
+          amount: { increment: lateAmount },
+          feeAmount: { increment: topUpFee },
+          netAmount: { increment: topUpNet },
+        },
+      });
+
+      console.log(`[Payment] Adjusted PENDING payout ${payout.id} by +$${topUpNet} for late payment ${paymentId}`);
+
+      await notificationService.createNotification({
+        userId,
+        groupId: cycle.groupId,
+        type: 'PAYMENT_RECEIVED',
+        title: 'Late Payment Processed',
+        message: `Your late payment of $${lateAmount.toFixed(2)} for "${cycle.group.name}" has been processed and will be included in the payout to the recipient.`,
+      });
+
       return;
     }
 
+    if (payout.status !== 'COMPLETED') return;
+
+    // Payout already sent — send a separate top-up transfer to the recipient
     const recipient = await prisma.user.findUnique({
       where: { id: payout.recipientId },
       select: { id: true, stripeConnectAccountId: true, stripeConnectOnboarded: true },
@@ -516,53 +555,42 @@ class PaymentService {
       return;
     }
 
-    // Calculate top-up: late payment minus platform fee (same 3% rate)
-    const topUpFee = Math.min(clearedAmount * 0.03, 150);
-    const topUpAmount = Math.round((clearedAmount - topUpFee) * 100) / 100;
-
-    if (topUpAmount <= 0) return;
-
     try {
       const transferId = await stripeService.createTransfer(
         payout.id,
         recipient.stripeConnectAccountId,
-        topUpAmount,
+        topUpNet,
         { type: 'late_payment_topup', latePaymentId: paymentId }
       );
 
-      // Update payout record to reflect the additional amount
       await prisma.payout.update({
         where: { id: payout.id },
         data: {
-          amount: { increment: clearedAmount },
+          amount: { increment: lateAmount },
           feeAmount: { increment: topUpFee },
-          netAmount: { increment: topUpAmount },
+          netAmount: { increment: topUpNet },
         },
       });
 
-      console.log(`[Payment] Top-up transfer of $${topUpAmount} sent to recipient ${payout.recipientId} (transfer ${transferId})`);
+      console.log(`[Payment] Top-up transfer of $${topUpNet} sent to recipient ${payout.recipientId} (transfer ${transferId})`);
 
-      // Notify the recipient about the top-up
       await notificationService.createNotification({
         userId: payout.recipientId,
         groupId: cycle.groupId,
         type: 'PAYOUT_COMPLETED',
         title: 'Late Payment Top-Up Received',
-        message: `A member's late payment of $${clearedAmount.toFixed(2)} for "${cycle.group.name}" has been collected. $${topUpAmount.toFixed(2)} has been transferred to your account.`,
+        message: `A member's late payment of $${lateAmount.toFixed(2)} for "${cycle.group.name}" has been collected. $${topUpNet.toFixed(2)} has been transferred to your account.`,
       });
 
-      // Notify the late payer that their debt is cleared
       await notificationService.createNotification({
         userId,
         groupId: cycle.groupId,
         type: 'PAYMENT_RECEIVED',
         title: 'Late Payment Processed',
-        message: `Your late payment of $${clearedAmount.toFixed(2)} for "${cycle.group.name}" has been processed and forwarded to the payout recipient.${remainingDebt > 0 ? ` Remaining debt: $${remainingDebt.toFixed(2)}.` : ' Your debt has been fully cleared.'}`,
+        message: `Your late payment of $${lateAmount.toFixed(2)} for "${cycle.group.name}" has been processed and forwarded to the payout recipient.`,
       });
     } catch (error: any) {
       console.error(`[Payment] Failed to send top-up transfer for late payment ${paymentId}: ${error.message}`);
-      // Don't re-throw — the debt was already cleared and the payment was collected.
-      // The platform can manually reconcile if the transfer fails.
     }
   }
 

@@ -95,7 +95,7 @@ class WebhookController {
 
     const failureMessage = paymentIntent.last_payment_error?.message || 'Payment failed';
 
-    await prisma.payment.update({
+    const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: {
         status: 'FAILED',
@@ -121,6 +121,15 @@ class WebhookController {
       payment.amount,
       failureMessage
     );
+
+    // Record as outstanding debt after max retries exhausted
+    if (updatedPayment.retryCount >= 3) {
+      await paymentService.recordOutstandingDebt(
+        paymentId,
+        payment.userId,
+        payment.cycle.group.id
+      );
+    }
 
     console.log(`Webhook: Payment ${paymentId} marked as FAILED - ${failureMessage}`);
   }
