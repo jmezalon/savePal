@@ -21,6 +21,10 @@ router.get('/:paymentId', paymentController.getPaymentById);
 // Get charge breakdown (contribution + processing fee)
 router.get('/:paymentId/breakdown', paymentController.getChargeBreakdown);
 
+// Debt management
+router.get('/debt/:groupId', paymentController.getDebtInfo);
+router.post('/debt/:groupId/pay', paymentController.payDebt);
+
 // Process payment
 router.post('/:paymentId/process', paymentController.processPayment);
 

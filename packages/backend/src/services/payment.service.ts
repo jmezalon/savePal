@@ -595,6 +595,199 @@ class PaymentService {
   }
 
   /**
+   * Pay off outstanding debt for a specific group membership.
+   * Charges the member's card, clears the debt, and forwards the payment
+   * to the shortchanged payout recipient (or adjusts a pending payout).
+   */
+  async payDebt(
+    userId: string,
+    groupId: string,
+    paymentMethodId?: string
+  ) {
+    const membership = await prisma.membership.findFirst({
+      where: { groupId, userId, isActive: true },
+      include: { group: true },
+    });
+
+    if (!membership) {
+      throw new Error('No active membership found for this group');
+    }
+
+    if (membership.outstandingDebt <= 0) {
+      throw new Error('No outstanding debt to pay');
+    }
+
+    const debtAmount = membership.outstandingDebt;
+    const { total: chargeAmount } = this.getChargeBreakdown(debtAmount);
+
+    // Charge the member's card
+    const result = await stripeService.chargePayment(
+      userId,
+      chargeAmount,
+      `debt_${membership.id}`,
+      paymentMethodId
+    );
+
+    if (result.status !== 'succeeded') {
+      throw new Error('Payment requires additional authentication. Please try a different payment method.');
+    }
+
+    // Find the debt payments to determine which cycles were affected
+    const debtPaymentIds = [...membership.debtPaymentIds];
+    const debtPayments = await prisma.payment.findMany({
+      where: { id: { in: debtPaymentIds } },
+      include: { cycle: { include: { group: true } } },
+    });
+
+    // Clear the debt from membership
+    await prisma.membership.update({
+      where: { id: membership.id },
+      data: {
+        outstandingDebt: 0,
+        debtPaymentIds: [],
+      },
+    });
+
+    // Mark all debt payments as resolved
+    for (const debtPayment of debtPayments) {
+      await prisma.payment.update({
+        where: { id: debtPayment.id },
+        data: {
+          fallbackMethod: 'debt_payment',
+          fallbackAt: new Date(),
+        },
+      });
+    }
+
+    // Restore trust score (reverse the penalties)
+    await this.adjustTrustScore(userId, Math.abs(TRUST_SCORE_PENALTY) * debtPayments.length);
+
+    // Forward the payment to each affected cycle's payout recipient
+    // Group debt payments by cycle so we handle each payout once
+    const cycleMap = new Map<string, typeof debtPayments>();
+    for (const dp of debtPayments) {
+      const existing = cycleMap.get(dp.cycleId) || [];
+      existing.push(dp);
+      cycleMap.set(dp.cycleId, existing);
+    }
+
+    for (const [cycleId, payments] of cycleMap) {
+      const cycleDebt = payments.reduce((sum, p) => sum + p.amount, 0);
+      const topUpFee = Math.min(cycleDebt * 0.03, 150);
+      const topUpNet = Math.round((cycleDebt - topUpFee) * 100) / 100;
+
+      if (topUpNet <= 0) continue;
+
+      const payout = await prisma.payout.findUnique({ where: { cycleId } });
+      if (!payout) continue;
+
+      if (payout.status === 'PENDING' || payout.status === 'PROCESSING') {
+        // Payout not sent yet — adjust the amount
+        await prisma.payout.update({
+          where: { id: payout.id },
+          data: {
+            amount: { increment: cycleDebt },
+            feeAmount: { increment: topUpFee },
+            netAmount: { increment: topUpNet },
+          },
+        });
+
+        console.log(`[Payment] Adjusted PENDING payout ${payout.id} by +$${topUpNet} from debt payment`);
+      } else if (payout.status === 'COMPLETED') {
+        // Payout already sent — send a top-up transfer
+        const recipient = await prisma.user.findUnique({
+          where: { id: payout.recipientId },
+          select: { id: true, stripeConnectAccountId: true, stripeConnectOnboarded: true },
+        });
+
+        if (recipient?.stripeConnectAccountId && recipient.stripeConnectOnboarded) {
+          try {
+            await stripeService.createTransfer(
+              payout.id,
+              recipient.stripeConnectAccountId,
+              topUpNet,
+              { type: 'debt_payment_topup' }
+            );
+
+            await prisma.payout.update({
+              where: { id: payout.id },
+              data: {
+                amount: { increment: cycleDebt },
+                feeAmount: { increment: topUpFee },
+                netAmount: { increment: topUpNet },
+              },
+            });
+
+            await notificationService.createNotification({
+              userId: payout.recipientId,
+              groupId,
+              type: 'PAYOUT_COMPLETED',
+              title: 'Debt Payment Top-Up Received',
+              message: `A member has paid their outstanding debt of $${cycleDebt.toFixed(2)} for "${membership.group.name}". $${topUpNet.toFixed(2)} has been transferred to your account.`,
+            });
+
+            console.log(`[Payment] Top-up of $${topUpNet} sent to recipient ${payout.recipientId} from debt payment`);
+          } catch (error: any) {
+            console.error(`[Payment] Failed to send debt top-up transfer: ${error.message}`);
+          }
+        }
+      }
+    }
+
+    // Notify the member
+    await notificationService.createNotification({
+      userId,
+      groupId,
+      type: 'PAYMENT_RECEIVED',
+      title: 'Debt Paid Successfully',
+      message: `Your outstanding debt of $${debtAmount.toFixed(2)} for "${membership.group.name}" has been paid. Your debt has been fully cleared.`,
+    });
+
+    console.log(`[Payment] User ${userId} paid $${debtAmount} debt for group ${groupId}`);
+
+    return {
+      debtAmount,
+      chargeAmount,
+      paymentsResolved: debtPayments.length,
+    };
+  }
+
+  /**
+   * Get outstanding debt info for a user in a specific group
+   */
+  async getDebtInfo(userId: string, groupId: string) {
+    const membership = await prisma.membership.findFirst({
+      where: { groupId, userId, isActive: true },
+      include: { group: { select: { name: true } } },
+    });
+
+    if (!membership) {
+      throw new Error('No active membership found for this group');
+    }
+
+    const debtPayments = membership.debtPaymentIds.length > 0
+      ? await prisma.payment.findMany({
+          where: { id: { in: membership.debtPaymentIds } },
+          select: {
+            id: true,
+            amount: true,
+            createdAt: true,
+            cycle: { select: { cycleNumber: true } },
+          },
+        })
+      : [];
+
+    const breakdown = this.getChargeBreakdown(membership.outstandingDebt);
+
+    return {
+      outstandingDebt: membership.outstandingDebt,
+      chargeAmount: breakdown.total,
+      processingFee: breakdown.processingFee,
+      debtPayments,
+    };
+  }
+
+  /**
    * Adjust a user's trust score (clamped to 0 minimum)
    */
   async adjustTrustScore(userId: string, delta: number) {

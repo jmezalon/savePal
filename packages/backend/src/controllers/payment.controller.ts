@@ -217,6 +217,55 @@ class PaymentController {
       });
     }
   }
+  /**
+   * Get debt info for current user in a group
+   * GET /api/payments/debt/:groupId
+   */
+  async getDebtInfo(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+      const { groupId } = req.params;
+
+      const debtInfo = await paymentService.getDebtInfo(userId, groupId);
+
+      res.json({
+        success: true,
+        data: debtInfo,
+      });
+    } catch (error: any) {
+      res.status(error.message.includes('No active membership') ? 404 : 400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Pay outstanding debt for a group
+   * POST /api/payments/debt/:groupId/pay
+   */
+  async payDebt(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId!;
+      const { groupId } = req.params;
+      const { paymentMethodId } = req.body;
+
+      const result = await paymentService.payDebt(userId, groupId, paymentMethodId);
+
+      res.json({
+        success: true,
+        message: 'Debt paid successfully',
+        data: result,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('No outstanding debt') ? 409 :
+                         error.message.includes('No active membership') ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
 }
 
 export default new PaymentController();
