@@ -659,6 +659,31 @@ export default function GroupDetails() {
                 </div>
               )}
 
+              {/* Outstanding Debt Banner */}
+              {group.status === 'ACTIVE' && outstandingDebt > 0 && (
+                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start space-x-3">
+                      <svg className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                      </svg>
+                      <div>
+                        <h3 className="text-sm font-semibold text-amber-900">Outstanding Debt</h3>
+                        <p className="text-sm text-amber-800 mt-1">
+                          You have <span className="font-bold">${outstandingDebt.toFixed(2)}</span> in outstanding debt
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowDebtModal(true)}
+                      className="ml-4 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 flex-shrink-0"
+                    >
+                      Pay Now
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {isOwner && group.status === 'PENDING' && (
                 <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-yellow-900 mb-2">Invite Members</h3>
@@ -1202,6 +1227,20 @@ export default function GroupDetails() {
             token={token}
             onClose={() => { setShowPaymentModal(false); setSelectedPayment(null); }}
             onSuccess={handlePaymentSuccess}
+          />
+        )}
+
+        {/* Debt Payment Modal */}
+        {showDebtModal && group && token && (
+          <DebtPaymentModal
+            groupId={group.id}
+            groupName={group.name}
+            debtAmount={outstandingDebt}
+            chargeAmount={debtChargeAmount}
+            processingFee={debtProcessingFee}
+            token={token}
+            onClose={() => setShowDebtModal(false)}
+            onSuccess={handleDebtPaymentSuccess}
           />
         )}
 
