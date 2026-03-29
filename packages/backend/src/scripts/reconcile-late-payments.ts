@@ -36,22 +36,6 @@ async function reconcileLatePayments() {
   // -------------------------------------------------------
   console.log('--- Phase 1: Recording untracked debts ---\n');
 
-  // Debug: check the specific payment we know about
-  const debugPayment = await prisma.payment.findUnique({
-    where: { id: '1e7af0d2-f458-4412-915f-7f884a37d4b8' },
-    include: { cycle: true },
-  });
-  if (debugPayment) {
-    console.log('[DEBUG] Payment 1e7af0d2:');
-    console.log(`  status: ${debugPayment.status}`);
-    console.log(`  retryCount: ${debugPayment.retryCount}`);
-    console.log(`  fallbackMethod: ${debugPayment.fallbackMethod}`);
-    console.log(`  cycle.isCompleted: ${debugPayment.cycle.isCompleted}`);
-    console.log('');
-  } else {
-    console.log('[DEBUG] Payment 1e7af0d2 NOT FOUND in this database\n');
-  }
-
   const untrackedFailedPayments = await prisma.payment.findMany({
     where: {
       status: 'FAILED',
@@ -198,15 +182,6 @@ async function reconcileLatePayments() {
           console.log(`    Cleared $${clearedDebt.toFixed(2)} debt from membership`);
         }
 
-        // Mark payment as reconciled
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: {
-            fallbackMethod: 'late_payment',
-            fallbackAt: new Date(),
-          },
-        });
-
         if (payout.status === 'PENDING' || payout.status === 'PROCESSING') {
           await prisma.payout.update({
             where: { id: payout.id },
@@ -214,6 +189,15 @@ async function reconcileLatePayments() {
               amount: { increment: lateAmount },
               feeAmount: { increment: topUpFee },
               netAmount: { increment: topUpNet },
+            },
+          });
+
+          // Mark payment as reconciled only after payout adjusted successfully
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              fallbackMethod: 'late_payment',
+              fallbackAt: new Date(),
             },
           });
 
@@ -236,9 +220,8 @@ async function reconcileLatePayments() {
           });
 
           if (!recipient?.stripeConnectAccountId || !recipient.stripeConnectOnboarded) {
-            console.log(`    [WARN] Recipient ${payout.recipientId} not onboarded, cannot send top-up`);
-            console.log(`    Payment marked as reconciled but top-up transfer needs manual intervention.\n`);
-            reconciled++;
+            console.log(`    [WARN] Recipient ${payout.recipientId} not onboarded, cannot send top-up\n`);
+            skipped++;
             continue;
           }
 
@@ -248,6 +231,15 @@ async function reconcileLatePayments() {
             topUpNet,
             { type: 'late_payment_topup', latePaymentId: payment.id }
           );
+
+          // Mark payment as reconciled only after transfer succeeds
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              fallbackMethod: 'late_payment',
+              fallbackAt: new Date(),
+            },
+          });
 
           await prisma.payout.update({
             where: { id: payout.id },
