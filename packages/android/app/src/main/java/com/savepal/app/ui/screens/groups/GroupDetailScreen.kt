@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.savepal.app.data.model.*
 import com.savepal.app.ui.components.*
 import com.savepal.app.ui.theme.*
+import com.savepal.app.data.model.SavedPaymentMethod
 import com.savepal.app.util.toCurrency
 import com.savepal.app.util.toFormattedDate
 
@@ -50,6 +51,19 @@ fun GroupDetailScreen(
         LaunchedEffect(msg) {
             viewModel.clearActionMessage()
         }
+    }
+
+    if (state.showPayDebtDialog && state.debtInfo != null) {
+        PayDebtDialog(
+            debtInfo = state.debtInfo!!,
+            paymentMethods = state.paymentMethods,
+            selectedMethodId = state.selectedDebtMethodId,
+            isPaying = state.isPayingDebt,
+            error = state.error,
+            onSelectMethod = { viewModel.selectDebtPaymentMethod(it) },
+            onPay = { viewModel.payDebt() },
+            onDismiss = { viewModel.dismissPayDebtDialog() }
+        )
     }
 
     if (showDeleteDialog) {
@@ -129,6 +143,50 @@ fun GroupDetailScreen(
                     SavePalCard(modifier = Modifier.weight(1f)) {
                         Text(group.payoutMethod.name.lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text("Payout", style = MaterialTheme.typography.bodySmall, color = SavePalTextSecondary)
+                    }
+                }
+
+                // Outstanding Debt Banner
+                state.debtInfo?.let { debt ->
+                    Spacer(Modifier.height(16.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = SavePalAmber.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, SavePalAmber.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = SavePalAmber,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Outstanding Debt",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SavePalAmber
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "You have ${debt.outstandingDebt.toCurrency()} in outstanding debt from missed payments.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SavePalTextSecondary
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Button(
+                                onClick = { viewModel.showPayDebtDialog() },
+                                colors = ButtonDefaults.buttonColors(containerColor = SavePalAmber),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Pay Now - ${debt.chargeAmount.toCurrency()}")
+                            }
+                        }
                     }
                 }
 
@@ -671,4 +729,143 @@ fun GroupDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PayDebtDialog(
+    debtInfo: DebtInfo,
+    paymentMethods: List<SavedPaymentMethod>,
+    selectedMethodId: String?,
+    isPaying: Boolean,
+    error: String?,
+    onSelectMethod: (String) -> Unit,
+    onPay: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isPaying) onDismiss() },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = SavePalAmber, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Pay Outstanding Debt")
+            }
+        },
+        text = {
+            Column {
+                error?.let {
+                    ErrorBanner(message = it, onDismiss = {})
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                // Breakdown
+                SavePalCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Debt Amount", color = SavePalTextSecondary)
+                        Text(debtInfo.outstandingDebt.toCurrency())
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Processing Fee", color = SavePalTextSecondary)
+                        Text(debtInfo.processingFee.toCurrency())
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Total Charge", fontWeight = FontWeight.Bold)
+                        Text(debtInfo.chargeAmount.toCurrency(), fontWeight = FontWeight.Bold, color = SavePalAmber)
+                    }
+                }
+
+                if (debtInfo.debtPayments.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Missed Payments", style = MaterialTheme.typography.labelMedium, color = SavePalTextSecondary)
+                    Spacer(Modifier.height(4.dp))
+                    debtInfo.debtPayments.forEach { payment ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Cycle ${payment.cycle.cycleNumber}", style = MaterialTheme.typography.bodySmall)
+                            Text(payment.amount.toCurrency(), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Text("Payment Method", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(8.dp))
+
+                if (paymentMethods.isEmpty()) {
+                    Text("No payment methods found. Please add a card first.", color = SavePalTextSecondary, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    paymentMethods.forEach { method ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedMethodId == method.id,
+                                onClick = { onSelectMethod(method.id) }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(method.displayName, style = MaterialTheme.typography.bodyMedium)
+                                if (method.expiryMonth != null && method.expiryYear != null) {
+                                    Text(
+                                        "Expires ${method.expiryMonth}/${method.expiryYear}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = SavePalTextSecondary
+                                    )
+                                }
+                            }
+                            if (method.isDefault) {
+                                StatusBadge("Default", SavePalBlue)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onPay,
+                enabled = selectedMethodId != null && !isPaying,
+                colors = ButtonDefaults.buttonColors(containerColor = SavePalAmber)
+            ) {
+                if (isPaying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Processing...")
+                } else {
+                    Text("Pay ${debtInfo.chargeAmount.toCurrency()}")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isPaying) {
+                Text("Cancel")
+            }
+        }
+    )
 }

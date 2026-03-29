@@ -42,6 +42,16 @@ class PaymentRepository @Inject constructor(
         api.retryPayout(id).data ?: throw Exception("Failed to retry payout")
     }
 
+    // Debt
+    suspend fun getDebtInfo(groupId: String): Result<DebtInfo> = apiCall {
+        api.getDebtInfo(groupId).data ?: throw Exception("Failed to get debt info")
+    }
+
+    suspend fun payDebt(groupId: String, paymentMethodId: String): Result<DebtPaymentResult> = apiCall {
+        val response = api.payDebt(groupId, PayDebtRequest(paymentMethodId))
+        response.data ?: throw Exception(response.error ?: "Debt payment failed")
+    }
+
     // Payment Methods
     suspend fun getStripeConfig(): Result<StripeConfig> = apiCall {
         api.getStripeConfig().data ?: throw Exception("Failed to get Stripe config")
