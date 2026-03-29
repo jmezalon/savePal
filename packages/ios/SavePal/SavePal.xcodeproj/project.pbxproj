@@ -51,6 +51,7 @@
 		A10040 /* StripeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10041 /* StripeManager.swift */; };
 		A10041 /* AddCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042 /* AddCardView.swift */; };
 		A10042 /* MakePaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043 /* MakePaymentView.swift */; };
+		A10047 /* PayDebtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10047 /* PayDebtView.swift */; };
 		A10043 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = P10001 /* StripePaymentSheet */; };
 		A10044 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10044 /* PushNotificationManager.swift */; };
 		A10045 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10045 /* GoogleSignInHelper.swift */; };
@@ -107,6 +108,7 @@
 		B10041 /* StripeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeManager.swift; sourceTree = "<group>"; };
 		B10042 /* AddCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCardView.swift; sourceTree = "<group>"; };
 		B10043 /* MakePaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakePaymentView.swift; sourceTree = "<group>"; };
+		B10047 /* PayDebtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayDebtView.swift; sourceTree = "<group>"; };
 		B10044 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		B10045 /* GoogleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInHelper.swift; sourceTree = "<group>"; };
 		B10046 /* Bid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bid.swift; sourceTree = "<group>"; };
@@ -297,6 +299,7 @@
 				B10028 /* PaymentHistoryView.swift */,
 				B10042 /* AddCardView.swift */,
 				B10043 /* MakePaymentView.swift */,
+				B10047 /* PayDebtView.swift */,
 			);
 			path = Payments;
 			sourceTree = "<group>";
@@ -537,6 +540,7 @@
 				A10040 /* StripeManager.swift in Sources */,
 				A10041 /* AddCardView.swift in Sources */,
 				A10042 /* MakePaymentView.swift in Sources */,
+				A10047 /* PayDebtView.swift in Sources */,
 				A10044 /* PushNotificationManager.swift in Sources */,
 				A10045 /* GoogleSignInHelper.swift in Sources */,
 				A10046 /* Bid.swift in Sources */,
