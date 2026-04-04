@@ -108,7 +108,7 @@ interface Pagination {
   totalPages: number;
 }
 
-type ActiveTab = 'users' | 'groups' | 'waiverCodes';
+type ActiveTab = 'users' | 'groups' | 'waiverCodes' | 'announcements';
 
 export default function AdminDashboard() {
   const { user, token } = useAuth();
@@ -133,6 +133,9 @@ export default function AdminDashboard() {
   const [selectedGroup, setSelectedGroup] = useState<GroupDetails | null>(null);
   const [loadingGroupDetails, setLoadingGroupDetails] = useState(false);
   const [reinitiatingPayoutId, setReinitiatingPayoutId] = useState<string | null>(null);
+  const [announcementSubject, setAnnouncementSubject] = useState('');
+  const [announcementBody, setAnnouncementBody] = useState('');
+  const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -377,6 +380,16 @@ export default function AdminDashboard() {
               }`}
             >
               Waiver Codes
+            </button>
+            <button
+              onClick={() => setActiveTab('announcements')}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 ${
+                activeTab === 'announcements'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Announcements
             </button>
           </nav>
         </div>
@@ -635,6 +648,74 @@ export default function AdminDashboard() {
               {waiverCodesPagination && waiverCodesPagination.totalPages > 1 && (
                 <PaginationControls pagination={waiverCodesPagination} onPageChange={fetchWaiverCodes} />
               )}
+            </div>
+          </div>
+        )}
+        {/* Announcements Tab */}
+        {activeTab === 'announcements' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Send Announcement to Group Creators</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              This will send an email to all users who have created a group. Recipient emails are kept private using BCC.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={announcementSubject}
+                  onChange={(e) => setAnnouncementSubject(e.target.value)}
+                  placeholder="e.g., Important Update from SavePal"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                <textarea
+                  value={announcementBody}
+                  onChange={(e) => setAnnouncementBody(e.target.value)}
+                  placeholder="Write your announcement here..."
+                  rows={8}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={async () => {
+                    if (!announcementSubject.trim() || !announcementBody.trim()) {
+                      alert('Please fill in both the subject and message.');
+                      return;
+                    }
+                    if (!confirm('Are you sure you want to send this announcement to all group creators?')) {
+                      return;
+                    }
+                    setSendingAnnouncement(true);
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/api/admin/announce`, {
+                        method: 'POST',
+                        headers: { ...headers, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subject: announcementSubject.trim(), body: announcementBody.trim() }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert(`Announcement sent to ${data.data.recipientCount} group creator(s).`);
+                        setAnnouncementSubject('');
+                        setAnnouncementBody('');
+                      } else {
+                        alert(data.error || 'Failed to send announcement');
+                      }
+                    } catch {
+                      alert('Failed to send announcement');
+                    } finally {
+                      setSendingAnnouncement(false);
+                    }
+                  }}
+                  disabled={sendingAnnouncement}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {sendingAnnouncement ? 'Sending...' : 'Send Announcement'}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -146,6 +146,18 @@ class AdminService {
     return group;
   }
 
+  async getGroupCreatorEmails(): Promise<string[]> {
+    const creators = await prisma.user.findMany({
+      where: {
+        createdGroups: { some: {} },
+      },
+      select: { email: true },
+      distinct: ['email'],
+    });
+
+    return creators.map((c) => c.email);
+  }
+
   async deleteGroup(groupId: string) {
     const group = await prisma.group.findUnique({
       where: { id: groupId },

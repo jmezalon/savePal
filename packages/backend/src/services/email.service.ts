@@ -411,6 +411,50 @@ class EmailService {
 
     await this.sendEmail({ to: email, subject, html, text });
   }
+  /**
+   * Send announcement email to multiple recipients using BCC
+   */
+  async sendAnnouncementEmail(
+    bccRecipients: string[],
+    subject: string,
+    body: string
+  ): Promise<void> {
+    const fromAddress = `SavePal <${process.env.EMAIL_FROM || 'noreply@save-pals.com'}>`;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n📧 [DEV] Announcement email suppressed:`);
+      console.log(`   BCC: ${bccRecipients.length} recipients`);
+      console.log(`   Subject: ${subject}`);
+      console.log(`   Body:\n${body}`);
+      console.log(`   ℹ️  Set NODE_ENV=production to send real emails.\n`);
+      return;
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">${subject}</h2>
+        <div style="color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${body}</div>
+        ${this.getEmailFooter()}
+      </div>
+    `;
+    const text = `${body}\n\nBest regards,\nThe SavePal Team`;
+
+    try {
+      await this.transporter.sendMail({
+        from: fromAddress,
+        replyTo: process.env.SUPPORT_EMAIL || 'support@save-pals.com',
+        to: process.env.EMAIL_FROM || 'noreply@save-pals.com',
+        bcc: bccRecipients,
+        subject,
+        text,
+        html,
+      });
+      console.log(`Announcement email sent to ${bccRecipients.length} recipients via BCC`);
+    } catch (error) {
+      console.error('Error sending announcement email:', error);
+      throw new Error('Failed to send announcement email');
+    }
+  }
 }
 
 export default new EmailService();
