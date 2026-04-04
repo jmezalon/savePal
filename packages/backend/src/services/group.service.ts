@@ -54,6 +54,21 @@ class GroupService {
       throw new Error('You must verify your email or phone number before creating a group');
     }
 
+    // Check active group limit (PENDING or ACTIVE)
+    const activeGroupCount = await prisma.membership.count({
+      where: {
+        userId: createdById,
+        isActive: true,
+        group: {
+          status: { in: ['PENDING', 'ACTIVE'] },
+        },
+      },
+    });
+
+    if (activeGroupCount >= 5) {
+      throw new Error('You cannot have more than 5 active groups at a time');
+    }
+
     // Determine fee waiver eligibility
     const eligibility = await feeWaiverService.checkFeeWaiverEligibility(createdById);
 
