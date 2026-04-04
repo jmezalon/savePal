@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import adminService from '../services/admin.service.js';
+import emailService from '../services/email.service.js';
 import feeWaiverService from '../services/feeWaiver.service.js';
 import payoutService from '../services/payout.service.js';
 
@@ -102,6 +103,27 @@ class AdminController {
       res.json({ success: true, data });
     } catch (error: any) {
       res.status(500).json({ success: false, error: 'Failed to fetch waiver codes' });
+    }
+  }
+
+  async sendAnnouncement(req: Request, res: Response) {
+    try {
+      const { subject, body } = req.body;
+      if (!subject || !body) {
+        res.status(400).json({ success: false, error: 'Subject and body are required' });
+        return;
+      }
+
+      const emails = await adminService.getGroupCreatorEmails();
+      if (emails.length === 0) {
+        res.status(400).json({ success: false, error: 'No group creators found' });
+        return;
+      }
+
+      await emailService.sendAnnouncementEmail(emails, subject, body);
+      res.json({ success: true, data: { recipientCount: emails.length } });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Failed to send announcement' });
     }
   }
 

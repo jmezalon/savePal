@@ -16,6 +16,9 @@ router.get('/groups/:id', adminController.getGroupDetails.bind(adminController))
 router.delete('/groups/:id', adminController.deleteGroup.bind(adminController));
 router.post('/payouts/:payoutId/reinitiate', adminController.reinitiateTransfer.bind(adminController));
 
+// Announcements
+router.post('/announce', adminController.sendAnnouncement.bind(adminController));
+
 // Waiver code management
 router.post('/waiver-codes', adminController.createWaiverCode.bind(adminController));
 router.get('/waiver-codes', adminController.getWaiverCodes.bind(adminController));
