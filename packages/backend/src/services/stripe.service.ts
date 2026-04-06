@@ -135,7 +135,7 @@ class StripeService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { stripeCustomerId: true },
+      select: { stripeCustomerId: true, firstName: true, lastName: true },
     });
 
     if (!user?.stripeCustomerId) {
@@ -156,6 +156,9 @@ class StripeService {
 
     // Get payment method details
     const paymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+
+    // Validate cardholder name matches the user's profile name
+    this.validateCardholderName(paymentMethod, user!.firstName, user!.lastName);
 
     // Check if this payment method already exists in our database
     const existing = await prisma.paymentMethod.findFirst({
@@ -204,20 +207,23 @@ class StripeService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { stripeCustomerId: true },
+      select: { stripeCustomerId: true, firstName: true, lastName: true },
     });
 
     if (!user?.stripeCustomerId) {
       throw new Error('Customer not found');
     }
 
+    // Get payment method details before attaching
+    const paymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+
+    // Validate cardholder name matches the user's profile name
+    this.validateCardholderName(paymentMethod, user!.firstName, user!.lastName);
+
     // Attach payment method to customer
     await this.stripe.paymentMethods.attach(paymentMethodId, {
       customer: user.stripeCustomerId,
     });
-
-    // Get payment method details
-    const paymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
 
     // If setting as default, unset other default payment methods
     if (isDefault) {
@@ -248,6 +254,30 @@ class StripeService {
           default_payment_method: paymentMethodId,
         },
       });
+    }
+  }
+
+  /**
+   * Validate that the cardholder name on the payment method matches the user's profile name
+   */
+  private validateCardholderName(
+    paymentMethod: Stripe.PaymentMethod,
+    firstName: string,
+    lastName: string
+  ): void {
+    const cardholderName = paymentMethod.billing_details?.name;
+
+    if (!cardholderName) {
+      throw new Error('Cardholder name is required. Please provide the name on the card.');
+    }
+
+    const profileName = `${firstName} ${lastName}`.toLowerCase().trim();
+    const cardName = cardholderName.toLowerCase().trim();
+
+    if (cardName !== profileName) {
+      throw new Error(
+        'The name on the card must match the name on your SavePal profile. You cannot add a card that belongs to someone else.'
+      );
     }
   }
 

@@ -16,6 +16,7 @@ function AddPaymentMethodForm({ token, onSuccess, onCancel }: AddPaymentMethodFo
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [setAsDefault, setSetAsDefault] = useState(false);
+  const [cardholderName, setCardholderName] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +56,9 @@ function AddPaymentMethodForm({ token, onSuccess, onCancel }: AddPaymentMethodFo
         {
           payment_method: {
             card: cardElement,
+            billing_details: {
+              name: cardholderName.trim(),
+            },
           },
         }
       );
@@ -94,6 +98,20 @@ function AddPaymentMethodForm({ token, onSuccess, onCancel }: AddPaymentMethodFo
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Cardholder Name
+        </label>
+        <input
+          type="text"
+          value={cardholderName}
+          onChange={(e) => setCardholderName(e.target.value)}
+          placeholder="Name as it appears on the card"
+          required
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p className="mt-1 text-xs text-gray-500">Must match the name on your SavePal profile</p>
+      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Card Information
