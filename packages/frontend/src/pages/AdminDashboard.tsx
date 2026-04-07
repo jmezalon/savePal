@@ -18,6 +18,7 @@ interface AdminUser {
   role: string;
   emailVerified: boolean;
   trustScore: number;
+  groupCreationSuspended: boolean;
   createdAt: string;
   _count: { memberships: number };
 }
@@ -133,6 +134,7 @@ export default function AdminDashboard() {
   const [selectedGroup, setSelectedGroup] = useState<GroupDetails | null>(null);
   const [loadingGroupDetails, setLoadingGroupDetails] = useState(false);
   const [reinitiatingPayoutId, setReinitiatingPayoutId] = useState<string | null>(null);
+  const [suspendingUserId, setSuspendingUserId] = useState<string | null>(null);
   const [announcementSubject, setAnnouncementSubject] = useState('');
   const [announcementBody, setAnnouncementBody] = useState('');
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
@@ -287,6 +289,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleGroupSuspension = async (userId: string, suspended: boolean) => {
+    const action = suspended ? 'suspend' : 'unsuspend';
+    if (!confirm(`Are you sure you want to ${action} this user from creating groups?`)) return;
+    setSuspendingUserId(userId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/group-suspension`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suspended }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchUsers(usersPagination?.page);
+      } else {
+        alert(data.error || `Failed to ${action} user`);
+      }
+    } catch {
+      alert(`Failed to ${action} user`);
+    } finally {
+      setSuspendingUserId(null);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'SUPERADMIN') {
       Promise.all([fetchStats(), fetchUsers(), fetchGroups(), fetchWaiverCodes()]).finally(() => setLoading(false));
@@ -437,14 +462,25 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
                         {u.role !== 'SUPERADMIN' && (
-                          <button
-                            onClick={() => setDeleteModal({ type: 'user', id: u.id, name: `${u.firstName} ${u.lastName}` })}
-                            className="text-red-600 hover:text-red-800 font-medium"
-                          >
-                            Delete
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleToggleGroupSuspension(u.id, !u.groupCreationSuspended)}
+                              disabled={suspendingUserId === u.id}
+                              className={`font-medium disabled:opacity-50 ${
+                                u.groupCreationSuspended ? 'text-green-600 hover:text-green-800' : 'text-orange-600 hover:text-orange-800'
+                              }`}
+                            >
+                              {suspendingUserId === u.id ? '...' : u.groupCreationSuspended ? 'Unsuspend' : 'Suspend'}
+                            </button>
+                            <button
+                              onClick={() => setDeleteModal({ type: 'user', id: u.id, name: `${u.firstName} ${u.lastName}` })}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Delete
+                            </button>
+                          </>
                         )}
                       </td>
                     </tr>
