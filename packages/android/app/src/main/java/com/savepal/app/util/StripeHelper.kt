@@ -4,6 +4,7 @@ import android.content.Context
 import com.savepal.app.data.repository.PaymentRepository
 import com.stripe.android.PaymentConfiguration
 import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.PaymentSheet.BillingDetailsCollectionConfiguration
 import com.stripe.android.paymentsheet.PaymentSheetResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,11 @@ class StripeHelper @Inject constructor(
     fun buildPaymentSheetConfig(): PaymentSheet.Configuration {
         return PaymentSheet.Configuration.Builder("SavePal")
             .allowsDelayedPaymentMethods(false)
+            .billingDetailsCollectionConfiguration(
+                BillingDetailsCollectionConfiguration(
+                    name = BillingDetailsCollectionConfiguration.CollectionMode.Always
+                )
+            )
             .build()
     }
 

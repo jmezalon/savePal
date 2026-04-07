@@ -32,6 +32,7 @@ final class StripeManager {
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = "SavePals"
         configuration.allowsDelayedPaymentMethods = false
+        configuration.billingDetailsCollectionConfiguration.name = .always
         return PaymentSheet(setupIntentClientSecret: clientSecret, configuration: configuration)
     }
 }
