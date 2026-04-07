@@ -106,6 +106,24 @@ class AdminController {
     }
   }
 
+  async toggleGroupSuspension(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { suspended } = req.body;
+      if (typeof suspended !== 'boolean') {
+        res.status(400).json({ success: false, error: 'suspended must be a boolean' });
+        return;
+      }
+      const result = await adminService.toggleGroupCreationSuspension(id, suspended);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      const status = error.message === 'User not found' ? 404
+        : error.message === 'Cannot suspend a superadmin user' ? 403
+        : 500;
+      res.status(status).json({ success: false, error: error.message });
+    }
+  }
+
   async sendAnnouncement(req: Request, res: Response) {
     try {
       const { subject, body } = req.body;

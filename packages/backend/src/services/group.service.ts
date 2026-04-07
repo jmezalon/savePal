@@ -47,11 +47,15 @@ class GroupService {
     // Check if creator has both email and phone unverified
     const creator = await prisma.user.findUnique({
       where: { id: createdById },
-      select: { emailVerified: true, phoneVerified: true },
+      select: { emailVerified: true, phoneVerified: true, groupCreationSuspended: true },
     });
 
     if (creator && !creator.emailVerified && !creator.phoneVerified) {
       throw new Error('You must verify your email or phone number before creating a group');
+    }
+
+    if (creator?.groupCreationSuspended) {
+      throw new Error('Your ability to create groups has been suspended. Please contact support for more information.');
     }
 
     // Check active group limit (PENDING or ACTIVE)

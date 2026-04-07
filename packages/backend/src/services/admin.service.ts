@@ -27,6 +27,7 @@ class AdminService {
           role: true,
           emailVerified: true,
           trustScore: true,
+          groupCreationSuspended: true,
           createdAt: true,
           _count: { select: { memberships: true } },
         },
@@ -144,6 +145,27 @@ class AdminService {
     }
 
     return group;
+  }
+
+  async toggleGroupCreationSuspension(userId: string, suspended: boolean) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.role === 'SUPERADMIN') {
+      throw new Error('Cannot suspend a superadmin user');
+    }
+
+    return prisma.user.update({
+      where: { id: userId },
+      data: { groupCreationSuspended: suspended },
+      select: { id: true, email: true, groupCreationSuspended: true },
+    });
   }
 
   async getGroupCreatorEmails(): Promise<string[]> {
