@@ -127,8 +127,6 @@ export default function Profile() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName,
-          lastName,
           phoneNumber: phoneNumber || null,
         }),
       });
@@ -843,11 +841,8 @@ export default function Profile() {
                 <input
                   type="text"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  disabled={!isEditing}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
-                    isEditing ? 'bg-white' : 'bg-gray-50'
-                  }`}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
                 />
               </div>
 
@@ -858,11 +853,8 @@ export default function Profile() {
                 <input
                   type="text"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  disabled={!isEditing}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
-                    isEditing ? 'bg-white' : 'bg-gray-50'
-                  }`}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
                 />
               </div>
             </div>
@@ -895,8 +887,6 @@ export default function Profile() {
                 <button
                   onClick={() => {
                     setIsEditing(false);
-                    setFirstName(user?.firstName || '');
-                    setLastName(user?.lastName || '');
                     setPhoneNumber(user?.phoneNumber || '');
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"

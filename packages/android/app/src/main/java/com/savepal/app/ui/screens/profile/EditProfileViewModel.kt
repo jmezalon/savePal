@@ -55,8 +55,6 @@ class EditProfileViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             authRepository.updateProfile(
                 UpdateProfileRequest(
-                    firstName = _state.value.firstName.trim(),
-                    lastName = _state.value.lastName.trim(),
                     phoneNumber = _state.value.phone.trim().ifBlank { null }
                 )
             ).onSuccess { _state.update { it.copy(isLoading = false, success = true) } }
@@ -75,8 +73,6 @@ class EditProfileViewModel @Inject constructor(
             }
             authRepository.updateProfile(
                 UpdateProfileRequest(
-                    firstName = _state.value.firstName.trim(),
-                    lastName = _state.value.lastName.trim(),
                     phoneNumber = phone
                 )
             ).onFailure { e ->

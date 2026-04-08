@@ -70,16 +70,18 @@ fun EditProfileScreen(
 
             SavePalTextField(
                 value = state.firstName,
-                onValueChange = { viewModel.updateFirstName(it) },
+                onValueChange = {},
                 label = "First Name",
-                leadingIcon = Icons.Default.Person
+                leadingIcon = Icons.Default.Person,
+                enabled = false
             )
             Spacer(Modifier.height(16.dp))
             SavePalTextField(
                 value = state.lastName,
-                onValueChange = { viewModel.updateLastName(it) },
+                onValueChange = {},
                 label = "Last Name",
-                leadingIcon = Icons.Default.Person
+                leadingIcon = Icons.Default.Person,
+                enabled = false
             )
             Spacer(Modifier.height(16.dp))
             SavePalTextField(
@@ -138,7 +140,7 @@ fun EditProfileScreen(
                 text = "Save Changes",
                 onClick = { viewModel.save() },
                 isLoading = state.isLoading,
-                enabled = state.firstName.isNotBlank() && state.lastName.isNotBlank()
+                enabled = !state.isLoading
             )
         }
     }

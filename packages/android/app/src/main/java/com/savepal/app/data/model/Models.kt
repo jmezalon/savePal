@@ -112,8 +112,6 @@ data class ChangePasswordRequest(
 
 @Serializable
 data class UpdateProfileRequest(
-    val firstName: String? = null,
-    val lastName: String? = null,
     val phoneNumber: String? = null
 )
 
