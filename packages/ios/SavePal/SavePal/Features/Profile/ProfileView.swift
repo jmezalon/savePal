@@ -285,7 +285,11 @@ struct EditProfileView: View {
             Form {
                 Section("Personal Information") {
                     TextField("First Name", text: $firstName)
+                        .disabled(true)
+                        .foregroundStyle(.secondary)
                     TextField("Last Name", text: $lastName)
+                        .disabled(true)
+                        .foregroundStyle(.secondary)
                     TextField("Phone Number", text: $phoneNumber)
                         .keyboardType(.phonePad)
                 }
@@ -346,7 +350,7 @@ struct EditProfileView: View {
                     Button("Save") {
                         Task { await save() }
                     }
-                    .disabled(isSaving || firstName.isEmpty || lastName.isEmpty)
+                    .disabled(isSaving)
                 }
             }
             .onAppear {
@@ -396,10 +400,7 @@ struct EditProfileView: View {
     private func save() async {
         isSaving = true
         defer { isSaving = false }
-        var body: [String: Any] = [
-            "firstName": firstName.trimmingCharacters(in: .whitespaces),
-            "lastName": lastName.trimmingCharacters(in: .whitespaces),
-        ]
+        var body: [String: Any] = [:]
         if !phoneNumber.isEmpty {
             body["phoneNumber"] = phoneNumber
         }

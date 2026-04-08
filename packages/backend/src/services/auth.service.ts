@@ -392,15 +392,11 @@ class AuthService {
    * Update user profile
    */
   async updateProfile(userId: string, data: {
-    firstName?: string;
-    lastName?: string;
     phoneNumber?: string;
   }): Promise<Omit<User, 'password'>> {
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
-        ...(data.firstName && { firstName: data.firstName }),
-        ...(data.lastName && { lastName: data.lastName }),
         ...(data.phoneNumber !== undefined && { phoneNumber: data.phoneNumber }),
       },
     });

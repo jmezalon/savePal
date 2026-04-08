@@ -232,7 +232,7 @@ class AuthController {
   async updateProfile(req: Request, res: Response) {
     try {
       const userId = (req as any).userId;
-      const { firstName, lastName, phoneNumber } = req.body;
+      const { phoneNumber } = req.body;
 
       if (!userId) {
         return res.status(401).json({
@@ -242,8 +242,6 @@ class AuthController {
       }
 
       const user = await authService.updateProfile(userId, {
-        firstName,
-        lastName,
         phoneNumber,
       });
 
