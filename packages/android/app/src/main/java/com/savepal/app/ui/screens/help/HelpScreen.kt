@@ -50,6 +50,18 @@ private val faqItems = listOf(
     FaqItem(
         "Is there a fee to create a group?",
         "A $10 creation fee may apply when creating a group. Group owners may use a waiver code to bypass this fee. Contact support if you believe you should have a waiver."
+    ),
+    FaqItem(
+        "Why does the name on my card need to match my profile?",
+        "To prevent fraud, the cardholder name on any payment method you add must match the first and last name on your SavePal profile. You cannot add a card that belongs to someone else. If the names do not match, the card will be rejected."
+    ),
+    FaqItem(
+        "Can I change my name on my profile?",
+        "No. Your first and last name are locked once your account is created and cannot be changed. This policy exists to protect the integrity of payment verification — since your card must match your profile name, allowing name changes could be used to bypass fraud protections. If you believe your name was entered incorrectly during registration, please contact support."
+    ),
+    FaqItem(
+        "How many groups can I have at one time?",
+        "You can have a maximum of 5 active groups at a time. This includes groups with a status of Pending (waiting to start) or Active (currently running). Once a group is completed or cancelled, it no longer counts toward your limit and you can create or join new groups."
     )
 )
 
