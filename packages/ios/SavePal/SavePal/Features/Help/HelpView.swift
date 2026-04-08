@@ -42,6 +42,18 @@ struct HelpView: View {
             question: "Is there a fee to create a group?",
             answer: "A one-time $10 creation fee applies. This fee is waived after 2 successful group completions or if you have a valid waiver code."
         ),
+        FAQItem(
+            question: "Why does the name on my card need to match my profile?",
+            answer: "To prevent fraud, the cardholder name on any payment method you add must match the first and last name on your SavePal profile. You cannot add a card that belongs to someone else. If the names do not match, the card will be rejected."
+        ),
+        FAQItem(
+            question: "Can I change my name on my profile?",
+            answer: "No. Your first and last name are locked once your account is created and cannot be changed. This policy exists to protect the integrity of payment verification — since your card must match your profile name, allowing name changes could be used to bypass fraud protections. If you believe your name was entered incorrectly during registration, please contact support."
+        ),
+        FAQItem(
+            question: "How many groups can I have at one time?",
+            answer: "You can have a maximum of 5 active groups at a time. This includes groups with a status of Pending (waiting to start) or Active (currently running). Once a group is completed or cancelled, it no longer counts toward your limit and you can create or join new groups."
+        ),
     ]
 
     var body: some View {
