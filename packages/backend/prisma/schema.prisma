@@ -325,6 +325,17 @@ model BlockedEmail {
   @@map("blocked_emails")
 }
 
+model BlockedName {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([firstName, lastName])
+  @@map("blocked_names")
+}
+
 enum NotificationType {
   PAYMENT_DUE
   PAYMENT_RECEIVED

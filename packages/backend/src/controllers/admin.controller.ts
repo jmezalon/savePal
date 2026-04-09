@@ -61,6 +61,42 @@ class AdminController {
     }
   }
 
+  async blockName(req: Request, res: Response) {
+    try {
+      const { firstName, lastName, reason } = req.body;
+      if (!firstName || !lastName) {
+        res.status(400).json({ success: false, error: 'firstName and lastName are required' });
+        return;
+      }
+      const result = await adminService.blockName(firstName, lastName, reason);
+      res.status(201).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Failed to block name' });
+    }
+  }
+
+  async getBlockedNames(req: Request, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const data = await adminService.getBlockedNames(page, limit);
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch blocked names' });
+    }
+  }
+
+  async unblockName(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const result = await adminService.unblockName(id);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      const status = error.message === 'Blocked name not found' ? 404 : 500;
+      res.status(status).json({ success: false, error: error.message });
+    }
+  }
+
   async getGroups(req: Request, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;
