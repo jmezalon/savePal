@@ -13,6 +13,11 @@
 
 set -euo pipefail
 
+# Use Homebrew PostgreSQL 17 if available
+if [ -x "/opt/homebrew/opt/postgresql@17/bin/pg_dump" ]; then
+  export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+fi
+
 # --- Configuration ---
 BACKUP_DIR="${BACKUP_DIR:-$HOME/savepal-backups}"
 DB_HOST="aws-1-us-east-1.pooler.supabase.com"
