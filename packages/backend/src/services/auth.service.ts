@@ -43,6 +43,15 @@ class AuthService {
       throw new Error('User with this email already exists');
     }
 
+    // Check if email is blocked
+    const blockedEmail = await prisma.blockedEmail.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (blockedEmail) {
+      throw new Error('This email address has been blocked. Please contact support for more information.');
+    }
+
     // Hash password
     const hashedPassword = await hashPassword(data.password);
 
@@ -187,6 +196,14 @@ class AuthService {
           },
         });
       } else {
+        // Check if email is blocked
+        const blockedEmail = await prisma.blockedEmail.findUnique({
+          where: { email: normalizedEmail },
+        });
+        if (blockedEmail) {
+          throw new Error('This email address has been blocked. Please contact support for more information.');
+        }
+
         // Create a new user from Google data
         user = await prisma.user.create({
           data: {
@@ -281,6 +298,14 @@ class AuthService {
           },
         });
       } else {
+        // Check if email is blocked
+        const blockedEmail = await prisma.blockedEmail.findUnique({
+          where: { email: normalizedEmail },
+        });
+        if (blockedEmail) {
+          throw new Error('This email address has been blocked. Please contact support for more information.');
+        }
+
         // Create a new user from Apple data
         // Apple only sends the name on the very first authorization
         user = await prisma.user.create({

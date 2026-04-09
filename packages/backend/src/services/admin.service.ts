@@ -46,7 +46,7 @@ class AdminService {
     };
   }
 
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string, blockEmail: boolean = false) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, role: true, email: true },
@@ -61,7 +61,55 @@ class AdminService {
     }
 
     await prisma.user.delete({ where: { id: userId } });
-    return { deletedEmail: user.email };
+
+    if (blockEmail) {
+      await prisma.blockedEmail.upsert({
+        where: { email: user.email.toLowerCase().trim() },
+        update: {},
+        create: {
+          email: user.email.toLowerCase().trim(),
+          reason: `Blocked on deletion of user ${userId}`,
+        },
+      });
+    }
+
+    return { deletedEmail: user.email, emailBlocked: blockEmail };
+  }
+
+  async unblockEmail(email: string) {
+    const blocked = await prisma.blockedEmail.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!blocked) {
+      throw new Error('Email is not blocked');
+    }
+
+    await prisma.blockedEmail.delete({ where: { id: blocked.id } });
+    return { email: blocked.email };
+  }
+
+  async getBlockedEmails(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const [emails, total] = await Promise.all([
+      prisma.blockedEmail.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.blockedEmail.count(),
+    ]);
+
+    return {
+      emails,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getAllGroups(page: number = 1, limit: number = 20) {

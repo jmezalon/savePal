@@ -126,6 +126,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState<{ type: 'user' | 'group'; id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [blockEmailOnDelete, setBlockEmailOnDelete] = useState(false);
   const [showCreateCode, setShowCreateCode] = useState(false);
   const [newCodeDescription, setNewCodeDescription] = useState('');
   const [newCodeMaxUses, setNewCodeMaxUses] = useState('');
@@ -325,10 +326,15 @@ export default function AdminDashboard() {
       const endpoint = deleteModal.type === 'user'
         ? `${API_BASE_URL}/api/admin/users/${deleteModal.id}`
         : `${API_BASE_URL}/api/admin/groups/${deleteModal.id}`;
-      const res = await fetch(endpoint, { method: 'DELETE', headers });
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: deleteModal.type === 'user' ? JSON.stringify({ blockEmail: blockEmailOnDelete }) : undefined,
+      });
       const data = await res.json();
       if (data.success) {
         setDeleteModal(null);
+        setBlockEmailOnDelete(false);
         fetchStats();
         if (deleteModal.type === 'user') fetchUsers(usersPagination?.page);
         else fetchGroups(groupsPagination?.page);
@@ -871,12 +877,26 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Delete</h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-4">
               Are you sure you want to delete {deleteModal.type} <span className="font-semibold">{deleteModal.name}</span>? This action cannot be undone.
             </p>
+            {deleteModal.type === 'user' && (
+              <div className="flex items-center mb-4 p-3 bg-red-50 rounded-md">
+                <input
+                  id="blockEmail"
+                  type="checkbox"
+                  checked={blockEmailOnDelete}
+                  onChange={(e) => setBlockEmailOnDelete(e.target.checked)}
+                  className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <label htmlFor="blockEmail" className="ml-2 block text-sm text-gray-700">
+                  Block this email from creating a new account
+                </label>
+              </div>
+            )}
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setDeleteModal(null)}
+                onClick={() => { setDeleteModal(null); setBlockEmailOnDelete(false); }}
                 disabled={deleting}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >

@@ -11,6 +11,8 @@ router.use(authenticate, requireSuperAdmin);
 router.get('/stats', adminController.getStats.bind(adminController));
 router.get('/users', adminController.getUsers.bind(adminController));
 router.delete('/users/:id', adminController.deleteUser.bind(adminController));
+router.get('/blocked-emails', adminController.getBlockedEmails.bind(adminController));
+router.delete('/blocked-emails/:email', adminController.unblockEmail.bind(adminController));
 router.patch('/users/:id/group-suspension', adminController.toggleGroupSuspension.bind(adminController));
 router.get('/groups', adminController.getGroups.bind(adminController));
 router.get('/groups/:id', adminController.getGroupDetails.bind(adminController));
