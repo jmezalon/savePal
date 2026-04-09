@@ -52,6 +52,20 @@ class AuthService {
       throw new Error('This email address has been blocked. Please contact support for more information.');
     }
 
+    // Check if name is blocked
+    const blockedName = await prisma.blockedName.findUnique({
+      where: {
+        firstName_lastName: {
+          firstName: data.firstName.toLowerCase().trim(),
+          lastName: data.lastName.toLowerCase().trim(),
+        },
+      },
+    });
+
+    if (blockedName) {
+      throw new Error('Account creation is not available. Please contact support for more information.');
+    }
+
     // Hash password
     const hashedPassword = await hashPassword(data.password);
 
@@ -204,6 +218,18 @@ class AuthService {
           throw new Error('This email address has been blocked. Please contact support for more information.');
         }
 
+        // Check if name is blocked
+        const gFirstName = (given_name || 'User').toLowerCase().trim();
+        const gLastName = (family_name || '').toLowerCase().trim();
+        if (gLastName) {
+          const blockedName = await prisma.blockedName.findUnique({
+            where: { firstName_lastName: { firstName: gFirstName, lastName: gLastName } },
+          });
+          if (blockedName) {
+            throw new Error('Account creation is not available. Please contact support for more information.');
+          }
+        }
+
         // Create a new user from Google data
         user = await prisma.user.create({
           data: {
@@ -304,6 +330,18 @@ class AuthService {
         });
         if (blockedEmail) {
           throw new Error('This email address has been blocked. Please contact support for more information.');
+        }
+
+        // Check if name is blocked
+        const aFirstName = (fullName?.firstName || 'User').toLowerCase().trim();
+        const aLastName = (fullName?.lastName || '').toLowerCase().trim();
+        if (aLastName) {
+          const blockedName = await prisma.blockedName.findUnique({
+            where: { firstName_lastName: { firstName: aFirstName, lastName: aLastName } },
+          });
+          if (blockedName) {
+            throw new Error('Account creation is not available. Please contact support for more information.');
+          }
         }
 
         // Create a new user from Apple data

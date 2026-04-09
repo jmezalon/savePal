@@ -112,6 +112,40 @@ class AdminService {
     };
   }
 
+  async blockName(firstName: string, lastName: string, reason?: string) {
+    const normalizedFirst = firstName.toLowerCase().trim();
+    const normalizedLast = lastName.toLowerCase().trim();
+
+    return prisma.blockedName.upsert({
+      where: { firstName_lastName: { firstName: normalizedFirst, lastName: normalizedLast } },
+      update: {},
+      create: {
+        firstName: normalizedFirst,
+        lastName: normalizedLast,
+        reason: reason || null,
+      },
+    });
+  }
+
+  async unblockName(id: string) {
+    const blocked = await prisma.blockedName.findUnique({ where: { id } });
+    if (!blocked) throw new Error('Blocked name not found');
+    await prisma.blockedName.delete({ where: { id } });
+    return blocked;
+  }
+
+  async getBlockedNames(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [names, total] = await Promise.all([
+      prisma.blockedName.findMany({ skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.blockedName.count(),
+    ]);
+    return {
+      names,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   async getAllGroups(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
