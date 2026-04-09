@@ -8,7 +8,7 @@
 #   ./backup-database.sh
 #
 # Cron example (every 3 days at 2am):
-#   0 2 */3 * * /Users/mezalonm/Developer/SavePals/packages/backend/src/scripts/backup-database.sh
+#   0 2 */3 * * DB_HOST="your-host" DB_USER="your-user" PGPASSWORD="your-password" /path/to/backup-database.sh
 #
 
 set -euo pipefail
@@ -19,11 +19,13 @@ if [ -x "/opt/homebrew/opt/postgresql@17/bin/pg_dump" ]; then
 fi
 
 # --- Configuration ---
+# Set these environment variables before running:
+#   DB_HOST, DB_USER, DB_NAME, PGPASSWORD
 BACKUP_DIR="${BACKUP_DIR:-$HOME/savepal-backups}"
-DB_HOST="aws-1-us-east-1.pooler.supabase.com"
-DB_PORT="5432"
-DB_NAME="postgres"
-DB_USER="postgres.qmynuziuczmgyqtatsys"
+DB_HOST="${DB_HOST:?ERROR: DB_HOST is not set}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-postgres}"
+DB_USER="${DB_USER:?ERROR: DB_USER is not set}"
 RETENTION_DAYS=30
 
 # --- Setup ---
