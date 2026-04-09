@@ -30,24 +30,20 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 # --- Target database config ---
-DB_PORT="5432"
-DB_NAME="postgres"
+# Set these environment variables before running:
+#   DB_HOST, DB_USER, PGPASSWORD
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-postgres}"
+DB_HOST="${DB_HOST:?ERROR: DB_HOST is not set}"
+DB_USER="${DB_USER:?ERROR: DB_USER is not set}"
 
 if [ "$TARGET" = "prod" ]; then
-  DB_HOST="aws-1-us-east-1.pooler.supabase.com"
-  DB_USER="postgres.qmynuziuczmgyqtatsys"
   echo "WARNING: You are about to restore to PRODUCTION!"
   read -p "Type 'yes-restore-prod' to confirm: " CONFIRM
   if [ "$CONFIRM" != "yes-restore-prod" ]; then
     echo "Aborted."
     exit 1
   fi
-elif [ "$TARGET" = "dev" ]; then
-  DB_HOST="aws-1-us-east-1.pooler.supabase.com"
-  DB_USER="postgres.bcmvlqbmspywmaarvyux"
-else
-  echo "ERROR: Target must be 'prod' or 'dev'"
-  exit 1
 fi
 
 if [ -z "${PGPASSWORD:-}" ]; then
