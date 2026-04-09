@@ -316,6 +316,15 @@ enum SystemRole {
   SUPERADMIN
 }
 
+model BlockedEmail {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("blocked_emails")
+}
+
 enum NotificationType {
   PAYMENT_DUE
   PAYMENT_RECEIVED

@@ -28,12 +28,35 @@ class AdminController {
   async deleteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await adminService.deleteUser(id);
+      const { blockEmail } = req.body || {};
+      const result = await adminService.deleteUser(id, blockEmail === true);
       res.json({ success: true, data: result });
     } catch (error: any) {
       const status = error.message === 'User not found' ? 404
         : error.message === 'Cannot delete a superadmin user' ? 403
         : 500;
+      res.status(status).json({ success: false, error: error.message });
+    }
+  }
+
+  async getBlockedEmails(req: Request, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const data = await adminService.getBlockedEmails(page, limit);
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch blocked emails' });
+    }
+  }
+
+  async unblockEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.params;
+      const result = await adminService.unblockEmail(decodeURIComponent(email));
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      const status = error.message === 'Email is not blocked' ? 404 : 500;
       res.status(status).json({ success: false, error: error.message });
     }
   }
