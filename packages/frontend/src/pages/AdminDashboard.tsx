@@ -109,7 +109,15 @@ interface Pagination {
   totalPages: number;
 }
 
-type ActiveTab = 'users' | 'groups' | 'waiverCodes' | 'announcements';
+interface BlockedName {
+  id: string;
+  firstName: string;
+  lastName: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+type ActiveTab = 'users' | 'groups' | 'waiverCodes' | 'announcements' | 'blockedNames';
 
 export default function AdminDashboard() {
   const { user, token } = useAuth();
@@ -136,6 +144,14 @@ export default function AdminDashboard() {
   const [loadingGroupDetails, setLoadingGroupDetails] = useState(false);
   const [reinitiatingPayoutId, setReinitiatingPayoutId] = useState<string | null>(null);
   const [suspendingUserId, setSuspendingUserId] = useState<string | null>(null);
+  const [blockedNames, setBlockedNames] = useState<BlockedName[]>([]);
+  const [blockedNamesPagination, setBlockedNamesPagination] = useState<Pagination | null>(null);
+  const [newBlockFirstName, setNewBlockFirstName] = useState('');
+  const [newBlockLastName, setNewBlockLastName] = useState('');
+  const [newBlockReason, setNewBlockReason] = useState('');
+  const [showBlockNameForm, setShowBlockNameForm] = useState(false);
+  const [blockingName, setBlockingName] = useState(false);
+  const [unblockingNameId, setUnblockingNameId] = useState<string | null>(null);
   const [announcementSubject, setAnnouncementSubject] = useState('');
   const [announcementBody, setAnnouncementBody] = useState('');
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
@@ -195,6 +211,19 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('Failed to fetch waiver codes:', err);
+    }
+  }, [token]);
+
+  const fetchBlockedNames = useCallback(async (page = 1) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/blocked-names?page=${page}&limit=20`, { headers });
+      const data = await res.json();
+      if (data.success) {
+        setBlockedNames(data.data.names);
+        setBlockedNamesPagination(data.data.pagination);
+      }
+    } catch (err) {
+      console.error('Failed to fetch blocked names:', err);
     }
   }, [token]);
 
@@ -315,7 +344,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user?.role === 'SUPERADMIN') {
-      Promise.all([fetchStats(), fetchUsers(), fetchGroups(), fetchWaiverCodes()]).finally(() => setLoading(false));
+      Promise.all([fetchStats(), fetchUsers(), fetchGroups(), fetchWaiverCodes(), fetchBlockedNames()]).finally(() => setLoading(false));
     }
   }, [user]);
 
@@ -421,6 +450,16 @@ export default function AdminDashboard() {
               }`}
             >
               Announcements
+            </button>
+            <button
+              onClick={() => setActiveTab('blockedNames')}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 ${
+                activeTab === 'blockedNames'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Blocked Names
             </button>
           </nav>
         </div>
@@ -758,6 +797,168 @@ export default function AdminDashboard() {
                   {sendingAnnouncement ? 'Sending...' : 'Send Announcement'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Blocked Names Tab */}
+        {activeTab === 'blockedNames' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Blocked Names</h2>
+              <button
+                onClick={() => setShowBlockNameForm(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                Block a Name
+              </button>
+            </div>
+
+            {showBlockNameForm && (
+              <div className="bg-white rounded-lg shadow p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Block a Name</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      value={newBlockFirstName}
+                      onChange={(e) => setNewBlockFirstName(e.target.value)}
+                      placeholder="e.g., Carl"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      value={newBlockLastName}
+                      onChange={(e) => setNewBlockLastName(e.target.value)}
+                      placeholder="e.g., Bonnie"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+                    <input
+                      type="text"
+                      value={newBlockReason}
+                      onChange={(e) => setNewBlockReason(e.target.value)}
+                      placeholder="e.g., Fraud"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => { setShowBlockNameForm(false); setNewBlockFirstName(''); setNewBlockLastName(''); setNewBlockReason(''); }}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!newBlockFirstName.trim() || !newBlockLastName.trim()) {
+                        alert('First name and last name are required.');
+                        return;
+                      }
+                      setBlockingName(true);
+                      try {
+                        const res = await fetch(`${API_BASE_URL}/api/admin/blocked-names`, {
+                          method: 'POST',
+                          headers: { ...headers, 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ firstName: newBlockFirstName.trim(), lastName: newBlockLastName.trim(), reason: newBlockReason.trim() || undefined }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setShowBlockNameForm(false);
+                          setNewBlockFirstName('');
+                          setNewBlockLastName('');
+                          setNewBlockReason('');
+                          fetchBlockedNames(blockedNamesPagination?.page);
+                        } else {
+                          alert(data.error || 'Failed to block name');
+                        }
+                      } catch {
+                        alert('Failed to block name');
+                      } finally {
+                        setBlockingName(false);
+                      }
+                    }}
+                    disabled={blockingName}
+                    className="px-3 py-1.5 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {blockingName ? 'Blocking...' : 'Block Name'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blocked On</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {blockedNames.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                          No blocked names. Click "Block a Name" to add one.
+                        </td>
+                      </tr>
+                    )}
+                    {blockedNames.map((bn) => (
+                      <tr key={bn.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
+                          {bn.firstName} {bn.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {bn.reason || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(bn.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Unblock "${bn.firstName} ${bn.lastName}"?`)) return;
+                              setUnblockingNameId(bn.id);
+                              try {
+                                const res = await fetch(`${API_BASE_URL}/api/admin/blocked-names/${bn.id}`, {
+                                  method: 'DELETE',
+                                  headers,
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  fetchBlockedNames(blockedNamesPagination?.page);
+                                } else {
+                                  alert(data.error || 'Failed to unblock');
+                                }
+                              } catch {
+                                alert('Failed to unblock');
+                              } finally {
+                                setUnblockingNameId(null);
+                              }
+                            }}
+                            disabled={unblockingNameId === bn.id}
+                            className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+                          >
+                            {unblockingNameId === bn.id ? '...' : 'Unblock'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {blockedNamesPagination && blockedNamesPagination.totalPages > 1 && (
+                <PaginationControls pagination={blockedNamesPagination} onPageChange={fetchBlockedNames} />
+              )}
             </div>
           </div>
         )}
