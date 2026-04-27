@@ -116,7 +116,7 @@ export default function Landing() {
             </p>
             <div className="mt-4 pt-4 border-t border-blue-200">
               <p className="text-sm text-blue-700">
-                <strong>💰 Fees:</strong> A small <strong>6% service fee</strong> applies — approximately 3% is added to each contribution for secure payment processing, and 3% is deducted from your payout. For a $100 contribution, you'd pay ~$103.29/month, and the payout recipient receives $970 from the $1,000 pot.
+                <strong>💰 Fees:</strong> A small <strong>6% service fee</strong> applies — approximately 3% is added to each contribution for secure payment processing, and 3% is deducted from your payout (capped at a maximum of $50). For a $100 contribution, you'd pay ~$103.29/month, and the payout recipient receives $970 from the $1,000 pot.
               </p>
             </div>
           </div>
