@@ -59,7 +59,7 @@ export default function TermsAndConditions() {
             <ul className="list-disc list-inside ml-4 space-y-1">
               <li>Contributions are processed through Stripe, a PCI-DSS compliant payment processor</li>
               <li>A processing fee is added to each contribution to cover payment processing costs (approximately 2.9% + $0.30 per transaction)</li>
-              <li>A 3% platform fee is deducted from payouts to sustain the SavePal platform</li>
+              <li>A 3% platform fee (capped at $50) is deducted from payouts to sustain the SavePal platform</li>
               <li>You are responsible for ensuring your payment method has sufficient funds</li>
               <li>Failed payments may affect your trust score and group standing</li>
             </ul>
@@ -82,7 +82,7 @@ export default function TermsAndConditions() {
               <li>Payouts are processed via Stripe Connect to your registered bank account</li>
               <li>You must set up and verify a payout account (bank account) to receive funds</li>
               <li>Payout processing times depend on Stripe and your bank, typically 2-5 business days</li>
-              <li>A 3% platform fee is deducted from each payout amount</li>
+              <li>A 3% platform fee (capped at $50) is deducted from each payout amount</li>
               <li>SavePal is not liable for delays caused by Stripe or your financial institution</li>
             </ul>
           </section>

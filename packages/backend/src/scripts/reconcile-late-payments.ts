@@ -24,7 +24,7 @@ import stripeService from '../services/stripe.service.js';
 import notificationService from '../services/notification.service.js';
 
 const PLATFORM_FEE_RATE = 0.03;
-const PLATFORM_FEE_CAP = 150;
+const PLATFORM_FEE_CAP = 50;
 
 async function reconcileLatePayments() {
   console.log('=== Late Payment & Untracked Debt Reconciliation ===\n');

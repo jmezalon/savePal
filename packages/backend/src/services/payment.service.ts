@@ -512,7 +512,7 @@ class PaymentService {
     const payout = await prisma.payout.findUnique({ where: { cycleId: cycle.id } });
     if (!payout) return;
 
-    const topUpFee = Math.min(lateAmount * 0.03, 150);
+    const topUpFee = Math.min(lateAmount * 0.03, 50);
     const topUpNet = Math.round((lateAmount - topUpFee) * 100) / 100;
 
     if (topUpNet <= 0) return;
@@ -673,7 +673,7 @@ class PaymentService {
 
     for (const [cycleId, payments] of cycleMap) {
       const cycleDebt = payments.reduce((sum, p) => sum + p.amount, 0);
-      const topUpFee = Math.min(cycleDebt * 0.03, 150);
+      const topUpFee = Math.min(cycleDebt * 0.03, 50);
       const topUpNet = Math.round((cycleDebt - topUpFee) * 100) / 100;
 
       if (topUpNet <= 0) continue;
