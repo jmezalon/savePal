@@ -11,6 +11,7 @@ import paymentMethodRoutes from './routes/paymentMethod.routes.js';
 import connectRoutes from './routes/connect.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import { trimBody } from './middleware/trimBody.js';
 import schedulerService from './services/scheduler.service.js';
 
 // Load environment variables
@@ -51,6 +52,7 @@ app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoute
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(trimBody);
 
 // Health check route
 app.get('/health', (_req: Request, res: Response) => {
