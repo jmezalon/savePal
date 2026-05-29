@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireSuperAdmin } from '../middleware/admin.middleware.js';
 import adminController from '../controllers/admin.controller.js';
+import invoiceController from '../controllers/invoice.controller.js';
 
 const router = Router();
 
@@ -29,5 +30,11 @@ router.post('/announce', adminController.sendAnnouncement.bind(adminController))
 router.post('/waiver-codes', adminController.createWaiverCode.bind(adminController));
 router.get('/waiver-codes', adminController.getWaiverCodes.bind(adminController));
 router.patch('/waiver-codes/:id', adminController.toggleWaiverCode.bind(adminController));
+
+// One-off Stripe invoicing (admin-only)
+router.post('/invoices', invoiceController.create.bind(invoiceController));
+router.get('/invoices', invoiceController.list.bind(invoiceController));
+router.get('/invoices/:id', invoiceController.get.bind(invoiceController));
+router.post('/invoices/:id/void', invoiceController.void.bind(invoiceController));
 
 export default router;

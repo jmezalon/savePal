@@ -47,6 +47,12 @@ class WebhookController {
         case 'charge.dispute.created':
           await this.handleChargeDisputeCreated(event.data.object as Stripe.Dispute);
           break;
+        case 'invoice.paid':
+        case 'invoice.payment_failed':
+        case 'invoice.finalized':
+        case 'invoice.sent':
+          await this.handleAdminInvoiceEvent(event.type, event.data.object as Stripe.Invoice);
+          break;
         default:
           break;
       }
@@ -235,6 +241,20 @@ class WebhookController {
     );
 
     console.log(`Webhook: Dispute recorded for payment ${payment.id} ($${payment.amount}) by user ${payment.userId}`);
+  }
+
+  /**
+   * Log lifecycle events for one-off admin-created invoices. Stripe handles the
+   * customer-facing emails (invoice + receipt) automatically; this is purely
+   * for the admin's visibility in the server logs.
+   */
+  private async handleAdminInvoiceEvent(eventType: string, invoice: Stripe.Invoice) {
+    if (invoice.metadata?.source !== 'savepals_admin_invoice') return;
+    const total = ((invoice.total ?? 0) / 100).toFixed(2);
+    console.log(
+      `Webhook: ${eventType} for admin invoice ${invoice.number || invoice.id} ` +
+      `(${invoice.customer_email || 'no-email'}) — ${invoice.currency?.toUpperCase()} ${total}, status=${invoice.status}`
+    );
   }
 }
 

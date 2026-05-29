@@ -117,7 +117,25 @@ interface BlockedName {
   createdAt: string;
 }
 
-type ActiveTab = 'users' | 'groups' | 'waiverCodes' | 'announcements' | 'blockedNames';
+interface AdminInvoice {
+  id: string;
+  number: string | null;
+  status: string | null;
+  customerEmail: string | null;
+  customerName: string | null;
+  description: string | null;
+  subtotal: number;
+  tax: number;
+  total: number;
+  amountPaid: number;
+  currency: string;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
+  created: number;
+  dueDate: number | null;
+}
+
+type ActiveTab = 'users' | 'groups' | 'waiverCodes' | 'announcements' | 'blockedNames' | 'invoices';
 
 export default function AdminDashboard() {
   const { user, token } = useAuth();
@@ -155,6 +173,17 @@ export default function AdminDashboard() {
   const [announcementSubject, setAnnouncementSubject] = useState('');
   const [announcementBody, setAnnouncementBody] = useState('');
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
+  // Invoices tab state
+  const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
+  const [invCustomerName, setInvCustomerName] = useState('');
+  const [invCustomerEmail, setInvCustomerEmail] = useState('');
+  const [invDescription, setInvDescription] = useState('');
+  const [invAmount, setInvAmount] = useState('');
+  const [invTaxPercent, setInvTaxPercent] = useState('');
+  const [invMemo, setInvMemo] = useState('');
+  const [invDaysUntilDue, setInvDaysUntilDue] = useState('30');
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [voidingInvoiceId, setVoidingInvoiceId] = useState<string | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -226,6 +255,94 @@ export default function AdminDashboard() {
       console.error('Failed to fetch blocked names:', err);
     }
   }, [token]);
+
+  const fetchInvoices = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/invoices?limit=50`, { headers });
+      const data = await res.json();
+      if (data.success) setInvoices(data.data.invoices);
+    } catch (err) {
+      console.error('Failed to fetch invoices:', err);
+    }
+  }, [token]);
+
+  const handleCreateInvoice = async () => {
+    if (!invCustomerName.trim() || !invCustomerEmail.trim() || !invDescription.trim() || !invAmount.trim()) {
+      alert('Customer name, email, description, and amount are required.');
+      return;
+    }
+    const amountNum = parseFloat(invAmount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      alert('Amount must be a positive number.');
+      return;
+    }
+    setCreatingInvoice(true);
+    try {
+      const body: Record<string, any> = {
+        customerName: invCustomerName.trim(),
+        customerEmail: invCustomerEmail.trim(),
+        description: invDescription.trim(),
+        amount: amountNum,
+      };
+      if (invTaxPercent.trim()) body.taxPercent = parseFloat(invTaxPercent);
+      if (invMemo.trim()) body.memo = invMemo.trim();
+      if (invDaysUntilDue.trim()) body.daysUntilDue = parseInt(invDaysUntilDue, 10);
+
+      const res = await fetch(`${API_BASE_URL}/api/admin/invoices`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Invoice ${data.data.number || data.data.id} sent to ${invCustomerEmail.trim()}.`);
+        setInvCustomerName('');
+        setInvCustomerEmail('');
+        setInvDescription('');
+        setInvAmount('');
+        setInvTaxPercent('');
+        setInvMemo('');
+        setInvDaysUntilDue('30');
+        fetchInvoices();
+      } else {
+        alert(data.error || 'Failed to create invoice');
+      }
+    } catch {
+      alert('Failed to create invoice');
+    } finally {
+      setCreatingInvoice(false);
+    }
+  };
+
+  const handleVoidInvoice = async (id: string, label: string) => {
+    if (!confirm(`Void invoice ${label}? This cannot be undone.`)) return;
+    setVoidingInvoiceId(id);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/invoices/${id}/void`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchInvoices();
+      } else {
+        alert(data.error || 'Failed to void invoice');
+      }
+    } catch {
+      alert('Failed to void invoice');
+    } finally {
+      setVoidingInvoiceId(null);
+    }
+  };
+
+  // Live preview of the tax + total as the admin types
+  const invAmountNum = parseFloat(invAmount);
+  const invTaxNum = parseFloat(invTaxPercent);
+  const invPreviewSubtotal = Number.isFinite(invAmountNum) && invAmountNum > 0 ? invAmountNum : 0;
+  const invPreviewTax = Number.isFinite(invTaxNum) && invTaxNum > 0 && invPreviewSubtotal > 0
+    ? Math.round(invPreviewSubtotal * invTaxNum) / 100
+    : 0;
+  const invPreviewTotal = invPreviewSubtotal + invPreviewTax;
 
   const handleCreateCode = async () => {
     setCreatingCode(true);
@@ -344,7 +461,14 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user?.role === 'SUPERADMIN') {
-      Promise.all([fetchStats(), fetchUsers(), fetchGroups(), fetchWaiverCodes(), fetchBlockedNames()]).finally(() => setLoading(false));
+      Promise.all([
+        fetchStats(),
+        fetchUsers(),
+        fetchGroups(),
+        fetchWaiverCodes(),
+        fetchBlockedNames(),
+        fetchInvoices(),
+      ]).finally(() => setLoading(false));
     }
   }, [user]);
 
@@ -460,6 +584,16 @@ export default function AdminDashboard() {
               }`}
             >
               Blocked Names
+            </button>
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 whitespace-nowrap ${
+                activeTab === 'invoices'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Invoices
             </button>
           </nav>
         </div>
@@ -959,6 +1093,218 @@ export default function AdminDashboard() {
               {blockedNamesPagination && blockedNamesPagination.totalPages > 1 && (
                 <PaginationControls pagination={blockedNamesPagination} onPageChange={fetchBlockedNames} />
               )}
+            </div>
+          </div>
+        )}
+        {/* Invoices Tab */}
+        {activeTab === 'invoices' && (
+          <div>
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Create &amp; Send Invoice</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Stripe emails the customer a hosted invoice page where they can pay with a credit card.
+                Stripe also auto-sends a receipt on payment if you have receipt emails enabled in your Stripe settings.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={invCustomerName}
+                    onChange={(e) => setInvCustomerName(e.target.value)}
+                    placeholder="e.g., Acme Corp"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Email</label>
+                  <input
+                    type="email"
+                    value={invCustomerEmail}
+                    onChange={(e) => setInvCustomerEmail(e.target.value)}
+                    placeholder="billing@acme.com"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={invDescription}
+                    onChange={(e) => setInvDescription(e.target.value)}
+                    placeholder="e.g., Website design — May 2026"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (USD)</label>
+                  <input
+                    type="number"
+                    value={invAmount}
+                    onChange={(e) => setInvAmount(e.target.value)}
+                    placeholder="0.00"
+                    min="0.01"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sales Tax %  <span className="text-gray-400">(optional)</span></label>
+                  <input
+                    type="number"
+                    value={invTaxPercent}
+                    onChange={(e) => setInvTaxPercent(e.target.value)}
+                    placeholder="e.g., 8.875"
+                    min="0"
+                    max="100"
+                    step="0.001"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Days Until Due</label>
+                  <input
+                    type="number"
+                    value={invDaysUntilDue}
+                    onChange={(e) => setInvDaysUntilDue(e.target.value)}
+                    placeholder="30"
+                    min="0"
+                    max="365"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Memo  <span className="text-gray-400">(optional)</span></label>
+                  <input
+                    type="text"
+                    value={invMemo}
+                    onChange={(e) => setInvMemo(e.target.value)}
+                    placeholder="Note shown on the invoice"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {invPreviewSubtotal > 0 && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-md text-sm text-gray-700">
+                  <div className="flex justify-between"><span>Subtotal</span><span>${invPreviewSubtotal.toFixed(2)}</span></div>
+                  {invPreviewTax > 0 && (
+                    <div className="flex justify-between"><span>Sales tax ({invTaxPercent}%)</span><span>${invPreviewTax.toFixed(2)}</span></div>
+                  )}
+                  <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-gray-200">
+                    <span>Total</span><span>${invPreviewTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCreateInvoice}
+                  disabled={creatingInvoice}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {creatingInvoice ? 'Sending…' : 'Create & Send Invoice'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">Recent Invoices</h3>
+                <button
+                  onClick={fetchInvoices}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {invoices.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
+                          No invoices yet. Fill out the form above to send your first one.
+                        </td>
+                      </tr>
+                    )}
+                    {invoices.map((inv) => (
+                      <tr key={inv.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {inv.number || inv.id.slice(0, 12)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="font-medium text-gray-900">{inv.customerName || '—'}</div>
+                          <div className="text-xs text-gray-500">{inv.customerEmail || '—'}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={inv.description || ''}>
+                          {inv.description || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ${inv.total.toFixed(2)}
+                          {inv.tax > 0 && (
+                            <span className="text-xs text-gray-400 block">incl. ${inv.tax.toFixed(2)} tax</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            inv.status === 'paid' ? 'bg-green-100 text-green-800'
+                              : inv.status === 'open' ? 'bg-yellow-100 text-yellow-800'
+                              : inv.status === 'void' ? 'bg-gray-200 text-gray-600'
+                              : inv.status === 'uncollectible' ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {inv.status || 'unknown'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(inv.created * 1000).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                          {inv.hostedInvoiceUrl && (
+                            <a
+                              href={inv.hostedInvoiceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View
+                            </a>
+                          )}
+                          {inv.invoicePdf && (
+                            <a
+                              href={inv.invoicePdf}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              PDF
+                            </a>
+                          )}
+                          {inv.status === 'open' && (
+                            <button
+                              onClick={() => handleVoidInvoice(inv.id, inv.number || inv.id.slice(0, 12))}
+                              disabled={voidingInvoiceId === inv.id}
+                              className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                            >
+                              {voidingInvoiceId === inv.id ? '…' : 'Void'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
