@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 interface EmailOptions {
   to: string;
   subject: string;
@@ -8,18 +6,32 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private async deliverEmail(message: {
+    from: string;
+    replyTo: string;
+    to: string;
+    bcc?: string[];
+    subject: string;
+    text?: string;
+    html: string;
+  }): Promise<void> {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error('RESEND_API_KEY is required');
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: parseInt(process.env.EMAIL_PORT || '587') === 465,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+    const { replyTo, ...payload } = message;
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ ...payload, reply_to: replyTo }),
+      signal: AbortSignal.timeout(15000),
     });
+    if (!response.ok) {
+      // Avoid logging provider responses containing recipient or credential details.
+      throw new Error(`Resend rejected email (HTTP ${response.status})`);
+    }
   }
 
   /**
@@ -52,7 +64,7 @@ class EmailService {
     }
 
     try {
-      await this.transporter.sendMail({
+      await this.deliverEmail({
         from: `SavePal <${process.env.EMAIL_FROM || 'noreply@save-pals.com'}>`,
         replyTo: process.env.SUPPORT_EMAIL || 'support@save-pals.com',
         to,
@@ -440,7 +452,7 @@ class EmailService {
     const text = `${body}\n\nBest regards,\nThe SavePal Team`;
 
     try {
-      await this.transporter.sendMail({
+      await this.deliverEmail({
         from: fromAddress,
         replyTo: process.env.SUPPORT_EMAIL || 'support@save-pals.com',
         to: process.env.EMAIL_FROM || 'noreply@save-pals.com',
