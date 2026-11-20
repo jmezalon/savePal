@@ -68,7 +68,7 @@ export default function Landing() {
               What is a Sousou?
             </h2>
             <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-              A sousou (also known as ROSCA - Rotating Savings and Credit Association) is a time-tested savings method where a group of trusted people pool money together regularly, and each member receives the full pot in rotation.
+              A sousou (also known as ROSCA - Rotating Savings and Credit Association) is a time-tested savings method where a group of trusted people pool money together regularly, and members take turns receiving a payout from the pot.
             </p>
           </div>
 
@@ -89,7 +89,7 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Contribute Regularly</h3>
               <p className="text-gray-600">
-                Each member contributes the agreed amount on schedule (weekly, bi-weekly, or monthly). Everyone pays in, one person receives the full pot.
+                Each member contributes the agreed amount on schedule (weekly, bi-weekly, or monthly). Everyone pays in, and one member receives that round’s payout.
               </p>
             </div>
 
@@ -99,7 +99,7 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Receive Your Turn</h3>
               <p className="text-gray-600">
-                When it's your turn, you receive the full pot! Use it for emergencies, investments, or reaching your savings goals faster.
+                When it's your turn, you receive the amount collected for that round, minus any applicable payout fees. Use it for emergencies, investments, or reaching your savings goals faster.
               </p>
             </div>
           </div>
@@ -109,13 +109,13 @@ export default function Landing() {
             <h4 className="text-lg font-semibold text-blue-900 mb-3">📊 Example:</h4>
             <p className="text-blue-800">
               <strong>10 friends</strong> each contribute <strong>$100/month</strong> for 10 months.
-              Each month, one person receives the full pot. Instead of saving $100/month for 10 months,
+              If everyone pays on time, the group collects $1,000 each month before any payout fees. Instead of saving $100/month for 10 months,
               you could receive your payout in month 1, 2, 3... or whenever your turn comes! Perfect for big purchases,
               debt payoff, or investment opportunities.
             </p>
             <div className="mt-4 pt-4 border-t border-blue-200">
               <p className="text-sm text-blue-700">
-                <strong>💰 Fees:</strong> A small <strong>6% service fee</strong> applies — approximately 3% is added to each contribution for secure payment processing, and 3% is deducted from your payout (capped at a maximum of $50). For a $100 contribution, you'd pay ~$103.29/month, and the payout recipient receives $970 from the $1,000 pot.
+                <strong>💰 Fees:</strong> Payment processing fees may be added to your contribution. Payout fees may be deducted from the pot before you receive it.
               </p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function Landing() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure & Transparent</h3>
               <p className="text-gray-600">
-                Every transaction is tracked and visible to group members. No surprises, no hidden fees.
+                Every transaction is tracked and visible to group members. See the contribution and payout fees described above.
               </p>
             </div>
 
@@ -224,8 +224,8 @@ export default function Landing() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <div>
-                    <h4 className="font-semibold text-gray-900">No Interest or Fees</h4>
-                    <p className="text-gray-600">Unlike loans, you get your money interest-free. What you contribute is what you get back.</p>
+                    <h4 className="font-semibold text-gray-900">Interest-Free Group Savings</h4>
+                    <p className="text-gray-600">You don’t pay interest on your payout. Payment processing and payout fees may still apply.</p>
                   </div>
                 </div>
                 <div className="flex items-start">
